@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ConfigTests(unittest.TestCase):
     def load_modified(self, mutate):
-        data = yaml.safe_load((ROOT / "config.yaml").read_text())
+        data = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
         mutate(data)
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "settings.yaml"
-            path.write_text(yaml.safe_dump(data))
+            path.write_text(yaml.safe_dump(data), encoding="utf-8")
             return load_config(path)
 
     def test_paths_are_relative_to_yaml(self):
@@ -44,6 +44,6 @@ class ConfigTests(unittest.TestCase):
 
     def test_loading_does_not_mutate_yaml_content(self):
         path = ROOT / "config.yaml"
-        original = copy.deepcopy(yaml.safe_load(path.read_text()))
+        original = copy.deepcopy(yaml.safe_load(path.read_text(encoding="utf-8")))
         load_config(path)
-        self.assertEqual(yaml.safe_load(path.read_text()), original)
+        self.assertEqual(yaml.safe_load(path.read_text(encoding="utf-8")), original)

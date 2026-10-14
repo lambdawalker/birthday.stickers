@@ -87,7 +87,7 @@ class FakeServices:
                 parts = urlsplit(self.path)
                 if parts.path == "/object_info":
                     graphs = [
-                        json.loads((ROOT / f"workflows/{name}.json").read_text())
+                        json.loads((ROOT / f"workflows/{name}.json").read_text(encoding="utf-8"))
                         for name in ("qwen-edit", "flux-outpaint")
                     ]
                     info = {
@@ -183,7 +183,7 @@ class FakeServices:
 class PipelineTests(unittest.TestCase):
     def configuration(self, temp, services, count=1):
         directory = Path(temp)
-        data = yaml.safe_load((ROOT / "config.yaml").read_text())
+        data = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
         for key in ("protagonist", "creature"):
             path = directory / (key + ".png")
             Image.new("RGB", (32, 32), "green").save(path)
@@ -194,7 +194,7 @@ class PipelineTests(unittest.TestCase):
             "refinement": "Use this guide: {{guide}}\nScene: {{scene}}",
         }.items():
             path = directory / (key + ".md")
-            path.write_text(text)
+            path.write_text(text, encoding="utf-8")
             data["prompts"][key] = str(path)
         for item in data["workflows"].values():
             item["path"] = str(ROOT / item["path"])
@@ -207,7 +207,7 @@ class PipelineTests(unittest.TestCase):
             directory=str(directory / "output"), width=53, height=55, feathering=4
         )
         path = directory / "config.yaml"
-        path.write_text(yaml.safe_dump(data))
+        path.write_text(yaml.safe_dump(data), encoding="utf-8")
         return load_config(path)
 
     def test_two_full_cycles_use_correct_prompts_images_and_sizes_and_append(self):
@@ -237,11 +237,13 @@ class PipelineTests(unittest.TestCase):
                     self.assertEqual(image.size, (53, 55))
                     self.assertEqual(image.format, "JPEG")
                     self.assertGreater(image.getpixel((26, 27))[0], 240)
-                text = (root / "prompts" / (name + ".md")).read_text()
+                text = (root / "prompts" / (name + ".md")).read_text(encoding="utf-8")
                 self.assertIn("## Raw scene", text)
                 self.assertIn("## Refined scene", text)
                 self.assertIn("<image1>", text)
-                meta = json.loads((root / "metadata" / (name + ".json")).read_text())
+                meta = json.loads(
+                    (root / "metadata" / (name + ".json")).read_text(encoding="utf-8")
+                )
                 self.assertEqual(meta["status"], "complete")
                 self.assertIn("qwen_prompt_id", meta)
                 self.assertIn("flux_prompt_id", meta)
@@ -255,7 +257,7 @@ class PipelineTests(unittest.TestCase):
             config = self.configuration(temp, service)
             with self.assertRaisesRegex(RuntimeError, "stiker-0000"):
                 run(config)
-            text = (config.output.directory / "prompts/stiker-0000.md").read_text()
+            text = (config.output.directory / "prompts/stiker-0000.md").read_text(encoding="utf-8")
             self.assertIn("moonlit castle", text)
             self.assertEqual(len(service.graphs), 0)
 
@@ -281,7 +283,9 @@ class PipelineTests(unittest.TestCase):
             config = self.configuration(temp, service)
             with self.assertRaisesRegex(RuntimeError, "GPU OOM"):
                 run(config)
-            meta = json.loads((config.output.directory / "metadata/stiker-0000.json").read_text())
+            meta = json.loads(
+                (config.output.directory / "metadata/stiker-0000.json").read_text(encoding="utf-8")
+            )
             self.assertEqual(meta["qwen_prompt_id"], "job-1")
 
     def test_timeout_is_bounded_and_does_not_resubmit(self):
@@ -316,7 +320,7 @@ class PipelineTests(unittest.TestCase):
             config = self.configuration(temp, service)
             with self.assertRaisesRegex(RuntimeError, "must name both"):
                 run(config)
-            saved = (config.output.directory / "prompts/stiker-0000.md").read_text()
+            saved = (config.output.directory / "prompts/stiker-0000.md").read_text(encoding="utf-8")
             self.assertIn("## Refined scene", saved)
             self.assertIn("missing reference tags", saved)
             self.assertEqual(service.graphs, [])
