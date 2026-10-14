@@ -40,8 +40,8 @@ generation:
   seed: null
 output:
   directory: output
-  width: 1624
-  height: 1624
+  width: 1312
+  height: 1312
   jpeg_quality: 95
   jpeg_subsampling: 0
   jpeg_background: '#ffffff'
