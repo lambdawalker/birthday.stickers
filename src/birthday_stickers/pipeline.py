@@ -1,23 +1,17 @@
-"""Sequential scene generation with durable, inspectable per-sticker artifacts."""
+"""Shared scene artifacts and the public parallel pipeline entry point."""
 
-import hashlib
 import json
 import logging
 import os
 import re
-import secrets
-import shutil
 from collections.abc import Callable
-from dataclasses import asdict
-from datetime import UTC, datetime
 from pathlib import Path
 
-from .activities import load_activities, select_activity
-from .comfy import ComfyClient
-from .config import Config, auth_headers
-from .control import RunControl, RunHalted
-from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
-from .llm import LLMClient, compose_refinement
+from .activities import load_activities
+from .config import Config
+from .control import RunControl
+from .images import decode_image, plan_padding
+from .llm import compose_refinement
 from .references import reference_pools
 from .workflows import build_flux, build_qwen, load_workflow
 
@@ -183,231 +177,9 @@ def run(
     resume: bool = False,
     control: RunControl | None = None,
     progress: Callable[[int, str, str], None] = lambda *_: None,
+    worker_progress: Callable[[str, int, str, str], None] = lambda *_: None,
 ) -> list[Path]:
-    control = control or RunControl()
-    control.check()
-    local = validate_local(config)
-    auth_headers(config.llm.api_key_env)
-    comfy = ComfyClient(config.comfy)
-    comfy.preflight(*local["graphs"])
-    control.check()
-    root = config.output.directory
-    records = scene_records(root) if resume else []
-    completed = [m for _, m in records if m.get("status") == "complete"]
-    final_paths = [root / "final" / f"{m['sticker']}.jpg" for m in completed]
-    for path in final_paths:
-        if decode_image(path).size != (config.output.width, config.output.height):
-            raise ValueError(f"Completed image is missing or has the wrong dimensions: {path}")
-    pending = [(p, m) for p, m in records if m.get("status") != "complete"]
-    previous_scenes = [m["raw_scene"] for m in completed if "raw_scene" in m]
-    uploaded_references: dict[Path, str] = {}
-    for iteration in range(len(completed), config.generation.count):
-        control.check()
-        if pending:
-            metadata_path, metadata = pending.pop(0)
-            name = metadata["sticker"]
-            index = int(name.split("-")[-1])
-        else:
-            index, name, metadata_path = reserve_sticker(root)
-            metadata = {"sticker": name, "index": index, "status": "reserved"}
-        prompt_path = root / "prompts" / f"{name}.md"
-        intermediate_path = root / "intermediate" / f"{name}.jpg"
-        final_path = root / "final" / f"{name}.jpg"
+    """Run an LLM producer and a ComfyUI consumer with durable scene handoff."""
+    from .engine import execute
 
-        def stage(
-            status: str,
-            metadata=metadata,
-            metadata_path=metadata_path,
-            iteration=iteration,
-            name=name,
-        ) -> None:
-            control.check()
-            metadata["status"] = status
-            metadata.pop("error", None)
-            write_json(metadata_path, metadata)
-            progress(iteration, name, status)
-            control.check()
-            log.info("[%s/%s] %s: %s", iteration + 1, config.generation.count, name, status)
-
-        try:
-            if "references" not in metadata:
-                protagonist = secrets.choice(local["reference_pools"][0])
-                creature = secrets.choice(local["reference_pools"][1])
-                seed = (
-                    secrets.randbelow(SEED_MODULUS)
-                    if config.generation.seed is None
-                    else (config.generation.seed + 2 * index) % SEED_MODULUS
-                )
-                metadata.update(
-                    created_at=datetime.now(UTC).isoformat(),
-                    llm_model=config.llm.model,
-                    qwen_seed=seed,
-                    flux_seed=(seed + 1) % SEED_MODULUS,
-                    generation_size=[config.generation.width, config.generation.height],
-                    target_size=[config.output.width, config.output.height],
-                    references=[
-                        {
-                            "role": role,
-                            "path": str(path),
-                            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                        }
-                        for role, path in (("protagonist", protagonist), ("creature", creature))
-                    ],
-                )
-                if local["activities"]:
-                    metadata["activity"] = select_activity(local["activities"], root / "metadata")
-                write_json(metadata_path, metadata)
-            references = tuple(Path(ref["path"]) for ref in metadata["references"])
-            for path, ref in zip(references, metadata["references"], strict=True):
-                if hashlib.sha256(path.read_bytes()).hexdigest() != ref["sha256"]:
-                    raise ValueError(f"Selected reference changed since this scene started: {path}")
-            llm = LLMClient(config.llm, references)
-            activity = metadata.get("activity")
-            if "raw_scene" not in metadata:
-                stage("planning")
-                metadata["raw_scene"] = llm.complete(
-                    planning_prompt(
-                        local["planning"],
-                        iteration + 1,
-                        config.generation.count,
-                        name,
-                        previous_scenes,
-                        activity,
-                    )
-                )
-                write_json(metadata_path, metadata)
-            raw = metadata["raw_scene"]
-            write_prompts(prompt_path, name, raw, metadata.get("refined_scene"), activity)
-            if "refined_scene" not in metadata:
-                stage("refining")
-                refined = llm.complete(
-                    compose_refinement(local["refinement"], local["guide"], raw), refined=True
-                )
-                write_prompts(prompt_path, name, raw, refined, activity)
-                if "<image1>" not in refined or "<image2>" not in refined:
-                    raise ValueError(
-                        "Refined prompt must name both <image1> and <image2> reference roles"
-                    )
-                metadata["refined_scene"] = refined
-                write_json(metadata_path, metadata)
-            refined = metadata["refined_scene"]
-            if not metadata.get("intermediate_saved"):
-                stage("rendering_qwen")
-                if "qwen_prompt_id" not in metadata:
-                    if metadata.get("qwen_submission_pending"):
-                        raise ValueError(
-                            "Qwen submission outcome is unknown. Inspect ComfyUI history and add "
-                            "qwen_prompt_id to this scene's metadata, or remove "
-                            "qwen_submission_pending only after confirming no job was queued."
-                        )
-                    for role, path in zip(("protagonist", "creature"), references, strict=True):
-                        control.check()
-                        if path not in uploaded_references:
-                            uploaded_references[path] = comfy.upload(path, role)
-                    graph = build_qwen(
-                        local["qwen"],
-                        config.qwen.nodes,
-                        config.qwen.overrides,
-                        refined,
-                        *(uploaded_references[p] for p in references),
-                        config.generation.width,
-                        config.generation.height,
-                        metadata["qwen_seed"],
-                        name + "-qwen",
-                    )
-                    write_json(root / "metadata" / f"{name}.qwen.json", graph)
-                    control.check()
-                    metadata["qwen_submission_pending"] = True
-                    write_json(metadata_path, metadata)
-                    metadata["qwen_prompt_id"] = comfy.submit(graph)
-                    metadata.pop("qwen_submission_pending")
-                    write_json(metadata_path, metadata)
-                image_data = comfy.wait_image(
-                    metadata["qwen_prompt_id"], config.qwen.nodes["output"], control.check
-                )
-                save_jpeg(
-                    image_data,
-                    intermediate_path,
-                    config.output.jpeg_quality,
-                    config.output.jpeg_subsampling,
-                    config.output.jpeg_background,
-                )
-                metadata["intermediate_saved"] = True
-                write_json(metadata_path, metadata)
-            source = decode_image(intermediate_path)
-            padding = plan_padding(source.size, (config.output.width, config.output.height))
-            metadata.update(padding=asdict(padding))
-            if source.size == padding.target:
-                control.check()
-                shutil.copyfile(intermediate_path, final_path)
-                metadata["outpaint_skipped"] = "Source already matches target size"
-            else:
-                stage("rendering_flux")
-                if "flux_prompt_id" not in metadata:
-                    if metadata.get("flux_submission_pending"):
-                        raise ValueError(
-                            "Flux submission outcome is unknown. Inspect ComfyUI history and add "
-                            "flux_prompt_id to this scene's metadata, or remove "
-                            "flux_submission_pending only after confirming no job was queued."
-                        )
-                    uploaded = comfy.upload(intermediate_path, "intermediate")
-                    graph = build_flux(
-                        local["flux"],
-                        config.flux.nodes,
-                        config.flux.overrides,
-                        raw,
-                        uploaded,
-                        padding,
-                        config.output.feathering,
-                        metadata["flux_seed"],
-                        name + "-flux",
-                    )
-                    write_json(root / "metadata" / f"{name}.flux.json", graph)
-                    control.check()
-                    metadata["flux_submission_pending"] = True
-                    write_json(metadata_path, metadata)
-                    metadata["flux_prompt_id"] = comfy.submit(graph)
-                    metadata.pop("flux_submission_pending")
-                    write_json(metadata_path, metadata)
-                data = comfy.wait_image(
-                    metadata["flux_prompt_id"], config.flux.nodes["output"], control.check
-                )
-                final = finish_outpaint(
-                    decode_image(data),
-                    source,
-                    padding,
-                    config.output.feathering,
-                    config.output.preserve_center,
-                )
-                save_jpeg(
-                    final,
-                    final_path,
-                    config.output.jpeg_quality,
-                    config.output.jpeg_subsampling,
-                    config.output.jpeg_background,
-                )
-            metadata.update(status="complete", finished_at=datetime.now(UTC).isoformat())
-            write_json(metadata_path, metadata)
-            previous_scenes.append(raw)
-            final_paths.append(final_path)
-            progress(iteration + 1, name, "complete")
-            log.info("%s: saved %s", name, final_path)
-        except (Exception, KeyboardInterrupt) as error:
-            metadata.update(
-                failed_stage=metadata.get("status"),
-                status=(
-                    error.status
-                    if isinstance(error, RunHalted)
-                    else "interrupted"
-                    if isinstance(error, KeyboardInterrupt)
-                    else "failed"
-                ),
-                error=str(error),
-            )
-            write_json(metadata_path, metadata)
-            if isinstance(error, (RunHalted, KeyboardInterrupt)):
-                raise
-            raise RuntimeError(
-                f"{name} failed: {error}\nSaved progress: {metadata_path}"
-            ) from error
-    return final_paths
+    return execute(config, resume, control or RunControl(), progress, worker_progress)

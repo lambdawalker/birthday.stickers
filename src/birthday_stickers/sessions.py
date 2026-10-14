@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from threading import RLock
 
 import yaml
 
@@ -163,6 +164,7 @@ class SessionStore:
                 "name": name,
                 "count": target,
                 "completed": 0,
+                "prompts_completed": 0,
                 "status": "ready",
                 "created_at": now(),
                 "updated_at": now(),
@@ -187,29 +189,70 @@ class SessionStore:
             if manifest["status"] == "complete":
                 return manifest
 
+            update_lock = RLock()
+
             def update(**changes):
-                manifest.update(**changes, updated_at=now())
-                write_json(directory / "session.json", manifest)
-                notify(dict(manifest))
+                with update_lock:
+                    manifest.update(**changes, updated_at=now())
+                    write_json(directory / "session.json", manifest)
+                    notify(dict(manifest))
+
+            def worker_update(lane, done, sticker, stage):
+                key = "prompts_completed" if lane == "prompts" else "completed"
+                update(
+                    **{key: done, f"{lane}_stage": stage, f"{lane}_sticker": sticker},
+                    sticker=sticker,
+                    stage=stage,
+                )
 
             try:
                 config = load_config(directory / "config.yaml")
-                completed = sum(m.get("status") == "complete" for _, m in scene_records(directory))
-                update(status="running", completed=completed, error="", stage="Checking services")
+                records = scene_records(directory)
+                completed = sum(m.get("status") == "complete" for _, m in records)
+                prompts_completed = sum(
+                    "refined_scene" in m or m.get("status") == "complete" for _, m in records
+                )
+                update(
+                    status="running",
+                    completed=completed,
+                    prompts_completed=prompts_completed,
+                    prompts_stage="starting",
+                    images_stage="starting",
+                    error="",
+                    prompts_sticker="",
+                    images_sticker="",
+                    stage="Checking services",
+                )
                 run(
                     config,
                     resume=True,
                     control=control,
-                    progress=lambda done, sticker, stage: update(
-                        completed=done, sticker=sticker, stage=stage
-                    ),
+                    worker_progress=worker_update,
                 )
-                update(status="complete", completed=manifest["count"], stage="All stickers saved")
+                update(
+                    status="complete",
+                    completed=manifest["count"],
+                    prompts_completed=manifest["count"],
+                    prompts_stage="done",
+                    images_stage="done",
+                    stage="All stickers saved",
+                )
             except RunHalted as error:
-                update(status=error.status, stage="Progress saved")
+                update(
+                    status=error.status,
+                    stage="Progress saved",
+                    prompts_stage=error.status,
+                    images_stage=error.status,
+                )
             except KeyboardInterrupt:
                 update(status="stopped", stage="Progress saved")
                 raise
             except Exception as error:
-                update(status="failed", error=str(error), stage="Needs attention")
+                update(
+                    status="failed",
+                    error=str(error),
+                    stage="Needs attention",
+                    prompts_stage="stopped",
+                    images_stage="stopped",
+                )
             return manifest

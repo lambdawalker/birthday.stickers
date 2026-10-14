@@ -37,9 +37,10 @@ class RunFinished(Message):
 
 
 class LogLine(Message):
-    def __init__(self, text: str):
+    def __init__(self, text: str, worker: str = "system"):
         super().__init__()
         self.text = text
+        self.worker = worker
 
 
 class UILogHandler(logging.Handler):
@@ -49,7 +50,8 @@ class UILogHandler(logging.Handler):
         self.setFormatter(logging.Formatter("%(asctime)s  %(message)s", datefmt="%H:%M:%S"))
 
     def emit(self, record):
-        self.app.post_message(LogLine(self.format(record)))
+        worker = getattr(record, "worker", "images" if record.name.endswith("comfy") else "system")
+        self.app.post_message(LogLine(self.format(record), worker))
 
 
 class StickerApp(App):
@@ -76,11 +78,21 @@ class StickerApp(App):
     #sessions { height: 6; background: #1b2233; }
     #session-title { color: #e5c9fa; text-style: bold; }
     #stage { margin: 1 0; color: #a9d9ed; }
-    #progress { width: 100%; margin: 1 0; }
+    #workers { height: 1fr; min-height: 16; }
+    .worker { width: 1fr; height: 100%; border: round #565277; padding: 0 1; }
+    #prompt-worker { margin-right: 1; }
+    .worker-stage { height: 3; color: #a9d9ed; }
+    .worker-count { height: 1; color: #acb4ca; }
+    ProgressBar { width: 100%; margin: 1 0; }
+    RichLog { height: 1fr; min-height: 5; background: #151c2c; }
     #output, #hint { color: #acb4ca; height: auto; }
     #error { color: #ffb4bc; height: auto; margin: 0; }
-    #logs { height: 1fr; min-height: 6; border: round #565277; background: #151c2c; }
     #dashboard { display: none; }
+    #dashboard.compact #hint, #dashboard.compact #output { display: none; }
+    #dashboard.compact #stage { margin: 0; }
+    #dashboard.compact ProgressBar { margin: 0; }
+    #dashboard.compact .worker-stage { height: 2; }
+    #dashboard.compact #workers { min-height: 12; }
     """
 
     def __init__(self, config: Config, store: SessionStore | None = None):
@@ -126,7 +138,6 @@ class StickerApp(App):
             with Vertical(classes="card"):
                 yield Static("", id="session-title")
                 yield Static("Preparing session…", id="stage")
-                yield ProgressBar(total=100, show_eta=False, id="progress")
                 yield Static("", id="totals")
                 yield Static("", id="output")
                 yield Static("", id="error")
@@ -139,7 +150,23 @@ class StickerApp(App):
                     "Pause keeps this screen. Stop returns to sessions. Both save progress.",
                     id="hint",
                 )
-            yield RichLog(id="logs", wrap=True, highlight=False, markup=False, max_lines=1000)
+            with Horizontal(id="workers"):
+                with Vertical(id="prompt-worker", classes="worker"):
+                    yield Label("LLM · PROMPTS", classes="title")
+                    yield Static("Waiting to start", id="prompts-stage", classes="worker-stage")
+                    yield ProgressBar(total=100, show_eta=False, id="prompts-progress")
+                    yield Static("", id="prompts-count", classes="worker-count")
+                    yield RichLog(
+                        id="prompts-logs", wrap=True, min_width=1, markup=False, max_lines=1000
+                    )
+                with Vertical(id="image-worker", classes="worker"):
+                    yield Label("COMFYUI · IMAGES", classes="title")
+                    yield Static("Waiting for prompts", id="images-stage", classes="worker-stage")
+                    yield ProgressBar(total=100, show_eta=False, id="images-progress")
+                    yield Static("", id="images-count", classes="worker-count")
+                    yield RichLog(
+                        id="images-logs", wrap=True, min_width=1, markup=False, max_lines=1000
+                    )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -147,10 +174,15 @@ class StickerApp(App):
             "Session", "Progress", "Status", "Last step"
         )
         self.refresh_sessions()
+        self.query_one("#dashboard").set_class(self.size.height < 32, "compact")
         logger = logging.getLogger("birthday_stickers")
         self.old_log_level = logger.level
         logger.setLevel(logging.INFO)
         logger.addHandler(self.handler)
+
+    def on_resize(self) -> None:
+        if self.is_mounted:
+            self.query_one("#dashboard").set_class(self.size.height < 32, "compact")
 
     def on_unmount(self) -> None:
         logger = logging.getLogger("birthday_stickers")
@@ -167,7 +199,8 @@ class StickerApp(App):
                 status = "Running / interrupted"
             table.add_row(
                 item["name"],
-                f"{item.get('completed', 0)} / {item['count']}",
+                f"{item.get('prompts_completed', item.get('completed', 0))} prompts / "
+                f"{item.get('completed', 0)} images / {item['count']}",
                 status,
                 item.get("stage", ""),
                 key=item["name"],
@@ -186,7 +219,8 @@ class StickerApp(App):
     def show_dashboard(self) -> None:
         self.query_one("#home").display = False
         self.query_one("#dashboard").display = True
-        self.query_one("#logs", RichLog).clear()
+        for lane in ("prompts", "images"):
+            self.query_one(f"#{lane}-logs", RichLog).clear()
         self.query_one("#hint", Static).update(
             "Pause keeps this screen. Stop returns to sessions. Both save progress."
         )
@@ -213,7 +247,10 @@ class StickerApp(App):
         self.query_one("#stage", Static).update("Preparing session…")
         self.query_one("#totals", Static).update("")
         self.query_one("#output", Static).update("")
-        self.query_one("#progress", ProgressBar).update(total=count or 100, progress=0)
+        for lane in ("prompts", "images"):
+            self.query_one(f"#{lane}-progress", ProgressBar).update(total=count or 100, progress=0)
+            self.query_one(f"#{lane}-stage", Static).update("Waiting to start")
+            self.query_one(f"#{lane}-count", Static).update("")
         self.execute_session(name, count)
 
     @work(thread=True, exit_on_error=False)
@@ -235,14 +272,42 @@ class StickerApp(App):
         self.active = event.value
         item = self.active
         self.query_one("#session-title", Static).update(Text(item["name"]))
-        self.query_one("#stage", Static).update(
-            Text(f"{item['status'].upper()}  ·  {item.get('sticker', '')}  {item.get('stage', '')}")
-        )
-        self.query_one("#progress", ProgressBar).update(
-            total=item["count"], progress=item.get("completed", 0)
-        )
+        status = item["status"].upper()
+        if self.busy and self.control.requested.is_set():
+            status = "SAVING BOTH WORKERS"
+        self.query_one("#stage", Static).update(Text(status))
+        prompt_count = item.get("prompts_completed", item.get("completed", 0))
+        image_count = item.get("completed", 0)
+        stages = {
+            "planning": "Planning scene",
+            "refining": "Refining Qwen prompt",
+            "prompts_ready": "Prompt saved to queue",
+            "done": "Finished",
+            "waiting_for_prompts": "Waiting for a ready prompt",
+            "upload_references": "Uploading character references",
+            "rendering_qwen": "Rendering with Qwen",
+            "save_intermediate": "Saving intermediate JPEG",
+            "upload_intermediate": "Uploading intermediate image",
+            "rendering_flux": "Outpainting with Flux",
+            "save_final": "Saving final JPEG",
+            "complete": "Image saved",
+        }
+        for lane, done, label in (
+            ("prompts", prompt_count, "prompts ready"),
+            ("images", image_count, "images saved"),
+        ):
+            self.query_one(f"#{lane}-progress", ProgressBar).update(
+                total=item["count"], progress=done
+            )
+            self.query_one(f"#{lane}-count", Static).update(f"{done} / {item['count']} {label}")
+            stage = item.get(f"{lane}_stage", "Ready")
+            sticker = item.get(f"{lane}_sticker", "")
+            self.query_one(f"#{lane}-stage", Static).update(
+                Text(f"{sticker}\n{stages.get(stage, stage.replace('_', ' ').capitalize())}")
+            )
         self.query_one("#totals", Static).update(
-            f"{item.get('completed', 0)} of {item['count']} stickers saved"
+            f"{prompt_count} prompts ready · {image_count} images saved · "
+            f"{max(0, prompt_count - image_count)} awaiting final images"
         )
         self.query_one("#output", Static).update(
             Text(f"Images: {self.store.directory(item['name']) / 'final'}")
@@ -267,7 +332,9 @@ class StickerApp(App):
             self.show_home()
 
     def on_log_line(self, event: LogLine) -> None:
-        self.query_one("#logs", RichLog).write(Text(event.text))
+        lanes = (event.worker,) if event.worker in ("prompts", "images") else ("prompts", "images")
+        for lane in lanes:
+            self.query_one(f"#{lane}-logs", RichLog).write(Text(event.text))
 
     @on(DataTable.RowSelected, "#sessions")
     def selected(self, event: DataTable.RowSelected) -> None:

@@ -374,7 +374,7 @@ class PipelineTests(unittest.TestCase):
             config.path.write_text(yaml.safe_dump(data), encoding="utf-8")
             config = load_config(config.path)
             chosen = [directory / name for name in ("A000.jpg", "B001.jpg", "A001.jpg", "B000.jpg")]
-            with patch("birthday_stickers.pipeline.secrets.choice", side_effect=chosen):
+            with patch("birthday_stickers.engine.secrets.choice", side_effect=chosen):
                 run(config)
             for index in range(2):
                 meta = json.loads(

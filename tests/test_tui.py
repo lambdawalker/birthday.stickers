@@ -5,11 +5,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 import test_pipeline as fixtures
-from textual.widgets import DataTable, Input, Static
+from textual.widgets import DataTable, Input, ProgressBar, RichLog, Static
 
 from birthday_stickers.control import RunHalted
 from birthday_stickers.sessions import SessionStore
-from birthday_stickers.tui import StickerApp
+from birthday_stickers.tui import LogLine, SessionUpdate, StickerApp
 
 
 class TUITests(unittest.IsolatedAsyncioTestCase):
@@ -20,8 +20,8 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
             app = StickerApp(config, store)
             started = threading.Event()
 
-            def fake_run(config, *, resume, control, progress):
-                progress(0, "stiker-0000", "rendering_qwen")
+            def fake_run(config, *, resume, control, worker_progress):
+                worker_progress("images", 0, "stiker-0000", "rendering_qwen")
                 started.set()
                 if not control.requested.wait(5):
                     raise RuntimeError("Test control was not requested")
@@ -71,7 +71,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
             app = StickerApp(config, store)
             started = threading.Event()
 
-            def fake_run(config, *, resume, control, progress):
+            def fake_run(config, *, resume, control, worker_progress):
                 started.set()
                 control.requested.wait(5)
                 control.check()
@@ -92,6 +92,37 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                     self.assertTrue(app.control.requested.is_set())
                     self.assertFalse(app.busy)
                     self.assertEqual(store.list_incomplete()[0]["status"], "stopped")
+
+    async def test_worker_bars_and_logs_are_independent(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            store = SessionStore(Path(temp) / "sessions")
+            item = store.create(config, count=5)
+            app = StickerApp(config, store)
+            async with app.run_test(size=(110, 40)) as pilot:
+                app.show_dashboard()
+                app.on_session_update(
+                    SessionUpdate(
+                        {
+                            **item,
+                            "prompts_completed": 4,
+                            "completed": 1,
+                            "prompts_stage": "refining",
+                            "prompts_sticker": "stiker-0004",
+                            "images_stage": "rendering_qwen",
+                            "images_sticker": "stiker-0001",
+                        }
+                    )
+                )
+                await pilot.pause()
+                self.assertEqual(app.query_one("#prompts-progress", ProgressBar).progress, 4)
+                self.assertEqual(app.query_one("#images-progress", ProgressBar).progress, 1)
+                app.on_log_line(LogLine("Plan scene finished in 1.25s", "prompts"))
+                app.on_log_line(LogLine("Qwen render finished in 20.50s", "images"))
+                await pilot.pause()
+                self.assertIn("Plan scene", str(app.query_one("#prompts-logs", RichLog).lines))
+                self.assertNotIn("Qwen render", str(app.query_one("#prompts-logs", RichLog).lines))
+                self.assertIn("Qwen render", str(app.query_one("#images-logs", RichLog).lines))
 
     async def test_invalid_count_and_start_error_are_visible(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

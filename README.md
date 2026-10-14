@@ -7,7 +7,9 @@ ComfyUI renders it with Qwen 2.1 and extends it with Flux Fill to your final siz
 The default command opens a Textual session picker and live generation dashboard.
 Each session has its own folder under `output/sessions/YYYY-MM-DD-NNN/`.
 
-For each of N iterations (paths below are relative to that session folder):
+Two workers run in parallel: the LLM prepares prompts for upcoming scenes while
+ComfyUI renders earlier ones. For each of N scenes (paths below are relative to
+that session folder):
 
 1. Read `prompts/plan_scene.md` and ask LLM A for a raw scene.
 2. Assemble the raw scene, local Qwen guide, and refinement template locally; ask
@@ -81,18 +83,41 @@ Choose **New session**, or select a row and choose **Resume selected** (Enter al
 resumes a selected row). Names are automatically filled from your computer's local
 date plus a daily counter, for example `2026-10-14-001` and `2026-10-14-002`.
 
-The active dashboard shows the current stage, completed-sticker progress, output
-folder, and live logs:
+The active dashboard has separate **LLM / Prompts** and **ComfyUI / Images** panels.
+Each shows its current sticker and step, a progress bar, and its own timed log.
+The prompt bar counts scenes with both raw and refined prompts saved; the image
+bar counts final JPEGs saved. The summary also shows how many prepared scenes
+are awaiting final images.
 
-- **Pause:** save the current checkpoint and stay on the dashboard; **Resume** continues.
+- **Pause:** checkpoint both workers and stay on the dashboard; **Resume** continues.
 - **Stop:** save progress and return to the session picker. The session stays resumable.
 - **Sessions:** return to the picker when generation is paused, finished, or failed.
 - **Q / Ctrl+C / Ctrl+Q:** save and quit. On restart, unfinished sessions remain listed.
 
-Controls are cooperative: an in-flight LLM or HTTP request finishes or times out
-before pausing. ComfyUI polling can pause between requests. Already-submitted GPU
+Controls are cooperative: both workers stop starting new operations, and an
+in-flight LLM or HTTP request finishes or times out before pausing. ComfyUI polling can pause between requests. Already-submitted GPU
 jobs may continue on the server; resuming reconnects using the saved job ID.
 The app never sends a global ComfyUI interrupt that could affect other users.
+
+The LLM can prepare the entire remaining session without waiting for images. A
+scene enters the renderer's queue only after both prompts and their metadata are
+saved. On restart the queue is rebuilt from these records, so ready prompts are
+reused, partial LLM work resumes from the saved raw description, and submitted GPU
+jobs reconnect by ID. Scene numbers, character choices, and activity history stay
+consistent even when the prompt worker is far ahead. If either worker fails, the
+other stops at its next checkpoint; in-flight responses are saved before the
+session reports the original error. Existing sequential sessions can also resume.
+
+Log lines include durations, for example `Plan scene finished in 2.31s` and
+`Qwen render and download finished in 43.72s`. Timed steps cover planning,
+refinement, reference uploads, Qwen rendering/download, intermediate JPEG saving,
+intermediate upload, Flux rendering/download, and final compositing/saving.
+Durations are elapsed wall time for each active attempt, including server queue
+and network waits. Paused time between runs is excluded; a resumed job gets a new
+attempt entry. Failed and paused attempts are labeled accordingly. The per-sticker
+`metadata/*.json` files retain the timing history under `timings` with the step,
+seconds, outcome, and recording timestamp. These are client-observed durations,
+not GPU-only inference measurements.
 
 Each session stores `session.json`, a `config.yaml` snapshot, copies of the prompts,
 workflows and character references under `inputs/`, plus `intermediate/`, `final/`,
@@ -208,7 +233,7 @@ configured tokens as Bearer headers. It never stores their values in output meta
 Edit [the scene brief](prompts/plan_scene.md) to set theme, medium, activities,
 subjects, or any requested lettering. Its optional placeholders are
 `{{iteration}}`, `{{count}}`, `{{sticker_id}}`, and `{{previous_scenes}}`. The last
-placeholder includes up to ten earlier completed scenes from the session to
+placeholder includes up to ten earlier planned scenes from the session to
 encourage variety; it is not a guarantee against duplicate compositions.
 
 The [refinement template](prompts/refine_scene.md) must contain `{{guide}}` and
