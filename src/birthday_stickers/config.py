@@ -69,13 +69,15 @@ class Config:
     comfy: ComfyConfig
     generation: GenerationConfig
     output: OutputConfig
-    protagonist: Path
-    creature: Path
+    protagonist: Path | str
+    creature: Path | str
     planning: Path
     refinement: Path
     guide: Path
     qwen: WorkflowConfig
     flux: WorkflowConfig
+    character_directory: Path | None = None
+    activities: Path | None = None
 
 
 def integer(value, name: str, low: int, high: int = 2**63 - 1) -> None:
@@ -199,11 +201,30 @@ def load_config(path: Path) -> Config:
     base = path.parent
     output.directory = local_path(base, output.directory)
     paths = {}
+    characters = data.get("characters")
+    if isinstance(characters, dict) and "directory" in characters:
+        if set(characters) != {"directory", "protagonist", "creature"}:
+            raise ValueError("characters must contain directory, protagonist, and creature")
+        paths["character_directory"] = local_path(base, characters["directory"])
+        for role in ("protagonist", "creature"):
+            value = characters[role]
+            if not isinstance(value, str) or len(value) != 1 or not "A" <= value <= "Z":
+                raise ValueError(f"characters.{role} must be one character ID from A-Z")
+            paths[role] = value
+        if paths["protagonist"] == paths["creature"]:
+            raise ValueError("Protagonist and creature must use different character IDs")
     for group, keys in (
         ("characters", ("protagonist", "creature")),
         ("prompts", ("planning", "refinement", "guide")),
     ):
+        if group == "characters" and "character_directory" in paths:
+            continue
         raw = data.get(group)
+        if group == "prompts" and isinstance(raw, dict):
+            raw = dict(raw)
+            activity_path = raw.pop("activities", None)
+            if activity_path is not None:
+                paths["activities"] = local_path(base, activity_path)
         if not isinstance(raw, dict) or set(raw) != set(keys):
             raise ValueError(f"{group} must contain exactly: {', '.join(keys)}")
         paths.update({key: local_path(base, raw[key]) for key in keys})

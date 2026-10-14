@@ -11,10 +11,12 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
+from .activities import load_activities, select_activity
 from .comfy import ComfyClient
 from .config import Config, auth_headers
 from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
 from .llm import LLMClient, compose_refinement
+from .references import reference_pools
 from .workflows import build_flux, build_qwen, load_workflow
 
 log = logging.getLogger(__name__)
@@ -28,9 +30,11 @@ def write_json(path: Path, value: dict) -> None:
 
 
 def validate_local(config: Config) -> dict:
+    activities = load_activities(config.activities) if config.activities else None
+    pools = reference_pools(config)
     for path in (
-        config.protagonist,
-        config.creature,
+        *pools[0],
+        *pools[1],
         config.planning,
         config.refinement,
         config.guide,
@@ -39,7 +43,7 @@ def validate_local(config: Config) -> dict:
     ):
         if not path.is_file():
             raise ValueError(f"Required file is missing: {path}")
-    for path in (config.protagonist, config.creature):
+    for path in (*pools[0], *pools[1]):
         decode_image(path)
     planning = config.planning.read_text(encoding="utf-8").strip()
     guide = config.guide.read_text(encoding="utf-8").strip()
@@ -79,6 +83,8 @@ def validate_local(config: Config) -> dict:
         ),
     )
     return {
+        "activities": activities,
+        "reference_pools": pools,
         "planning": planning,
         "guide": guide,
         "refinement": refinement,
@@ -111,11 +117,19 @@ def reserve_sticker(root: Path) -> tuple[int, str, Path]:
             index += 1
 
 
-def write_prompts(path: Path, name: str, raw: str, refined: str | None = None) -> None:
+def write_prompts(
+    path: Path, name: str, raw: str, refined: str | None = None, activity: dict | None = None
+) -> None:
     # Text fences keep literal reference tags visible in Markdown renderers.
     longest = max((len(match[0]) for match in re.finditer(r"`+", raw + (refined or ""))), default=0)
     fence = "`" * max(3, longest + 1)
     text = f"# {name}\n\n## Raw scene\n\n{fence}text\n{raw}\n{fence}\n"
+    if activity:
+        text += (
+            "\n## Selected activity\n\n"
+            + "\n".join(f"- {key}: {value}" for key, value in activity.items())
+            + "\n"
+        )
     if refined is not None:
         text += f"\n## Refined scene\n\n{fence}text\n{refined}\n{fence}\n"
     temporary = path.with_suffix(".md.tmp")
@@ -124,7 +138,12 @@ def write_prompts(path: Path, name: str, raw: str, refined: str | None = None) -
 
 
 def planning_prompt(
-    template: str, iteration: int, count: int, name: str, previous_scenes: list[str]
+    template: str,
+    iteration: int,
+    count: int,
+    name: str,
+    previous_scenes: list[str],
+    activity: dict | None = None,
 ) -> str:
     values = {
         "iteration": str(iteration),
@@ -132,11 +151,17 @@ def planning_prompt(
         "sticker_id": name,
         "previous_scenes": "\n".join(previous_scenes[-10:]) or "None yet.",
     }
-    return re.sub(
+    rendered = re.sub(
         r"\{\{(iteration|count|sticker_id|previous_scenes)\}\}",
         lambda match: values[match[1]],
         template,
     )
+    if activity:
+        rendered += "\n\nSelected scene brief (follow this activity; adapt details coherently):\n"
+        rendered += "\n".join(
+            f"{key}: {value}" for key, value in activity.items() if key not in ("id", "cycle")
+        )
+    return rendered
 
 
 def run(config: Config) -> list[Path]:
@@ -145,11 +170,13 @@ def run(config: Config) -> list[Path]:
     auth_headers(config.llm.api_key_env)
     comfy = ComfyClient(config.comfy)
     comfy.preflight(*local["graphs"])
-    llm = LLMClient(config.llm, (config.protagonist, config.creature))
-    references = None
+    uploaded_references: dict[Path, str] = {}
     final_paths = []
     previous_scenes = []
     for iteration in range(config.generation.count):
+        protagonist = secrets.choice(local["reference_pools"][0])
+        creature = secrets.choice(local["reference_pools"][1])
+        llm = LLMClient(config.llm, (protagonist, creature))
         index, name, metadata_path = reserve_sticker(config.output.directory)
         root = config.output.directory
         prompt_path = root / "prompts" / f"{name}.md"
@@ -177,38 +204,49 @@ def run(config: Config) -> list[Path]:
                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                 }
                 for role, path in (
-                    ("protagonist", config.protagonist),
-                    ("creature", config.creature),
+                    ("protagonist", protagonist),
+                    ("creature", creature),
                 )
             ],
         }
         try:
+            activity = (
+                select_activity(local["activities"], root / "metadata")
+                if local["activities"]
+                else None
+            )
+            if activity:
+                metadata["activity"] = activity
             write_json(metadata_path, metadata)
             log.info("[%s/%s] %s: planning scene", iteration + 1, config.generation.count, name)
             raw = llm.complete(
                 planning_prompt(
-                    local["planning"], iteration + 1, config.generation.count, name, previous_scenes
+                    local["planning"],
+                    iteration + 1,
+                    config.generation.count,
+                    name,
+                    previous_scenes,
+                    activity,
                 )
             )
-            write_prompts(prompt_path, name, raw)
+            write_prompts(prompt_path, name, raw, activity=activity)
             metadata["status"] = "refining"
             write_json(metadata_path, metadata)
             log.info("%s: refining scene with local Qwen guide", name)
             refined = llm.complete(
                 compose_refinement(local["refinement"], local["guide"], raw), refined=True
             )
-            write_prompts(prompt_path, name, raw, refined)
+            write_prompts(prompt_path, name, raw, refined, activity)
             if "<image1>" not in refined or "<image2>" not in refined:
                 raise ValueError(
                     "Refined prompt must name both <image1> and <image2> reference roles"
                 )
             metadata["status"] = "rendering_qwen"
             write_json(metadata_path, metadata)
-            if references is None:
-                references = (
-                    comfy.upload(config.protagonist, "protagonist"),
-                    comfy.upload(config.creature, "creature"),
-                )
+            for role, path in (("protagonist", protagonist), ("creature", creature)):
+                if path not in uploaded_references:
+                    uploaded_references[path] = comfy.upload(path, role)
+            references = (uploaded_references[protagonist], uploaded_references[creature])
             graph = build_qwen(
                 local["qwen"],
                 config.qwen.nodes,
