@@ -1,0 +1,69 @@
+# Copy to config.local.yaml for personal addresses/settings (ignored by Git).
+# Every relative path is resolved from the directory containing THIS YAML.
+llm:
+  base_url: http://127.0.0.1:1234/v1  # IP A; include /v1
+  model: your-loaded-model-id
+  api_key_env: null                 # e.g. LLM_API_KEY; null for an unauthenticated LAN server
+  timeout: 300
+  temperature: 0.9
+  refinement_temperature: 0.3
+  max_tokens: 4096
+  token_limit_field: max_tokens     # or max_completion_tokens if your server requires it
+  send_reference_images: false      # true only when LLM A accepts image_url vision input
+  extra_body: {}                   # e.g. chat_template_kwargs: {enable_thinking: false}
+
+comfy:
+  base_url: http://127.0.0.1:8188     # IP B
+  api_key_env: null
+  request_timeout: 60
+  job_timeout: 1800                 # includes time spent waiting in ComfyUI's queue
+  poll_interval: 2
+  get_retries: 3                    # GET only; submissions/uploads are never auto-retried
+  retry_delay: 1
+
+characters:
+  protagonist: assets/characters/protagonist.png  # Qwen socket 1
+  creature: assets/characters/creature.png        # Qwen socket 2
+
+prompts:
+  planning: prompts/plan_scene.md
+  refinement: prompts/refine_scene.md
+  guide: docs/Qwen_Image_2_1_Ultimate_Prompt_Guide.md
+
+generation:
+  count: 10
+  width: 1024                       # Qwen canvas, multiples of 32
+  height: 1024
+  seed: null                        # null = random; integer = seed + 2*sticker_index, then +1 for Flux
+
+output:
+  directory: output
+  width: 1536                       # final JPEG width M; may be any positive integer
+  height: 1536                      # final JPEG height N
+  jpeg_quality: 95
+  jpeg_subsampling: 0               # 0 = 4:4:4, useful for illustration edges; 2 = smaller files
+  jpeg_background: "#ffffff"        # JPEG cannot keep transparency
+  feathering: 24
+  preserve_center: true             # composite the intermediate back, feathering its edges
+
+workflows:
+  qwen:
+    path: workflows/qwen-edit.json
+    nodes:
+      protagonist: "514"
+      creature: "516"
+      encoder: "459:474"
+      latent: "459:456"
+      sampler: "459:458"
+      output: "461"
+    overrides: {}                   # e.g. "459:458": {steps: 30, cfg: 1.4}
+  flux:
+    path: workflows/flux-outpaint.json
+    nodes:
+      image: "47"
+      prompt: "23"
+      pad: "44"
+      sampler: "3"
+      conditioning: "38"
+      output: "9"
+    overrides: {}                   # e.g. "31": {unet_name: flux1-fill-dev.safetensors}
