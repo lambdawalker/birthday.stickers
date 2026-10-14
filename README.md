@@ -27,8 +27,9 @@ uv sync --locked
 Copy-Item config.yaml config.local.yaml
 ```
 
-Add `assets/characters/protagonist.png` and `assets/characters/creature.png`, or
-set their actual paths in the YAML. These images are not yet included in the repo.
+Add character references under `assets/characters/`, named `A000.jpg`, `A001.jpg`,
+`B000.jpg`, `B001.jpg`, etc. The prefix is an uppercase character ID from A–Z;
+the suffix is a numeric reference number. These images are not yet included in the repo.
 
 Edit `config.local.yaml`, especially:
 
@@ -79,7 +80,8 @@ single quotes, for example `'D:\Art\protagonist.png'`.
 |---|---|
 | `llm.base_url`, `llm.model` | IP A, port, OpenAI API prefix, and loaded model ID |
 | `comfy.base_url` | IP B and ComfyUI port |
-| `characters.protagonist`, `characters.creature` | Fixed reference order, first and second socket |
+| `characters.directory` | Folder containing all character reference variants |
+| `characters.protagonist`, `characters.creature` | Character IDs (default A and B), first and second socket |
 | `generation.count` | Number of new scenes for this invocation |
 | `generation.width`, `generation.height` | Qwen output canvas; multiples of 32 |
 | `output.width`, `output.height` | Exact final width M and height N in pixels |
@@ -96,6 +98,30 @@ The checked-in defaults preserve the supplied samplers: Qwen 21 steps / CFG 1.4;
 Flux 20 steps / CFG 1, with Flux guidance 30. They are workflow settings, not a
 claim of optimal model parameters. See [workflow details](workflows/README.md) for
 all node bindings and reference-resolution tuning.
+
+Character references are discovered automatically from the configured directory:
+
+```yaml
+characters:
+  directory: assets/characters
+  protagonist: A
+  creature: B
+```
+
+For each scene, the program independently chooses one matching file per character
+at random. For example, it can use `A003.jpg` with `B012.jpg`, then `A000.jpg` with
+`B002.jpg`. Repeats are allowed. Any uppercase ID A–Z can be assigned to either
+role; the protagonist always goes to Qwen socket 1, and the creature to socket 2.
+Reference numbers may have any number of digits; both `.jpg` and `.JPG` are accepted.
+Other filenames and subdirectories are ignored. Missing or invalid references
+are reported before generation starts.
+
+The selected pair stays fixed throughout that scene's planning, refinement, and
+Qwen rendering, including optional LLM vision input. Metadata records the actual
+selected paths and hashes. References already uploaded during the batch are reused
+when selected again. Reference selection is random independently of the configured
+diffusion seed. Existing configurations specifying explicit `protagonist` and
+`creature` file paths without `directory` continue to use those fixed files.
 
 An LLM with image input support can inspect both references during planning and
 refinement. With the default `send_reference_images: false`, it receives role

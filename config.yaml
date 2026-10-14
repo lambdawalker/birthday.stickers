@@ -22,8 +22,9 @@ comfy:
   retry_delay: 1
 
 characters:
-  protagonist: assets/characters/protagonist.png  # Qwen socket 1
-  creature: assets/characters/creature.png        # Qwen socket 2
+  directory: assets/characters
+  protagonist: A  # Random A<number>.jpg reference; Qwen socket 1
+  creature: B     # Random B<number>.jpg reference; Qwen socket 2
 
 prompts:
   planning: prompts/plan_scene.md

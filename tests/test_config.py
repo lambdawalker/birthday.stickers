@@ -21,11 +21,16 @@ class ConfigTests(unittest.TestCase):
 
     def test_paths_are_relative_to_yaml(self):
         config = load_config(ROOT / "config.yaml")
-        self.assertEqual(config.protagonist, ROOT / "assets/characters/protagonist.png")
+        self.assertEqual(config.character_directory, ROOT / "assets/characters")
+        self.assertEqual(config.protagonist, "A")
+        self.assertEqual(config.creature, "B")
         self.assertEqual(config.output.directory, ROOT / "output")
 
     def test_invalid_configs_fail_before_network_requests(self):
         cases = [
+            (lambda d: d["characters"].update(protagonist="AA"), "A-Z"),
+            (lambda d: d["characters"].update(creature="a"), "A-Z"),
+            (lambda d: d["characters"].update(creature="A"), "different character IDs"),
             (lambda d: d["generation"].update(count=0), "count"),
             (lambda d: d["generation"].update(count=True), "count"),
             (lambda d: d["generation"].update(width=1001), "multiple of 32"),
