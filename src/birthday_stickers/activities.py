@@ -75,9 +75,9 @@ def select_activity(catalog: list[dict], metadata_directory: Path) -> dict:
         "mood": RNG.choice(["playful", "curious", "cozy", "quietly triumphant", "affectionate"]),
         "composition": RNG.choice(
             [
-                "full-body interaction at the child's eye level",
+                "full-body action at the subject's eye level",
                 "full-body action in a gentle three-quarter view",
-                "a wider environmental scene with both characters clearly readable",
+                "a wider environmental scene with the subject clearly readable",
             ]
         ),
         "palette": RNG.choice(

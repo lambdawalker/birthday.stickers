@@ -136,3 +136,18 @@ def build_flux(
     mapped_inputs(graph, nodes, "sampler", "KSampler")["seed"] = seed
     core_saver(graph, nodes, prefix)
     return reachable_graph(graph, str(nodes["output"]))
+
+
+def build_text_qwen(template, nodes, overrides, prompt, width, height, seed, prefix):
+    """Use local LLM text, pruning the supplied workflow's internal rewrite branch."""
+    graph = copy.deepcopy(template)
+    apply_overrides(graph, overrides)
+    mapped_inputs(graph, nodes, "encoder", "TextEncodeQwenImage21")["prompt"] = prompt
+    mapped_inputs(graph, nodes, "latent", "EmptyLatentImage").update(
+        width=width, height=height, batch_size=1
+    )
+    mapped_inputs(graph, nodes, "sampler", "KSampler").update(
+        seed=seed, latent_image=[str(nodes["latent"]), 0]
+    )
+    core_saver(graph, nodes, prefix)
+    return reachable_graph(graph, str(nodes["output"]))

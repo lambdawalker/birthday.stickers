@@ -1,0 +1,49 @@
+# Baby dragon text-to-image. Canvas dimensions are also final JPEG dimensions.
+llm:
+  base_url: http://127.0.0.1:1234/v1
+  model: google/gemma-4-e2b
+  api_key_env: null
+  timeout: 300
+  temperature: 0.9
+  refinement_temperature: 0.3
+  max_tokens: 4096
+  token_limit_field: max_tokens
+  send_reference_images: false
+  extra_body: {}
+comfy:
+  base_url: http://192.168.1.186:8188/
+  api_key_env: null
+  request_timeout: 60
+  job_timeout: 9999999
+  poll_interval: 2
+  get_retries: 3
+  retry_delay: 1
+prompts:
+  planning: prompts/plan_dragon.md
+  refinement: prompts/refine_dragon.md
+  guide: docs/qwen-text-guide.md
+  activities: prompts/dragon_activities.json
+generation:
+  count: 10
+  width: 768
+  height: 1024
+  seed: null
+  type: baby_dragon
+output:
+  directory: output
+  width: 768
+  height: 1024
+  jpeg_quality: 95
+  jpeg_subsampling: 0
+  jpeg_background: '#ffffff'
+  feathering: 24
+  preserve_center: true
+workflows:
+  qwen:
+    path: workflows/qwen-text.json
+    nodes:
+      encoder: 459:452
+      latent: 459:456
+      sampler: 459:458
+      output: '461'
+    overrides: {}

@@ -119,11 +119,11 @@ attempt entry. Failed and paused attempts are labeled accordingly. The per-stick
 seconds, outcome, and recording timestamp. These are client-observed durations,
 not GPU-only inference measurements.
 
-Each session stores `session.json`, a `config.yaml` snapshot, copies of the prompts,
-workflows and character references under `inputs/`, plus `intermediate/`, `final/`,
+Each session stores `session.json`, a `config.yaml` snapshot, copies of the prompts
+and workflows under `inputs/`, plus `intermediate/`, `final/`,
 `prompts/` and `metadata/`. Changing the main YAML affects new sessions only. To
 change a server address for an existing session, edit its saved `config.yaml`
-while stopped. Keep dimensions, workflows and references unchanged for partial
+while stopped. Keep dimensions and workflows unchanged for partial
 scenes. API credentials still come from the configured environment variables.
 
 Only one process can run a session at a time. Process locks release automatically
@@ -362,3 +362,45 @@ Catalog IDs must be unique and stable. Each record needs `id`, `category`,
 `activity`, and a nonempty `settings` list. Editing the catalog recalculates history
 against the currently available IDs; adding activities makes them available in the
 current cycle. Reference images remain local and are not embedded in the catalog.
+
+
+### Generation types
+
+- `viking_duo` (default `config.yaml`): baby girl + baby dragon identity references,
+  Qwen Edit followed by Flux outpainting.
+- `baby_dragon` (`config.dragon.yaml`): one baby dragon, 300 dedicated activities,
+  local LLM planning/refinement, and the supplied Qwen Image 2.1 text-to-image flow.
+  No references or Flux model are needed. The attached flow has no image sockets;
+  edit `prompts/plan_dragon.md` to customize the dragon's appearance.
+
+Choose a type by launching its configuration (copy it to a personal YAML first
+if you want to customize server addresses):
+
+```sh
+uv run birthday-stickers --config config.dragon.yaml
+uv run birthday-stickers --config config.yaml
+```
+
+Both types share the session picker, pause/stop/resume, parallel prompt and image
+workers, per-step timings, Markdown prompts, and `stiker-0000.jpg` naming.
+The session records its type; resuming uses its saved configuration. Both configs
+use the same output directory, so either launcher lists all incomplete sessions.
+For `baby_dragon`, `generation.width` and `generation.height` set both the canvas
+and final JPEG size; `output.width/height` are ignored because there is no outpaint.
+The workflow's internal text generator, resolution selector and seed node are
+pruned in favor of the local prompt, configured canvas and durable scene seed.
+
+### Live character references
+
+New sessions no longer copy character images. They retain the absolute source
+folder (or explicit legacy image paths). Before each new duo scene, the program
+rescans `[A-Z][0-9]+.jpg`, including `A0.jpg`, `A100.jpg`, `B1000.jpg` and
+`C123456.jpg`; there is no digit limit. Set the two role labels in YAML, e.g.
+`protagonist: A` and `creature: C`. New files become eligible immediately for
+unplanned scenes, including after a resume. Already-planned scenes keep their
+selected paths and hashes: do not delete or overwrite those files until their
+images finish. You can change references freely between sessions.
+
+Older sessions retain their original snapshot paths for safe resumption; their
+existing backups are not deleted or automatically migrated. New sessions do not
+create these backups. Prompt/activity/workflow snapshots are still retained.

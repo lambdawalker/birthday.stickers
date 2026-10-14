@@ -115,7 +115,7 @@ class StickerApp(App):
                 classes="muted",
             )
             with Vertical(classes="card"):
-                yield Label("NEW SESSION", classes="title")
+                yield Label(f"NEW SESSION · {self.config.generation.type}", classes="title")
                 with Horizontal(classes="fields"):
                     with Vertical(classes="field"):
                         yield Label("Session name · automatic")
@@ -126,7 +126,8 @@ class StickerApp(App):
                 with Horizontal(classes="buttons"):
                     yield Button("New session", variant="primary", id="new")
                 yield Static(
-                    "Your settings and references are saved with each session.", classes="muted"
+                    "Prompts/settings are saved; new scenes use live character references.",
+                    classes="muted",
                 )
             yield Label("UNFINISHED SESSIONS", classes="title")
             yield DataTable(id="sessions", cursor_type="row")
@@ -171,7 +172,7 @@ class StickerApp(App):
 
     def on_mount(self) -> None:
         self.query_one("#sessions", DataTable).add_columns(
-            "Session", "Progress", "Status", "Last step"
+            "Session", "Type", "Progress", "Status", "Last step"
         )
         self.refresh_sessions()
         self.query_one("#dashboard").set_class(self.size.height < 32, "compact")
@@ -199,6 +200,7 @@ class StickerApp(App):
                 status = "Running / interrupted"
             table.add_row(
                 item["name"],
+                item.get("generation_type", "viking_duo"),
                 f"{item.get('prompts_completed', item.get('completed', 0))} prompts / "
                 f"{item.get('completed', 0)} images / {item['count']}",
                 status,
@@ -271,7 +273,9 @@ class StickerApp(App):
     def on_session_update(self, event: SessionUpdate) -> None:
         self.active = event.value
         item = self.active
-        self.query_one("#session-title", Static).update(Text(item["name"]))
+        self.query_one("#session-title", Static).update(
+            Text(item["name"] + " · " + item.get("generation_type", "viking_duo"))
+        )
         status = item["status"].upper()
         if self.busy and self.control.requested.is_set():
             status = "SAVING BOTH WORKERS"

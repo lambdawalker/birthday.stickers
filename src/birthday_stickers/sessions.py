@@ -99,7 +99,7 @@ class SessionStore:
     def create(self, config: Config, count: int | None = None) -> dict:
         target = config.generation.count if count is None else count
         integer(target, "Sticker count", 1)
-        local = validate_local(config)
+        validate_local(config)
         self.root.mkdir(parents=True, exist_ok=True)
         while True:
             name = self.next_name()
@@ -109,7 +109,7 @@ class SessionStore:
                 break
             except FileExistsError:
                 continue
-        # Copy inputs so editing the original YAML/prompts/references cannot alter a resumed scene.
+        # Snapshot small planning inputs; character images remain in their live source folder.
         try:
             snapshots = directory / "inputs"
             snapshots.mkdir()
@@ -126,6 +126,8 @@ class SessionStore:
                     prompts[key] = str(destination.relative_to(directory))
             workflows = {}
             for key, workflow in (("qwen", config.qwen), ("flux", config.flux)):
+                if workflow is None:
+                    continue
                 destination = snapshots / f"{key}.json"
                 shutil.copyfile(workflow.path, destination)
                 workflows[key] = {
@@ -134,21 +136,15 @@ class SessionStore:
                 }
             characters = {}
             if config.character_directory is not None:
-                images = snapshots / "characters"
-                images.mkdir()
-                for path in (*local["reference_pools"][0], *local["reference_pools"][1]):
-                    shutil.copyfile(path, images / path.name)
                 characters = {
-                    "directory": "inputs/characters",
+                    "directory": str(config.character_directory),
                     "protagonist": config.protagonist,
                     "creature": config.creature,
                 }
-            else:
-                for role in ("protagonist", "creature"):
-                    source = getattr(config, role)
-                    destination = snapshots / (role + source.suffix)
-                    shutil.copyfile(source, destination)
-                    characters[role] = str(destination.relative_to(directory))
+            elif config.generation.type == "viking_duo":
+                characters = {
+                    role: str(getattr(config, role)) for role in ("protagonist", "creature")
+                }
             data = {
                 "llm": asdict(config.llm),
                 "comfy": asdict(config.comfy),
@@ -161,6 +157,7 @@ class SessionStore:
             (directory / "config.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
             manifest = {
                 "version": 1,
+                "generation_type": config.generation.type,
                 "name": name,
                 "count": target,
                 "completed": 0,

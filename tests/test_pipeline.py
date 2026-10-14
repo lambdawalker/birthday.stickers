@@ -60,6 +60,8 @@ class FakeServices:
                         else "Create a castle scene with the protagonist from <image1> "
                         "and the creature from <image2>, preserving their identities."
                     )
+                    if "This is text-to-image" in service.chats[-1]["messages"][0]["content"]:
+                        text = "One baby dragon curls up beside a pastel Viking longhouse."
                     if service.bad_refinement and len(service.chats) % 2 == 0:
                         text = (
                             "Create a castle scene with both characters but missing reference tags."

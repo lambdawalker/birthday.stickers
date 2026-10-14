@@ -37,6 +37,7 @@ class ComfyConfig:
 
 @dataclass
 class GenerationConfig:
+    type: str = "viking_duo"
     count: int = 10
     width: int = 1024
     height: int = 1024
@@ -75,7 +76,7 @@ class Config:
     refinement: Path
     guide: Path
     qwen: WorkflowConfig
-    flux: WorkflowConfig
+    flux: WorkflowConfig | None
     character_directory: Path | None = None
     activities: Path | None = None
 
@@ -156,6 +157,11 @@ def load_config(path: Path) -> Config:
     comfy = section(data, "comfy", ComfyConfig)
     generation = section(data, "generation", GenerationConfig)
     output = section(data, "output", OutputConfig)
+    if generation.type not in ("viking_duo", "baby_dragon"):
+        raise ValueError("generation.type must be viking_duo or baby_dragon")
+    dragon = generation.type == "baby_dragon"
+    if dragon:
+        output.width, output.height = generation.width, generation.height
     for name, item in (("llm", llm), ("comfy", comfy)):
         validate_url(item.base_url, name + ".base_url")
         if item.api_key_env is not None and (
@@ -202,7 +208,9 @@ def load_config(path: Path) -> Config:
     output.directory = local_path(base, output.directory)
     paths = {}
     characters = data.get("characters")
-    if isinstance(characters, dict) and "directory" in characters:
+    if dragon:
+        paths.update(protagonist="", creature="", flux=None)
+    if not dragon and isinstance(characters, dict) and "directory" in characters:
         if set(characters) != {"directory", "protagonist", "creature"}:
             raise ValueError("characters must contain directory, protagonist, and creature")
         paths["character_directory"] = local_path(base, characters["directory"])
@@ -217,7 +225,7 @@ def load_config(path: Path) -> Config:
         ("characters", ("protagonist", "creature")),
         ("prompts", ("planning", "refinement", "guide")),
     ):
-        if group == "characters" and "character_directory" in paths:
+        if group == "characters" and (dragon or "character_directory" in paths):
             continue
         raw = data.get(group)
         if group == "prompts" and isinstance(raw, dict):
@@ -229,12 +237,20 @@ def load_config(path: Path) -> Config:
             raise ValueError(f"{group} must contain exactly: {', '.join(keys)}")
         paths.update({key: local_path(base, raw[key]) for key in keys})
     workflows = data.get("workflows")
-    if not isinstance(workflows, dict) or set(workflows) != {"qwen", "flux"}:
-        raise ValueError("workflows must contain qwen and flux")
+    if not isinstance(workflows, dict) or set(workflows) != (
+        {"qwen"} if dragon else {"qwen", "flux"}
+    ):
+        raise ValueError(
+            "workflows must contain only qwen" if dragon else "workflows must contain qwen and flux"
+        )
     for key, roles in (
         ("qwen", {"protagonist", "creature", "encoder", "latent", "sampler", "output"}),
         ("flux", {"image", "prompt", "pad", "sampler", "conditioning", "output"}),
     ):
+        if dragon and key == "flux":
+            continue
+        if dragon:
+            roles = roles - {"protagonist", "creature"}
         item = section(workflows, key, WorkflowConfig)
         item.path = local_path(base, item.path)
         if not isinstance(item.nodes, dict) or set(item.nodes) != roles:

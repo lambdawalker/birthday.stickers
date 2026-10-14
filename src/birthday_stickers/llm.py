@@ -63,7 +63,10 @@ def response_text(response: dict, refined: bool) -> str:
 
 
 class LLMClient:
-    def __init__(self, config: LLMConfig, references: tuple[Path, Path]):
+    def __init__(
+        self, config: LLMConfig, references: tuple[Path, ...], generation_type="viking_duo"
+    ):
+        self.generation_type = generation_type
         self.config = config
         self.http = HTTPClient(config.base_url, config.timeout, auth_headers(config.api_key_env))
         self.reference_parts = []
@@ -97,6 +100,14 @@ class LLMClient:
             "Describe the environment and how it continues beyond the central characters. "
             "Preserve any requested visible text exactly in its original language."
         )
+        if self.generation_type == "baby_dragon":
+            system = (
+                "Describe one baby dragon as the only character, following the local brief. "
+                "This is text-to-image generation with no reference images. "
+                "Return only one English visual scene paragraph, without image tags. "
+                "Preserve the selected activity, character description, palette and style. "
+                "Output dimensions are controlled by the application."
+            )
         user_content = (
             [{"type": "text", "text": prompt}, *self.reference_parts]
             if self.reference_parts

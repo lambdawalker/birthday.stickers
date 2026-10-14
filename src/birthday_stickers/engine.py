@@ -28,7 +28,8 @@ from .pipeline import (
     write_json,
     write_prompts,
 )
-from .workflows import build_flux, build_qwen
+from .references import reference_pools
+from .workflows import build_flux, build_qwen, build_text_qwen
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class Pipeline:
         self.abort = Event()
         self.report_lock = RLock()
         self.counts = {"prompts": 0, "images": 0}
-        self.uploaded: dict[Path, str] = {}
+        self.uploaded: dict[tuple[Path, str], str] = {}
 
     def check(self):
         self.control.check()
@@ -56,8 +57,12 @@ class Pipeline:
             self.worker_progress(lane, self.counts[lane], name, stage)
 
     def prepare_references(self, metadata, index):
-        protagonist = secrets.choice(self.local["reference_pools"][0])
-        creature = secrets.choice(self.local["reference_pools"][1])
+        pools = reference_pools(self.config)
+        selected = [
+            (role, secrets.choice(pool))
+            for role, pool in zip(("protagonist", "creature"), pools, strict=True)
+            if pool
+        ]
         seed = (
             secrets.randbelow(SEED_MODULUS)
             if self.config.generation.seed is None
@@ -66,6 +71,7 @@ class Pipeline:
         metadata.update(
             created_at=datetime.now(UTC).isoformat(),
             llm_model=self.config.llm.model,
+            generation_type=self.config.generation.type,
             qwen_seed=seed,
             flux_seed=(seed + 1) % SEED_MODULUS,
             generation_size=[self.config.generation.width, self.config.generation.height],
@@ -76,7 +82,7 @@ class Pipeline:
                     "path": str(path),
                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                 }
-                for role, path in (("protagonist", protagonist), ("creature", creature))
+                for role, path in selected
             ],
         )
         if self.local["activities"]:
@@ -174,7 +180,7 @@ class Scene:
             self.pipeline.prepare_references(self.meta, int(self.name.split("-")[-1]))
             self.save()
         references = self.references()
-        llm = LLMClient(self.config.llm, references)
+        llm = LLMClient(self.config.llm, references, self.config.generation.type)
         activity = self.meta.get("activity")
         if "raw_scene" not in self.meta:
             with self.step("planning", "Plan scene"):
@@ -196,7 +202,9 @@ class Scene:
                     compose_refinement(local["refinement"], local["guide"], raw), refined=True
                 )
                 write_prompts(self.prompt_path, self.name, raw, refined, activity)
-                if "<image1>" not in refined or "<image2>" not in refined:
+                if self.config.generation.type == "viking_duo" and (
+                    "<image1>" not in refined or "<image2>" not in refined
+                ):
                     raise ValueError(
                         "Refined prompt must name both <image1> and <image2> reference roles"
                     )
@@ -221,8 +229,44 @@ class Scene:
         self.meta.pop(pending)
         self.save()
 
+    def render_dragon(self):
+        config = self.config
+        with self.step("rendering_qwen", "Qwen render and download"):
+            if "qwen_prompt_id" not in self.meta:
+                graph = build_text_qwen(
+                    self.pipeline.local["qwen"],
+                    config.qwen.nodes,
+                    config.qwen.overrides,
+                    self.meta["refined_scene"],
+                    config.generation.width,
+                    config.generation.height,
+                    self.meta["qwen_seed"],
+                    self.name + "-qwen",
+                )
+                self.submit("qwen", graph)
+            data = self.pipeline.comfy.wait_image(
+                self.meta["qwen_prompt_id"], config.qwen.nodes["output"], self.pipeline.check
+            )
+        with self.step("save_final", "Save final JPEG"):
+            image = decode_image(data)
+            if image.size != (config.generation.width, config.generation.height):
+                raise ValueError("Qwen returned an unexpected image size")
+            save_jpeg(
+                image,
+                self.final,
+                config.output.jpeg_quality,
+                config.output.jpeg_subsampling,
+                config.output.jpeg_background,
+            )
+        self.meta.update(status="complete", finished_at=datetime.now(UTC).isoformat())
+        self.save()
+        self.pipeline.report("images", self.name, "complete", increment=1)
+
     def render(self):
         config, local, comfy = self.config, self.pipeline.local, self.pipeline.comfy
+        if config.generation.type == "baby_dragon":
+            self.render_dragon()
+            return
         references = self.references()
         raw, refined = self.meta["raw_scene"], self.meta["refined_scene"]
         if not self.meta.get("intermediate_saved"):
@@ -230,8 +274,9 @@ class Scene:
                 with self.step("upload_references", "Upload character references"):
                     for role, path in zip(("protagonist", "creature"), references, strict=True):
                         self.pipeline.check()
-                        if path not in self.pipeline.uploaded:
-                            self.pipeline.uploaded[path] = comfy.upload(path, role)
+                        key = (path, hashlib.sha256(path.read_bytes()).hexdigest())
+                        if key not in self.pipeline.uploaded:
+                            self.pipeline.uploaded[key] = comfy.upload(path, role)
             with self.step("rendering_qwen", "Qwen render and download"):
                 if "qwen_prompt_id" not in self.meta:
                     graph = build_qwen(
@@ -239,7 +284,10 @@ class Scene:
                         config.qwen.nodes,
                         config.qwen.overrides,
                         refined,
-                        *(self.pipeline.uploaded[p] for p in references),
+                        *(
+                            self.pipeline.uploaded[(p, ref["sha256"])]
+                            for p, ref in zip(references, self.meta["references"], strict=True)
+                        ),
                         config.generation.width,
                         config.generation.height,
                         self.meta["qwen_seed"],

@@ -13,7 +13,7 @@ from .control import RunControl
 from .images import decode_image, plan_padding
 from .llm import compose_refinement
 from .references import reference_pools
-from .workflows import build_flux, build_qwen, load_workflow
+from .workflows import build_flux, build_qwen, build_text_qwen, load_workflow
 
 log = logging.getLogger(__name__)
 SEED_MODULUS = 2**63
@@ -35,7 +35,7 @@ def validate_local(config: Config) -> dict:
         config.refinement,
         config.guide,
         config.qwen.path,
-        config.flux.path,
+        *([config.flux.path] if config.flux else []),
     ):
         if not path.is_file():
             raise ValueError(f"Required file is missing: {path}")
@@ -48,6 +48,28 @@ def validate_local(config: Config) -> dict:
         raise ValueError("Planning prompt and Qwen guide must not be empty")
     compose_refinement(refinement, guide, "validation scene")
     qwen = load_workflow(config.qwen.path)
+    if config.generation.type == "baby_dragon":
+        return {
+            "activities": activities,
+            "reference_pools": pools,
+            "planning": planning,
+            "guide": guide,
+            "refinement": refinement,
+            "qwen": qwen,
+            "flux": None,
+            "graphs": (
+                build_text_qwen(
+                    qwen,
+                    config.qwen.nodes,
+                    config.qwen.overrides,
+                    "validation",
+                    config.generation.width,
+                    config.generation.height,
+                    0,
+                    "validation",
+                ),
+            ),
+        }
     flux = load_workflow(config.flux.path)
     padding = plan_padding(
         (config.generation.width, config.generation.height),

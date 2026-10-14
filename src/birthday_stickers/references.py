@@ -20,6 +20,8 @@ def discover_characters(directory: Path) -> dict[str, list[Path]]:
 
 
 def reference_pools(config: Config) -> tuple[list[Path], list[Path]]:
+    if config.generation.type == "baby_dragon":
+        return [], []
     if config.character_directory is None:
         # Keep existing configs with explicit image paths working.
         return [Path(config.protagonist)], [Path(config.creature)]
