@@ -85,7 +85,9 @@ date plus a daily counter, for example `2026-10-14-001` and `2026-10-14-002`.
 
 The active dashboard has **LLM / Prompts**, **ComfyUI / Images**, and
 **ComfyUI / Outpainting** panels.
-Each shows its current sticker and step, a progress bar, and its own timed log.
+Each shows its active server URL, current sticker and step, a progress bar, and its own timed log.
+URLs come from the active session snapshot; outpainting shows the effective
+endpoint, including fallback to the generation server.
 The prompt bar counts scenes with both raw and refined prompts saved; the image
 bar counts generated images saved. The outpainting bar counts completed final
 images when enabled. The summary shows final output count and effective GPU mode.

@@ -109,6 +109,11 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                     SessionUpdate(
                         {
                             **item,
+                            "service_urls": {
+                                "prompts": "http://llm:1234/v1",
+                                "images": "http://generation:8188",
+                                "outpainting": "http://outpaint:8188",
+                            },
                             "prompts_completed": 4,
                             "images_completed": 3,
                             "outpainting_completed": 1,
@@ -121,6 +126,12 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                     )
                 )
                 await pilot.pause()
+                for lane, url in (
+                    ("prompts", "http://llm:1234/v1"),
+                    ("images", "http://generation:8188"),
+                    ("outpainting", "http://outpaint:8188"),
+                ):
+                    self.assertEqual(app.query_one(f"#{lane}-url", Static).tooltip, url)
                 self.assertEqual(app.query_one("#prompts-progress", ProgressBar).progress, 4)
                 self.assertEqual(app.query_one("#images-progress", ProgressBar).progress, 3)
                 self.assertEqual(app.query_one("#outpainting-progress", ProgressBar).progress, 1)

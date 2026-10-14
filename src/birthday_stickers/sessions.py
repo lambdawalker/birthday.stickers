@@ -17,6 +17,14 @@ from .control import RunControl, RunHalted
 from .pipeline import prepare_records, run, validate_local, write_json
 
 
+def service_urls(config: Config) -> dict[str, str]:
+    return {
+        "prompts": config.llm.base_url,
+        "images": config.comfy.base_url,
+        "outpainting": config.outpainting_comfy.base_url,
+    }
+
+
 def now() -> str:
     return datetime.now().astimezone().isoformat()
 
@@ -168,6 +176,7 @@ class SessionStore:
             (directory / "config.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
             manifest = {
                 "version": 1,
+                "service_urls": service_urls(config),
                 "generation_type": config.generation.type,
                 "outpainting": config.generation.outpainting,
                 "name": name,
@@ -278,6 +287,7 @@ class SessionStore:
                 )
                 update(
                     status="running",
+                    service_urls=service_urls(config),
                     outpainting=config.generation.outpainting,
                     completed=completed,
                     prompts_completed=prompts_completed,

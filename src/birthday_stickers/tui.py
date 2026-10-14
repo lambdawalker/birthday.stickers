@@ -24,7 +24,7 @@ from textual.widgets import (
 from .config import Config, load_config
 from .control import RunControl
 from .flows import get_flow
-from .sessions import SessionStore
+from .sessions import SessionStore, service_urls
 
 
 class SessionUpdate(Message):
@@ -87,6 +87,7 @@ class StickerApp(App):
     #workers { height: 1fr; min-height: 16; }
     .worker { width: 1fr; height: 100%; border: round #565277; padding: 0 1; }
     #prompt-worker, #image-worker { margin-right: 1; }
+    .worker-url { height: auto; min-height: 1; color: #acb4ca; }
     .worker-stage { height: 3; color: #a9d9ed; }
     .worker-count { height: 1; color: #acb4ca; }
     ProgressBar { width: 100%; margin: 1 0; }
@@ -192,6 +193,7 @@ class StickerApp(App):
                 ):
                     with Vertical(id=f"{panel}-worker", classes="worker"):
                         yield Label(title, classes="title")
+                        yield Static("Loading endpoint…", id=f"{lane}-url", classes="worker-url")
                         yield Static("Waiting to start", id=f"{lane}-stage", classes="worker-stage")
                         yield ProgressBar(total=100, show_eta=False, id=f"{lane}-progress")
                         yield Static("", id=f"{lane}-count", classes="worker-count")
@@ -338,6 +340,7 @@ class StickerApp(App):
         for lane in ("prompts", "images", "outpainting"):
             self.query_one(f"#{lane}-progress", ProgressBar).update(total=count or 100, progress=0)
             self.query_one(f"#{lane}-stage", Static).update("Waiting to start")
+            self.query_one(f"#{lane}-url", Static).update("Loading endpoint…")
             self.query_one(f"#{lane}-count", Static).update("")
         self.execute_session(name, count)
 
@@ -347,7 +350,10 @@ class StickerApp(App):
             if name is None:
                 item = self.store.create(self.config, count)
                 name = item["name"]
-            self.post_message(SessionUpdate(self.store.read(name)))
+            item = self.store.read(name)
+            saved_config = load_config(self.store.directory(name) / "config.yaml")
+            item["service_urls"] = service_urls(saved_config)
+            self.post_message(SessionUpdate(item))
             item = self.store.execute(
                 name, self.control, lambda value: self.post_message(SessionUpdate(value))
             )
@@ -359,6 +365,13 @@ class StickerApp(App):
     def on_session_update(self, event: SessionUpdate) -> None:
         self.active = event.value
         item = self.active
+        for lane in ("prompts", "images", "outpainting"):
+            url = item.get("service_urls", {}).get(lane, "Loading endpoint…")
+            if lane == "outpainting" and not item.get("outpainting", True):
+                url += " (disabled)"
+            widget = self.query_one(f"#{lane}-url", Static)
+            widget.update(Text(url))
+            widget.tooltip = url
         self.query_one("#session-title", Static).update(
             Text(item["name"] + " · " + item.get("generation_type", "multi_character_reference"))
         )
