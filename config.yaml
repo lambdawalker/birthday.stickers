@@ -8,7 +8,7 @@ llm:
   timeout: 300
   temperature: 0.9
   refinement_temperature: 0.3
-  max_tokens: 4096
+  max_tokens: 16384
   token_limit_field: max_tokens
   send_reference_images: false
   extra_body: {}
