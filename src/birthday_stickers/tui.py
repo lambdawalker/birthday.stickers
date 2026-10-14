@@ -1,5 +1,6 @@
 """Textual session picker and responsive generation dashboard."""
 
+import copy
 import logging
 
 from rich.text import Text
@@ -19,7 +20,7 @@ from textual.widgets import (
     Static,
 )
 
-from .config import Config
+from .config import Config, load_config
 from .control import RunControl
 from .sessions import SessionStore
 
@@ -62,7 +63,7 @@ class StickerApp(App):
     Screen { background: #101522; color: #e7e4f2; }
     Header { background: #24243d; color: #e5c9fa; }
     Footer { background: #24243d; }
-    #home, #dashboard { padding: 1 3; }
+    #type-picker, #home, #dashboard { padding: 1 3; }
     .title { color: #e5c9fa; text-style: bold; margin-bottom: 0; }
     .muted { color: #acb4ca; margin-bottom: 0; }
     .card { border: round #565277; padding: 0 1; height: auto; margin-bottom: 1; }
@@ -87,7 +88,8 @@ class StickerApp(App):
     RichLog { height: 1fr; min-height: 5; background: #151c2c; }
     #output, #hint { color: #acb4ca; height: auto; }
     #error { color: #ffb4bc; height: auto; margin: 0; }
-    #dashboard { display: none; }
+    #home, #dashboard { display: none; }
+    #type-error { color: #ffb4bc; height: auto; }
     #dashboard.compact #hint, #dashboard.compact #output { display: none; }
     #dashboard.compact #stage { margin: 0; }
     #dashboard.compact ProgressBar { margin: 0; }
@@ -98,6 +100,7 @@ class StickerApp(App):
     def __init__(self, config: Config, store: SessionStore | None = None):
         super().__init__()
         self.config = config
+        self.launch_config = copy.deepcopy(config)
         self.store = store or SessionStore(config.output.directory / "sessions")
         self.control = RunControl()
         self.busy = False
@@ -108,14 +111,32 @@ class StickerApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
+        with VerticalScroll(id="type-picker"):
+            yield Static("What would you like to create?", classes="title")
+            yield Static(
+                "Choose a generation type to start or resume a collection.", classes="muted"
+            )
+            with Vertical(classes="card"):
+                yield Label("GIRL + DRAGON", classes="title")
+                yield Static("Two character references · Qwen Edit + outpainting", classes="muted")
+                yield Button("Girl + dragon", variant="primary", id="choose-duo")
+            with Vertical(classes="card"):
+                yield Label("BABY DRAGON ONLY", classes="title")
+                yield Static(
+                    "300 solo activities · text-to-image · no references needed", classes="muted"
+                )
+                yield Button("Baby dragon only", variant="success", id="choose-dragon")
+            yield Static("", id="type-error")
         with VerticalScroll(id="home"):
             yield Static("A new adventure, or right where you left off.", classes="title")
             yield Static(
-                "Create a collection of Viking scenes with your baby girl and dragon.",
+                "Create a collection, or resume any unfinished session.",
                 classes="muted",
             )
             with Vertical(classes="card"):
-                yield Label(f"NEW SESSION · {self.config.generation.type}", classes="title")
+                yield Label(
+                    f"NEW SESSION · {self.config.generation.type}", classes="title", id="new-type"
+                )
                 with Horizontal(classes="fields"):
                     with Vertical(classes="field"):
                         yield Label("Session name · automatic")
@@ -125,6 +146,7 @@ class StickerApp(App):
                         yield Input(str(self.config.generation.count), type="integer", id="count")
                 with Horizontal(classes="buttons"):
                     yield Button("New session", variant="primary", id="new")
+                    yield Button("Change type", id="change-type")
                 yield Static(
                     "Prompts/settings are saved; new scenes use live character references.",
                     classes="muted",
@@ -218,7 +240,37 @@ class StickerApp(App):
         self.query_one("#empty", Static).update(Text(text))
         self.query_one("#new-name", Input).value = self.store.next_name()
 
+    def choose_type(self, generation_type: str) -> None:
+        if self.busy:
+            return
+        try:
+            if generation_type == self.launch_config.generation.type:
+                selected = copy.deepcopy(self.launch_config)
+            else:
+                stem = "config.dragon" if generation_type == "baby_dragon" else "config"
+                directory = self.launch_config.path.parent
+                local = directory / f"{stem}.local.yaml"
+                path = local if local.is_file() else directory / f"{stem}.yaml"
+                selected = load_config(path)
+                if selected.generation.type != generation_type:
+                    raise ValueError(f"{path} must use generation.type: {generation_type}")
+                # Connection settings and the session collection belong to the launcher.
+                selected.llm = copy.deepcopy(self.launch_config.llm)
+                selected.comfy = copy.deepcopy(self.launch_config.comfy)
+                selected.output.directory = self.launch_config.output.directory
+                selected.generation.count = self.launch_config.generation.count
+            self.config = selected
+        except (OSError, ValueError) as error:
+            self.query_one("#type-error", Static).update(Text(f"Unable to load this type: {error}"))
+            return
+        self.query_one("#new-type", Label).update(f"NEW SESSION · {generation_type}")
+        self.query_one("#count", Input).value = str(selected.generation.count)
+        self.query_one("#type-error", Static).update("")
+        self.show_home()
+        self.query_one("#new", Button).focus()
+
     def show_dashboard(self) -> None:
+        self.query_one("#type-picker").display = False
         self.query_one("#home").display = False
         self.query_one("#dashboard").display = True
         for lane in ("prompts", "images"):
@@ -234,6 +286,7 @@ class StickerApp(App):
         self.query_one("#back", Button).disabled = True
 
     def show_home(self) -> None:
+        self.query_one("#type-picker").display = False
         self.query_one("#dashboard").display = False
         self.query_one("#home").display = True
         self.refresh_sessions()
@@ -347,7 +400,13 @@ class StickerApp(App):
     @on(Button.Pressed)
     def pressed(self, event: Button.Pressed) -> None:
         action = event.button.id
-        if action == "new":
+        if action in ("choose-duo", "choose-dragon"):
+            self.choose_type("viking_duo" if action == "choose-duo" else "baby_dragon")
+        elif action == "change-type" and not self.busy:
+            self.query_one("#home").display = False
+            self.query_one("#type-picker").display = True
+            self.query_one("#choose-duo", Button).focus()
+        elif action == "new":
             try:
                 count = int(self.query_one("#count", Input).value)
                 if count < 1:

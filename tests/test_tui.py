@@ -31,6 +31,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
             with patch("birthday_stickers.sessions.run", fake_run):
                 async with app.run_test(size=(110, 40)) as pilot:
                     self.assertTrue(app.query_one("#new-name", Input).value.endswith("-001"))
+                    await pilot.click("#choose-duo")
                     await pilot.click("#new")
                     for _ in range(60):
                         if started.is_set():
@@ -78,6 +79,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
 
             with patch("birthday_stickers.sessions.run", fake_run):
                 async with app.run_test(size=(110, 40)) as pilot:
+                    await pilot.click("#choose-duo")
                     await pilot.click("#new")
                     for _ in range(60):
                         if started.is_set():
@@ -129,6 +131,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
             config = fixtures.PipelineTests().configuration(temp, service)
             app = StickerApp(config, SessionStore(Path(temp) / "sessions"))
             async with app.run_test(size=(110, 40)) as pilot:
+                await pilot.click("#choose-duo")
                 app.query_one("#count", Input).value = "0"
                 await pilot.click("#new")
                 self.assertFalse(app.busy)
@@ -143,3 +146,37 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                             break
                         await pilot.pause(0.05)
                 self.assertIn("Missing references", str(app.query_one("#error", Static).render()))
+
+    async def test_type_picker_switches_profiles_and_keeps_connection_settings(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            from birthday_stickers.config import load_config
+
+            config = fixtures.PipelineTests().configuration(temp, service)
+            dragon = load_config(fixtures.ROOT / "config.dragon.yaml")
+            app = StickerApp(config, SessionStore(Path(temp) / "sessions"))
+            async with app.run_test(size=(80, 24)) as pilot:
+                self.assertTrue(app.query_one("#type-picker").display)
+                self.assertFalse(app.query_one("#home").display)
+                with patch("birthday_stickers.tui.load_config", return_value=dragon):
+                    await pilot.click("#choose-dragon")
+                self.assertEqual(app.config.generation.type, "baby_dragon")
+                self.assertEqual(app.config.llm.base_url, config.llm.base_url)
+                self.assertEqual(app.config.comfy.base_url, config.comfy.base_url)
+                self.assertEqual(app.config.output.directory, config.output.directory)
+                self.assertTrue(app.query_one("#home").display)
+                await pilot.click("#change-type")
+                self.assertTrue(app.query_one("#type-picker").display)
+                await pilot.click("#choose-duo")
+                self.assertEqual(app.config.generation.type, "viking_duo")
+                self.assertEqual(app.config.protagonist, config.protagonist)
+
+    async def test_missing_profile_keeps_picker_open_with_error(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            app = StickerApp(config)
+            async with app.run_test(size=(80, 24)) as pilot:
+                await pilot.click("#choose-dragon")
+                self.assertTrue(app.query_one("#type-picker").display)
+                self.assertIn("Unable to load", str(app.query_one("#type-error", Static).render()))
+                await pilot.click("#choose-duo")
+                self.assertTrue(app.query_one("#home").display)

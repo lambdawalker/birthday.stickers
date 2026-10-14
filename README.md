@@ -373,12 +373,30 @@ current cycle. Reference images remain local and are not embedded in the catalog
   No references or Flux model are needed. The attached flow has no image sockets;
   edit `prompts/plan_dragon.md` to customize the dragon's appearance.
 
-Choose a type by launching its configuration (copy it to a personal YAML first
-if you want to customize server addresses):
+The interactive app opens with a generation-type picker. Choose **Girl + dragon**
+or **Baby dragon only**, then create a session or resume an unfinished one.
+Use **Change type** on the session screen to return to the picker.
+
+Start the app normally (including your personal server settings):
 
 ```sh
-uv run birthday-stickers --config config.dragon.yaml
-uv run birthday-stickers --config config.yaml
+uv run birthday-stickers --config config.local.yaml
+```
+
+The selected type loads its configuration from the launcher YAML's directory:
+`config.local.yaml` / `config.yaml` for the duo, and
+`config.dragon.local.yaml` / `config.dragon.yaml` for the solo dragon (local files
+take priority). The type matching the launcher uses that exact launch configuration.
+Switching types retains the launcher's LLM/Comfy connection settings, count, and
+output directory. Prompts, workflows, canvas size and JPEG settings come from the
+selected type. Keep both configuration files together. Existing sessions always
+resume with their own saved settings, regardless of the selected new-session type.
+
+For headless runs, choose the configuration explicitly:
+
+```sh
+uv run birthday-stickers --config config.dragon.yaml --headless
+uv run birthday-stickers --config config.yaml --headless
 ```
 
 Both types share the session picker, pause/stop/resume, parallel prompt and image
