@@ -13,6 +13,7 @@ import yaml
 from PIL import Image
 
 from birthday_stickers.config import load_config
+from birthday_stickers.flows import expand_config
 from birthday_stickers.pipeline import run
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -91,8 +92,12 @@ class FakeServices:
                 parts = urlsplit(self.path)
                 if parts.path == "/object_info":
                     graphs = [
-                        json.loads((ROOT / f"workflows/{name}.json").read_text(encoding="utf-8"))
-                        for name in ("qwen-edit", "flux-outpaint")
+                        json.loads(
+                            (ROOT / f"src/birthday_stickers/flows/{name}.json").read_text(
+                                encoding="utf-8"
+                            )
+                        )
+                        for name in ("multi_character_reference/qwen", "common/flux-outpaint")
                     ]
                     info = {
                         node["class_type"]: {"input": {"required": {}}}
@@ -187,8 +192,11 @@ class FakeServices:
 class PipelineTests(unittest.TestCase):
     def configuration(self, temp, services, count=1):
         directory = Path(temp)
-        data = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+        data = expand_config(
+            yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8")), ROOT
+        )
         data["prompts"].pop("activities", None)
+        data["prompts"].pop("outpainting", None)
         data["characters"] = {}  # Exercise legacy explicit-path configurations too.
         for key in ("protagonist", "creature"):
             path = directory / (key + ".png")
@@ -265,8 +273,12 @@ class PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
             config = self.configuration(temp, service)
             data = yaml.safe_load(config.path.read_text(encoding="utf-8"))
-            data["prompts"]["activities"] = str(ROOT / "prompts/activities.json")
-            data["prompts"]["planning"] = str(ROOT / "prompts/plan_scene.md")
+            data["prompts"]["activities"] = str(
+                ROOT / "src/birthday_stickers/flows/multi_character_reference/activities.json"
+            )
+            data["prompts"]["planning"] = str(
+                ROOT / "src/birthday_stickers/flows/multi_character_reference/planning.md"
+            )
             config.path.write_text(yaml.safe_dump(data), encoding="utf-8")
             config = load_config(config.path)
             service.fail_refine = True

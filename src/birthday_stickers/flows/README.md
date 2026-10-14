@@ -2,8 +2,9 @@
 
 These files are the user's original ComfyUI API exports, copied unchanged:
 
-- `qwen-edit.json` from `Qwen 2.1 Edit.json`
-- `flux-outpaint.json` from `Flux outpaint.json`
+- `multi_character_reference/qwen.json` from `Qwen 2.1 Edit.json`
+- `common/flux-outpaint.json` from `Flux outpaint.json`
+- `single_character_text/qwen.json` from `Qwen image 2.1.json`
 
 The CLI deep-copies and patches them in memory, then saves each submitted graph
 under `output/metadata`. Change model filenames/sampler inputs with YAML overrides.
@@ -15,7 +16,7 @@ under `output/metadata`. Change model filenames/sampler inputs with YAML overrid
 | Qwen | `459:456`, `459:458` | Configured empty latent size, batch 1, sampler seed |
 | Qwen | `461` | Core `SaveImage`, using the original decoded image connection |
 | Flux | `47` | Uploaded intermediate JPEG |
-| Flux | `23` | Original raw scene, not the refined Qwen instruction |
+| Flux | `23` | Original raw scene plus the resolved outpainting prompt |
 | Flux | `44` | Computed left/top/right/bottom padding and configured feathering |
 | Flux | `38` | Enable `noise_mask` to constrain inpainting |
 | Flux | `3`, `9` | Sampler seed and output filename prefix |

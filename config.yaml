@@ -1,92 +1,41 @@
-# Copy to config.local.yaml for personal addresses/settings (ignored by Git).
-# Every relative path is resolved from the directory containing THIS YAML.
+# Flow assets and defaults live in src/birthday_stickers/flows/.
+# Personal addresses/settings belong in a *.local.yaml file.
+flow: multi_character_reference
 llm:
-  base_url: http://127.0.0.1:1234/v1  # IP A; include /v1
-  model: "google/gemma-4-e2b"
-  api_key_env: null                 # e.g. LLM_API_KEY; null for an unauthenticated LAN server
+  base_url: http://127.0.0.1:1234/v1
+  model: google/gemma-4-e2b
+  api_key_env: null
   timeout: 300
   temperature: 0.9
   refinement_temperature: 0.3
   max_tokens: 4096
-  token_limit_field: max_tokens     # or max_completion_tokens if your server requires it
-  send_reference_images: false      # true only when LLM A accepts image_url vision input
-  extra_body: {}                   # e.g. chat_template_kwargs: {enable_thinking: false}
-
+  token_limit_field: max_tokens
+  send_reference_images: false
+  extra_body: {}
 comfy:
-  base_url: http://192.168.1.186:8188/     # IP B
+  base_url: http://192.168.1.186:8188/
   api_key_env: null
   request_timeout: 60
-  job_timeout: 9999999                 # includes time spent waiting in ComfyUI's queue
+  job_timeout: 9999999
   poll_interval: 2
-  get_retries: 3                    # GET only; submissions/uploads are never auto-retried
+  get_retries: 3
   retry_delay: 1
-
 characters:
   directory: assets/characters
-  protagonist: A  # Random A<number>.jpg reference; Qwen socket 1
-  creature: B     # Random B<number>.jpg reference; Qwen socket 2
-
-prompts:
-  activities: prompts/activities.json # Set null to disable activity sampling
-  planning: prompts/plan_scene.md
-  refinement: prompts/refine_scene.md
-  guide: docs/Qwen_Image_2_1_Ultimate_Prompt_Guide.md
-
+  protagonist: A
+  creature: B
 generation:
-  outpainting: true                # UI toggle default for new sessions
-  type: viking_duo                  # Two reference characters, Qwen Edit + Flux outpaint
+  outpainting: true
   count: 10
-  width: 1024                       # Qwen canvas, multiples of 32
+  width: 1024
   height: 1024
-  seed: null                        # null = random; integer = seed + 2*sticker_index, then +1 for Flux
-
+  seed: null
 output:
   directory: output
-  width: 1624                       # final JPEG width M; may be any positive integer
-  height: 1624                      # final JPEG height N
+  width: 1624
+  height: 1624
   jpeg_quality: 95
-  jpeg_subsampling: 0               # 0 = 4:4:4, useful for illustration edges; 2 = smaller files
-  jpeg_background: "#ffffff"        # JPEG cannot keep transparency
+  jpeg_subsampling: 0
+  jpeg_background: '#ffffff'
   feathering: 24
-  preserve_center: true             # composite the intermediate back, feathering its edges
-
-  # Appended to the original scene for Flux; empty string preserves raw-only behavior.
-  outpainting_prompt: >-
-    Continue the existing image as one uninterrupted scene through all four edges.
-    Match the source image's art style, palette, exposure, light direction, perspective,
-    and level of detail at the boundary. Extend the visible ground, plants, architecture,
-    water and sky where they meet the edges, with coherent shapes and readable texture.
-    Keep foreground and midground detail as clear as the adjacent source; use atmospheric
-    softness only for genuinely distant scenery. Maintain consistent illumination through
-    the outer margins. No vignette, foggy border, blurred frame, tunnel effect, dark halo,
-    radial blur, new depth-of-field blur, or extra characters. Preserve the existing scene
-    and character identity; only complete the surrounding environment.
-    The added area contains scenery and inanimate environmental details only.
-    Do not introduce any new people, babies, animals, dragons, creatures, faces,
-    silhouettes or background crowds. Do not duplicate, mirror or repeat the existing
-    characters or invent extra heads, limbs, wings or tails. If an existing character
-    crosses the source boundary, continue only that same character anatomically;
-    otherwise keep every character entirely within the original scene.
-
-workflows:
-  qwen:
-    path: workflows/qwen-edit.json
-    nodes:
-      protagonist: "514"
-      creature: "516"
-      encoder: "459:474"
-      latent: "459:456"
-      sampler: "459:458"
-      output: "461"
-    overrides: {}                   # e.g. "459:458": {steps: 30, cfg: 1.4}
-  flux:
-    path: workflows/flux-outpaint.json
-    nodes:
-      image: "47"
-      prompt: "23"
-      pad: "44"
-      sampler: "3"
-      conditioning: "38"
-      output: "9"
-    overrides:
-      "3": {steps: 50}                   # e.g. "31": {unet_name: flux1-fill-dev.safetensors}
+  preserve_center: true

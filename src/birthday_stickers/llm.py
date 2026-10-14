@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 from .config import LLMConfig, auth_headers
+from .flows import get_flow
 from .http import HTTPClient, ServiceError
 from .images import decode_image, rgb_image
 
@@ -64,7 +65,10 @@ def response_text(response: dict, refined: bool) -> str:
 
 class LLMClient:
     def __init__(
-        self, config: LLMConfig, references: tuple[Path, ...], generation_type="viking_duo"
+        self,
+        config: LLMConfig,
+        references: tuple[Path, ...],
+        generation_type="multi_character_reference",
     ):
         self.generation_type = generation_type
         self.config = config
@@ -82,32 +86,7 @@ class LLMClient:
                 )
 
     def complete(self, prompt: str, *, refined: bool = False) -> str:
-        role_context = (
-            "The attached images are ordered: protagonist as <image1>, creature as <image2>. "
-            if self.reference_parts
-            else "You cannot see the character images. Refer to their identities by role; "
-            "do not invent details of their appearance. Qwen will receive the actual images. "
-        )
-        system = role_context + (
-            "Rewrite the supplied scene as a multi-reference Qwen editing instruction. "
-            "Both images are identity sources for a NEW scene; neither is a base canvas. "
-            "Preserve identity while allowing the scene's pose and environment to change. "
-            "Return only one plain-text paragraph, with <image1> and <image2> roles explicit. "
-            "Output dimensions are controlled by the application."
-            if refined
-            else "Plan one complete visual scene following the local brief. Return only the scene "
-            "description in English. This original scene will also be used for outpainting. "
-            "Describe the environment and how it continues beyond the central characters. "
-            "Preserve any requested visible text exactly in its original language."
-        )
-        if self.generation_type == "baby_dragon":
-            system = (
-                "Describe one baby dragon as the only character, following the local brief. "
-                "This is text-to-image generation with no reference images. "
-                "Return only one English visual scene paragraph, without image tags. "
-                "Preserve the selected activity, character description, palette and style. "
-                "Output dimensions are controlled by the application."
-            )
+        system = get_flow(self.generation_type).system_prompt(refined, bool(self.reference_parts))
         user_content = (
             [{"type": "text", "text": prompt}, *self.reference_parts]
             if self.reference_parts

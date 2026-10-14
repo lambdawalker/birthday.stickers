@@ -29,7 +29,7 @@ from .pipeline import (
     write_prompts,
 )
 from .references import reference_pools
-from .workflows import build_flux, build_qwen, build_text_qwen
+from .workflows import build_flux
 
 log = logging.getLogger(__name__)
 
@@ -203,7 +203,7 @@ class Scene:
                     compose_refinement(local["refinement"], local["guide"], raw), refined=True
                 )
                 write_prompts(self.prompt_path, self.name, raw, refined, activity)
-                if self.config.generation.type == "viking_duo" and (
+                if self.config.flow.uses_references and (
                     "<image1>" not in refined or "<image2>" not in refined
                 ):
                     raise ValueError(
@@ -249,32 +249,18 @@ class Scene:
                             self.pipeline.uploaded[key] = comfy.upload(path, role)
             with self.step("rendering_qwen", "Qwen render and download"):
                 if "qwen_prompt_id" not in self.meta:
-                    if config.generation.type == "baby_dragon":
-                        graph = build_text_qwen(
-                            local["qwen"],
-                            config.qwen.nodes,
-                            config.qwen.overrides,
-                            refined,
-                            config.generation.width,
-                            config.generation.height,
-                            self.meta["qwen_seed"],
-                            self.name + "-qwen",
-                        )
-                    else:
-                        graph = build_qwen(
-                            local["qwen"],
-                            config.qwen.nodes,
-                            config.qwen.overrides,
-                            refined,
-                            *(
-                                self.pipeline.uploaded[(p, ref["sha256"])]
-                                for p, ref in zip(references, self.meta["references"], strict=True)
-                            ),
-                            config.generation.width,
-                            config.generation.height,
-                            self.meta["qwen_seed"],
-                            self.name + "-qwen",
-                        )
+                    uploaded_refs = tuple(
+                        self.pipeline.uploaded[(p, ref["sha256"])]
+                        for p, ref in zip(references, self.meta["references"], strict=True)
+                    )
+                    graph = config.flow.build_graph(
+                        config,
+                        local["qwen"],
+                        refined,
+                        uploaded_refs,
+                        self.meta["qwen_seed"],
+                        self.name + "-qwen",
+                    )
                     self.submit("qwen", graph)
                 data = comfy.wait_image(
                     self.meta["qwen_prompt_id"], config.qwen.nodes["output"], self.pipeline.check
@@ -315,7 +301,7 @@ class Scene:
                 with self.step("upload_intermediate", "Upload intermediate image"):
                     uploaded = comfy.upload(self.intermediate, "intermediate")
                     self.meta["outpainting_prompt"] = "\n\n".join(
-                        text for text in (raw, config.output.outpainting_prompt.strip()) if text
+                        text for text in (raw, local["outpainting_prompt"].strip()) if text
                     )
                     graph = build_flux(
                         local["flux"],

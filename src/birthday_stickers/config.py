@@ -9,6 +9,8 @@ from urllib.parse import urlsplit
 import yaml
 from PIL import ImageColor
 
+from .flows import canonical_name, expand_config, get_flow, legacy_asset
+
 
 @dataclass
 class LLMConfig:
@@ -37,7 +39,7 @@ class ComfyConfig:
 
 @dataclass
 class GenerationConfig:
-    type: str = "viking_duo"
+    type: str = "multi_character_reference"
     outpainting: bool = True
     count: int = 10
     width: int = 1024
@@ -81,6 +83,11 @@ class Config:
     flux: WorkflowConfig | None
     character_directory: Path | None = None
     activities: Path | None = None
+    outpainting: Path | None = None
+
+    @property
+    def flow(self):
+        return get_flow(self.generation.type)
 
     @property
     def final_size(self) -> tuple[int, int]:
@@ -158,6 +165,7 @@ def load_config(path: Path) -> Config:
         raise ValueError(f"Invalid YAML in {path}: {error}") from error
     if not isinstance(data, dict):
         raise ValueError("Config must be a YAML mapping")
+    data = expand_config(data, path.parent)
     expected = {"llm", "comfy", "generation", "output", "characters", "prompts", "workflows"}
     if set(data) - expected:
         raise ValueError(f"Unknown config sections: {set(data) - expected}")
@@ -165,9 +173,8 @@ def load_config(path: Path) -> Config:
     comfy = section(data, "comfy", ComfyConfig)
     generation = section(data, "generation", GenerationConfig)
     output = section(data, "output", OutputConfig)
-    if generation.type not in ("viking_duo", "baby_dragon"):
-        raise ValueError("generation.type must be viking_duo or baby_dragon")
-    dragon = generation.type == "baby_dragon"
+    generation.type = canonical_name(generation.type)
+    dragon = not get_flow(generation.type).uses_references
     if "outpainting" not in data.get("generation", {}):
         generation.outpainting = not dragon  # Preserve older session behavior.
     if type(generation.outpainting) is not bool:
@@ -242,12 +249,24 @@ def load_config(path: Path) -> Config:
         raw = data.get(group)
         if group == "prompts" and isinstance(raw, dict):
             raw = dict(raw)
+            outpainting_path = raw.pop("outpainting", None)
+            if outpainting_path is not None:
+                paths["outpainting"] = legacy_asset(base, outpainting_path)
             activity_path = raw.pop("activities", None)
             if activity_path is not None:
-                paths["activities"] = local_path(base, activity_path)
+                paths["activities"] = legacy_asset(base, activity_path)
         if not isinstance(raw, dict) or set(raw) != set(keys):
             raise ValueError(f"{group} must contain exactly: {', '.join(keys)}")
-        paths.update({key: local_path(base, raw[key]) for key in keys})
+        paths.update(
+            {
+                key: (
+                    legacy_asset(base, raw[key])
+                    if group == "prompts"
+                    else local_path(base, raw[key])
+                )
+                for key in keys
+            }
+        )
     workflows = data.get("workflows")
     if (
         not isinstance(workflows, dict)
@@ -266,7 +285,7 @@ def load_config(path: Path) -> Config:
         if dragon:
             roles = roles - {"protagonist", "creature"}
         item = section(workflows, key, WorkflowConfig)
-        item.path = local_path(base, item.path)
+        item.path = legacy_asset(base, item.path)
         if not isinstance(item.nodes, dict) or set(item.nodes) != roles:
             raise ValueError(f"workflows.{key}.nodes must contain: {', '.join(sorted(roles))}")
         item.nodes = {role: str(value) for role, value in item.nodes.items()}

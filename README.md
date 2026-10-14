@@ -11,7 +11,7 @@ Two workers run in parallel: the LLM prepares prompts for upcoming scenes while
 ComfyUI renders earlier ones. For each of N scenes (paths below are relative to
 that session folder):
 
-1. Read `prompts/plan_scene.md` and ask LLM A for a raw scene.
+1. Read `src/birthday_stickers/flows/multi_character_reference/planning.md` and ask LLM A for a raw scene.
 2. Assemble the raw scene, local Qwen guide, and refinement template locally; ask
    the same LLM for the refined Qwen editing instruction.
 3. Upload the protagonist to Qwen input 1 and the fantastic creature to input 2.
@@ -176,7 +176,7 @@ single quotes, for example `'D:\Art\protagonist.png'`.
 
 The checked-in defaults preserve the supplied samplers: Qwen 21 steps / CFG 1.4;
 Flux 20 steps / CFG 1, with Flux guidance 30. They are workflow settings, not a
-claim of optimal model parameters. See [workflow details](workflows/README.md) for
+claim of optimal model parameters. See [workflow details](src/birthday_stickers/flows/README.md) for
 all node bindings and reference-resolution tuning.
 
 Character references are discovered automatically from the configured directory:
@@ -230,18 +230,18 @@ configured tokens as Bearer headers. It never stores their values in output meta
 
 ## Prompts and the Qwen guide
 
-Edit [the scene brief](prompts/plan_scene.md) to set theme, medium, activities,
+Edit [the scene brief](src/birthday_stickers/flows/multi_character_reference/planning.md) to set theme, medium, activities,
 subjects, or any requested lettering. Its optional placeholders are
 `{{iteration}}`, `{{count}}`, `{{sticker_id}}`, and `{{previous_scenes}}`. The last
 placeholder includes up to ten earlier planned scenes from the session to
 encourage variety; it is not a guarantee against duplicate compositions.
 
-The [refinement template](prompts/refine_scene.md) must contain `{{guide}}` and
+The [refinement template](src/birthday_stickers/flows/multi_character_reference/refinement.md) must contain `{{guide}}` and
 `{{scene}}`. Both are substituted locally in one pass. The raw description is
 sent unchanged to Flux's positive prompt node; it is never replaced by Qwen's
 reference-tagged refinement.
 
-The [supplied guide](docs/Qwen_Image_2_1_Ultimate_Prompt_Guide.md) is included with
+The [supplied guide](src/birthday_stickers/flows/multi_character_reference/guide.md) is included with
 a project-specific supplement and corrections distinguishing official T2I and
 editing contracts. Both characters are **identity references for a new scene**;
 the first image is not automatically a base canvas. The pipeline refines once,
@@ -343,12 +343,12 @@ and the girl's Viking outfit remain faithful to the chosen references. The plann
 includes this art direction in the raw scene, which also guides Flux outpainting;
 the refinement prompt explicitly preserves it for Qwen.
 
-`prompts.activities` in YAML points to `prompts/activities.json`: 300 editable
+Each flow defaults to its own activity catalog, for example `src/birthday_stickers/flows/multi_character_reference/activities.json`: 300 editable
 activities in 12 categories, each with compatible settings. For each scene the
 program samples an unused activity, avoids the preceding category when possible,
 and selects a setting, mood, framing, and pastel palette. The LLM supplies the
 specific poses and delightful details. The sampler is independent of diffusion
-seeds. Set `prompts.activities: null` (or omit it) to use only your planning prompt.
+seeds. Set `prompts.activities: null` to use only your planning prompt.
 
 Selection history lives in the per-sticker JSON files under each session's `metadata/`.
 It persists when resuming that session. New sessions start a fresh activity cycle. Every activity is used
@@ -366,13 +366,13 @@ current cycle. Reference images remain local and are not embedded in the catalog
 
 ### Generation types
 
-- `viking_duo` (default `config.yaml`): baby girl + baby dragon identity references,
+- `multi_character_reference` (default `config.yaml`): baby girl + baby dragon identity references,
   Qwen Edit with optional Flux outpainting.
-- `baby_dragon` (`config.dragon.yaml`): one baby dragon, 300 dedicated activities,
+- `single_character_text` (`config.dragon.yaml`): one baby dragon, 300 dedicated activities,
   local LLM planning/refinement, and the supplied Qwen Image 2.1 text-to-image flow.
   No references are needed; Flux is needed only with outpainting enabled.
   The attached Qwen flow has no image sockets;
-  edit `prompts/plan_dragon.md` to customize the dragon's appearance.
+  edit `src/birthday_stickers/flows/single_character_text/planning.md` to customize the dragon's appearance.
 
 The interactive app opens with a generation-type picker. Choose **Girl + dragon**
 or **Baby dragon only**, then create a session or resume an unfinished one.
@@ -440,31 +440,85 @@ final canvas. With it off, Qwen saves directly to the final folder and Flux is
 not validated, uploaded to, or run. Existing sessions without this setting retain
 the old behavior: duo on, solo dragon off.
 
-Both shipped configurations include `workflows.flux`. If you have an older
-`config.dragon.local.yaml`, copy the `workflows.flux` section from the updated
-`config.dragon.yaml` and set larger `output.width/height` before enabling the switch.
+Both flows inherit `workflows.flux` from `flows/common/flow.yaml`. For an older
+flat configuration, migrate to `flow: single_character_text` and remove its
+`prompts`/`workflows` sections to use these defaults. Keep custom model overrides
+and choose larger `output.width/height` before enabling the switch.
 The switch is saved in the session snapshot, along with the chosen dimensions.
 
 
 ### Avoiding foggy outpaint borders
 
-Both example YAML files use 50 Flux Fill steps (node `3`) instead of the supplied
+The shared `flows/common/flow.yaml` uses 50 Flux Fill steps (node `3`) instead of the supplied
 workflow's 20, retaining guidance 30, CFG 1 and denoise 1. This matches the model
 publisher's example sampling budget: https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev.
 It is a quality-oriented starting point, not a guarantee of sharper results, and
 increases sampling time. Keep denoise at 1 for newly padded empty regions.
 
-`output.outpainting_prompt` appends local continuity instructions to the **original
+The resolved `outpainting.md` file appends local continuity instructions to the **original
 raw scene**, requesting consistent detail, lighting and focus rather than a vignette
 or blurred frame. Added regions must contain scenery only, with no new characters
 or duplicated faces/bodies; an existing character crossing the boundary may be
 continued anatomically. The exact combined prompt is saved as `outpainting_prompt` in
-scene metadata and in the submitted Flux graph. Set it to `""` for raw-only behavior.
+scene metadata and in the submitted Flux graph. Set `prompts.outpainting: null`
+for raw-only behavior in a flow-based config.
 The 24-pixel feather and center preservation remain unchanged: they only blend the
 source boundary, and do not blur the entire generated border.
 
-Copy these settings into your personal YAML to use them. Existing session snapshots
+Flow-based configs inherit these defaults. Existing session snapshots
 and already-submitted jobs retain their previous settings. Compare new sessions with
 the same scene/seed before deciding whether the new settings improve your output.
 For a paused session, changes to its saved YAML only affect Flux jobs not yet submitted;
 never clear a saved job ID to rerender a job that may still be running.
+
+
+### Flow module and prompt lookup
+
+All generation-specific assets live in the Python package `src/birthday_stickers/flows/`:
+
+| Folder | Contents |
+|---|---|
+| `multi_character_reference/` | Qwen Edit builder, LLM instructions, `flow.yaml`, `planning.md`, `refinement.md`, `guide.md`, `activities.json`, `qwen.json` |
+| `single_character_text/` | Text-to-image builder, LLM instructions, `flow.yaml`, its own prompts/guide/activity catalog and `qwen.json` |
+| `common/` | Shared `outpainting.md`, Flux workflow and `flow.yaml` bindings/settings |
+
+Select a flow in the launch YAML:
+
+```yaml
+flow: multi_character_reference
+# or: single_character_text
+```
+
+Prompt filenames are searched **in the selected flow folder first, then in
+`flows/common/`**. For example, adding `single_character_text/outpainting.md`
+overrides the shared version only for that flow. A missing file in both locations
+produces an error naming both searched directories. The same resolver is used for
+default workflow assets. Activity catalogs are resolved like prompt files.
+
+Optional config overrides still work:
+
+```yaml
+prompts:
+  planning: ./my-prompts/planning.md  # explicit path, relative to this YAML
+  outpainting: outpainting.md       # flow folder, then common
+workflows:
+  flux:
+    overrides:
+      "3": {steps: 40}              # merged with the flow's workflow defaults
+```
+
+Absolute paths and paths containing directories resolve relative to the YAML
+(as before); bare prompt filenames use flow/common lookup. `prompts.activities:
+null` disables activity selection, and `prompts.outpainting: null` disables the
+extra outpainting instructions. Leave a section out to use the flow defaults.
+The repository's launch YAMLs contain connection, character, canvas and output
+settings; prompt text and workflow bindings live with the flows.
+
+`viking_duo` and `baby_dragon` remain accepted aliases. Old flat YAMLs and saved
+session snapshots continue to load without adopting new flow defaults. Missing
+paths to the former shipped prompt/workflow files redirect to their new packaged
+locations; existing custom files take precedence. Legacy inline outpainting text
+is still read for compatibility. Every new session saves its resolved outpainting
+prompt as `inputs/outpainting.md`, including when starting from a legacy inline
+config. Resuming reads this saved file, so editing `common/outpainting.md` only
+changes new sessions. The flows and their assets are included in the wheel.

@@ -1,0 +1,13 @@
+workflows:
+  flux:
+    path: flux-outpaint.json
+    nodes:
+      image: '47'
+      prompt: '23'
+      pad: '44'
+      sampler: '3'
+      conditioning: '38'
+      output: '9'
+    overrides:
+      '3':
+        steps: 50

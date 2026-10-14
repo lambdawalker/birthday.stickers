@@ -1,4 +1,6 @@
-# Baby dragon with optional Flux outpainting.
+# Flow assets and defaults live in src/birthday_stickers/flows/.
+# Personal addresses/settings belong in a *.local.yaml file.
+flow: single_character_text
 llm:
   base_url: http://127.0.0.1:1234/v1
   model: google/gemma-4-e2b
@@ -18,17 +20,11 @@ comfy:
   poll_interval: 2
   get_retries: 3
   retry_delay: 1
-prompts:
-  planning: prompts/plan_dragon.md
-  refinement: prompts/refine_dragon.md
-  guide: docs/qwen-text-guide.md
-  activities: prompts/dragon_activities.json
 generation:
   count: 10
   width: 768
   height: 1024
   seed: null
-  type: baby_dragon
   outpainting: false
 output:
   directory: output
@@ -39,41 +35,3 @@ output:
   jpeg_background: '#ffffff'
   feathering: 24
   preserve_center: true
-  # Appended to the original scene for Flux; empty string preserves raw-only behavior.
-  outpainting_prompt: >-
-    Continue the existing image as one uninterrupted scene through all four edges.
-    Match the source image's art style, palette, exposure, light direction, perspective,
-    and level of detail at the boundary. Extend the visible ground, plants, architecture,
-    water and sky where they meet the edges, with coherent shapes and readable texture.
-    Keep foreground and midground detail as clear as the adjacent source; use atmospheric
-    softness only for genuinely distant scenery. Maintain consistent illumination through
-    the outer margins. No vignette, foggy border, blurred frame, tunnel effect, dark halo,
-    radial blur, new depth-of-field blur, or extra characters. Preserve the existing scene
-    and character identity; only complete the surrounding environment.
-    The added area contains scenery and inanimate environmental details only.
-    Do not introduce any new people, babies, animals, dragons, creatures, faces,
-    silhouettes or background crowds. Do not duplicate, mirror or repeat the existing
-    characters or invent extra heads, limbs, wings or tails. If an existing character
-    crosses the source boundary, continue only that same character anatomically;
-    otherwise keep every character entirely within the original scene.
-
-workflows:
-  qwen:
-    path: workflows/qwen-text.json
-    nodes:
-      encoder: 459:452
-      latent: 459:456
-      sampler: 459:458
-      output: '461'
-    overrides: {}
-  flux:
-    path: workflows/flux-outpaint.json
-    nodes:
-      image: '47'
-      prompt: '23'
-      pad: '44'
-      sampler: '3'
-      conditioning: '38'
-      output: '9'
-    overrides:
-      "3": {steps: 50}

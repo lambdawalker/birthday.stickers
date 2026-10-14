@@ -27,7 +27,11 @@ FLUX_NODES = {
 
 class WorkflowTests(unittest.TestCase):
     def test_qwen_uses_refined_prompt_and_ordered_references_without_internal_rewriter(self):
-        source = json.loads((ROOT / "workflows/qwen-edit.json").read_text(encoding="utf-8"))
+        source = json.loads(
+            (ROOT / "src/birthday_stickers/flows/multi_character_reference/qwen.json").read_text(
+                encoding="utf-8"
+            )
+        )
         original = copy.deepcopy(source)
         result = build_qwen(
             source, QWEN_NODES, {}, "REFINED", "hero.png", "pet.png", 1024, 768, 42, "stiker-0000"
@@ -46,7 +50,11 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(source, original)
 
     def test_flux_uses_original_scene_and_actual_padding(self):
-        source = json.loads((ROOT / "workflows/flux-outpaint.json").read_text(encoding="utf-8"))
+        source = json.loads(
+            (ROOT / "src/birthday_stickers/flows/common/flux-outpaint.json").read_text(
+                encoding="utf-8"
+            )
+        )
         plan = plan_padding((1001, 777), (1500, 1000))
         result = build_flux(
             source,
@@ -68,7 +76,11 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(result["3"]["inputs"]["steps"], 25)
 
     def test_wrong_node_mapping_fails_clearly(self):
-        source = json.loads((ROOT / "workflows/qwen-edit.json").read_text(encoding="utf-8"))
+        source = json.loads(
+            (ROOT / "src/birthday_stickers/flows/multi_character_reference/qwen.json").read_text(
+                encoding="utf-8"
+            )
+        )
         with self.assertRaisesRegex(ValueError, "protagonist.*LoadImage"):
             build_qwen(
                 source,
@@ -84,7 +96,11 @@ class WorkflowTests(unittest.TestCase):
             )
 
     def test_unknown_override_fails_instead_of_silently_ignoring_typo(self):
-        source = json.loads((ROOT / "workflows/flux-outpaint.json").read_text(encoding="utf-8"))
+        source = json.loads(
+            (ROOT / "src/birthday_stickers/flows/common/flux-outpaint.json").read_text(
+                encoding="utf-8"
+            )
+        )
         with self.assertRaisesRegex(ValueError, "stepz"):
             build_flux(
                 source,

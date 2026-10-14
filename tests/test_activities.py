@@ -11,7 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ActivityTests(unittest.TestCase):
     def test_catalog_and_persistent_cycles(self):
-        catalog = load_activities(ROOT / "prompts/activities.json")
+        catalog = load_activities(
+            ROOT / "src/birthday_stickers/flows/multi_character_reference/activities.json"
+        )
         self.assertEqual(len(catalog), 300)
         self.assertEqual(len({x["activity"] for x in catalog}), 300)
         with tempfile.TemporaryDirectory() as temp:
@@ -41,7 +43,13 @@ class ActivityTests(unittest.TestCase):
             path.unlink()
             (Path(temp) / "stiker-0000.json").write_text("{", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "history"):
-                select_activity(load_activities(ROOT / "prompts/activities.json"), Path(temp))
+                select_activity(
+                    load_activities(
+                        ROOT
+                        / "src/birthday_stickers/flows/multi_character_reference/activities.json"
+                    ),
+                    Path(temp),
+                )
 
     def test_brief_is_injected_even_with_legacy_template(self):
         brief = {"activity": "Read together.", "setting": "longhouse"}

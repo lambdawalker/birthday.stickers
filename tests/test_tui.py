@@ -161,7 +161,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(app.query_one("#home").display)
                 with patch("birthday_stickers.tui.load_config", return_value=dragon):
                     await pilot.click("#choose-dragon")
-                self.assertEqual(app.config.generation.type, "baby_dragon")
+                self.assertEqual(app.config.generation.type, "single_character_text")
                 self.assertFalse(app.query_one("#outpainting", Switch).value)
                 await pilot.click("#outpainting")
                 self.assertTrue(app.query_one("#outpainting", Switch).value)
@@ -172,7 +172,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                 await pilot.click("#change-type")
                 self.assertTrue(app.query_one("#type-picker").display)
                 await pilot.click("#choose-duo")
-                self.assertEqual(app.config.generation.type, "viking_duo")
+                self.assertEqual(app.config.generation.type, "multi_character_reference")
                 self.assertEqual(app.config.protagonist, config.protagonist)
 
     async def test_missing_profile_keeps_picker_open_with_error(self):

@@ -119,6 +119,7 @@ class SessionStore:
                 ("refinement", config.refinement),
                 ("guide", config.guide),
                 ("activities", config.activities),
+                ("outpainting", config.outpainting),
             ):
                 if path is not None:
                     destination = snapshots / f"{key}{path.suffix}"
@@ -141,15 +142,21 @@ class SessionStore:
                     "protagonist": config.protagonist,
                     "creature": config.creature,
                 }
-            elif config.generation.type == "viking_duo":
+            elif config.flow.uses_references:
                 characters = {
                     role: str(getattr(config, role)) for role in ("protagonist", "creature")
                 }
+            output = {**asdict(config.output), "directory": "."}
+            legacy_outpainting = output.pop("outpainting_prompt", "")
+            if "outpainting" not in prompts and legacy_outpainting:
+                destination = snapshots / "outpainting.md"
+                destination.write_text(legacy_outpainting, encoding="utf-8")
+                prompts["outpainting"] = str(destination.relative_to(directory))
             data = {
                 "llm": asdict(config.llm),
                 "comfy": asdict(config.comfy),
                 "generation": {**asdict(config.generation), "count": target},
-                "output": {**asdict(config.output), "directory": "."},
+                "output": output,
                 "characters": characters,
                 "prompts": prompts,
                 "workflows": workflows,

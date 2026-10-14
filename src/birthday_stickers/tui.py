@@ -23,6 +23,7 @@ from textual.widgets import (
 
 from .config import Config, load_config
 from .control import RunControl
+from .flows import get_flow
 from .sessions import SessionStore
 
 
@@ -233,10 +234,13 @@ class StickerApp(App):
                 status = "Running / interrupted"
             table.add_row(
                 item["name"],
-                item.get("generation_type", "viking_duo"),
+                item.get("generation_type", "multi_character_reference"),
                 "On"
                 if item.get(
-                    "outpainting", item.get("generation_type", "viking_duo") == "viking_duo"
+                    "outpainting",
+                    get_flow(
+                        item.get("generation_type", "multi_character_reference")
+                    ).uses_references,
                 )
                 else "Off",
                 f"{item.get('prompts_completed', item.get('completed', 0))} prompts / "
@@ -263,7 +267,7 @@ class StickerApp(App):
             if generation_type == self.launch_config.generation.type:
                 selected = copy.deepcopy(self.launch_config)
             else:
-                stem = "config.dragon" if generation_type == "baby_dragon" else "config"
+                stem = "config.dragon" if generation_type == "single_character_text" else "config"
                 directory = self.launch_config.path.parent
                 local = directory / f"{stem}.local.yaml"
                 path = local if local.is_file() else directory / f"{stem}.yaml"
@@ -357,7 +361,7 @@ class StickerApp(App):
         self.active = event.value
         item = self.active
         self.query_one("#session-title", Static).update(
-            Text(item["name"] + " · " + item.get("generation_type", "viking_duo"))
+            Text(item["name"] + " · " + item.get("generation_type", "multi_character_reference"))
         )
         status = item["status"].upper()
         if self.busy and self.control.requested.is_set():
@@ -431,7 +435,9 @@ class StickerApp(App):
     def pressed(self, event: Button.Pressed) -> None:
         action = event.button.id
         if action in ("choose-duo", "choose-dragon"):
-            self.choose_type("viking_duo" if action == "choose-duo" else "baby_dragon")
+            self.choose_type(
+                "multi_character_reference" if action == "choose-duo" else "single_character_text"
+            )
         elif action == "change-type" and not self.busy:
             self.query_one("#home").display = False
             self.query_one("#type-picker").display = True

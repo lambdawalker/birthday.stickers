@@ -13,7 +13,7 @@ from .control import RunControl
 from .images import decode_image, plan_padding
 from .llm import compose_refinement
 from .references import reference_pools
-from .workflows import build_flux, build_qwen, build_text_qwen, load_workflow
+from .workflows import build_flux, load_workflow
 
 log = logging.getLogger(__name__)
 SEED_MODULUS = 2**63
@@ -48,30 +48,9 @@ def validate_local(config: Config) -> dict:
         raise ValueError("Planning prompt and Qwen guide must not be empty")
     compose_refinement(refinement, guide, "validation scene")
     qwen = load_workflow(config.qwen.path)
-    if config.generation.type == "baby_dragon":
-        graph = build_text_qwen(
-            qwen,
-            config.qwen.nodes,
-            config.qwen.overrides,
-            "validation",
-            config.generation.width,
-            config.generation.height,
-            0,
-            "validation",
-        )
-    else:
-        graph = build_qwen(
-            qwen,
-            config.qwen.nodes,
-            config.qwen.overrides,
-            "validation",
-            "protagonist.png",
-            "creature.png",
-            config.generation.width,
-            config.generation.height,
-            0,
-            "validation",
-        )
+    graph = config.flow.build_graph(
+        config, qwen, "validation", ("protagonist.png", "creature.png"), 0, "validation"
+    )
     graphs = [graph]
     flux = None
     if config.generation.outpainting:
@@ -94,7 +73,13 @@ def validate_local(config: Config) -> dict:
                 "validation",
             )
         )
+    outpainting_prompt = config.output.outpainting_prompt
+    if config.generation.outpainting and config.outpainting is not None:
+        outpainting_prompt = config.outpainting.read_text(encoding="utf-8").strip()
+        if not outpainting_prompt:
+            raise ValueError(f"Outpainting prompt must not be empty: {config.outpainting}")
     return {
+        "outpainting_prompt": outpainting_prompt,
         "activities": activities,
         "reference_pools": pools,
         "planning": planning,

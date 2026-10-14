@@ -6,13 +6,16 @@ from pathlib import Path
 import yaml
 
 from birthday_stickers.config import load_config
+from birthday_stickers.flows import expand_config
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class ConfigTests(unittest.TestCase):
     def load_modified(self, mutate):
-        data = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+        data = expand_config(
+            yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8")), ROOT
+        )
         mutate(data)
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "settings.yaml"

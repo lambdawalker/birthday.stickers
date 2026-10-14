@@ -12,6 +12,7 @@ from birthday_stickers.comfy import ComfyClient
 from birthday_stickers.config import load_config
 from birthday_stickers.control import RunControl
 from birthday_stickers.engine import Pipeline, Scene
+from birthday_stickers.flows import expand_config
 from birthday_stickers.pipeline import reserve_sticker, validate_local
 from birthday_stickers.references import discover_characters
 from birthday_stickers.sessions import SessionStore
@@ -59,7 +60,7 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertFalse((directory / "inputs/characters").exists())
             meta = json.loads((directory / "metadata/stiker-0000.json").read_text(encoding="utf-8"))
             self.assertEqual(meta["references"], [])
-            self.assertEqual(meta["generation_type"], "baby_dragon")
+            self.assertEqual(meta["generation_type"], "single_character_text")
 
     def test_live_character_folder_and_unlimited_numeric_suffix(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
@@ -139,7 +140,7 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertEqual(
                 service.graphs[1]["23"]["inputs"]["text"],
                 "One baby dragon curls up beside a pastel Viking longhouse.\n\n"
-                + config.output.outpainting_prompt.strip(),
+                + config.outpainting.read_text(encoding="utf-8").strip(),
             )
             self.assertEqual(service.graphs[1]["3"]["inputs"]["steps"], 50)
             self.assertEqual(service.graphs[1]["26"]["inputs"]["guidance"], 30)
@@ -166,8 +167,12 @@ class GenerationTypeTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp:
             for filename, enabled in (("config.yaml", True), ("config.dragon.yaml", False)):
-                data = yaml.safe_load((fixtures.ROOT / filename).read_text(encoding="utf-8"))
+                data = expand_config(
+                    yaml.safe_load((fixtures.ROOT / filename).read_text(encoding="utf-8")),
+                    fixtures.ROOT,
+                )
                 data["generation"].pop("outpainting")
+                data["generation"]["type"] = "viking_duo" if enabled else "baby_dragon"
                 if not enabled:
                     data["workflows"].pop("flux")
                 path = Path(temp) / filename
