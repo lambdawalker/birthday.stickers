@@ -1,3 +1,4 @@
+import base64
 import io
 import json
 import tempfile
@@ -5,6 +6,7 @@ import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 import yaml
@@ -184,6 +186,7 @@ class PipelineTests(unittest.TestCase):
     def configuration(self, temp, services, count=1):
         directory = Path(temp)
         data = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+        data["characters"] = {}  # Exercise legacy explicit-path configurations too.
         for key in ("protagonist", "creature"):
             path = directory / (key + ".png")
             Image.new("RGB", (32, 32), "green").save(path)
@@ -323,4 +326,62 @@ class PipelineTests(unittest.TestCase):
             saved = (config.output.directory / "prompts/stiker-0000.md").read_text(encoding="utf-8")
             self.assertIn("## Refined scene", saved)
             self.assertIn("missing reference tags", saved)
+            self.assertEqual(service.graphs, [])
+
+    def test_random_pair_is_selected_per_scene_and_shared_with_vision_and_qwen(self):
+        with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
+            config = self.configuration(temp, service, count=2)
+            directory = Path(temp) / "characters"
+            directory.mkdir()
+            for name, color in (
+                ("A000.jpg", "red"),
+                ("A001.jpg", "green"),
+                ("B000.jpg", "blue"),
+                ("B001.jpg", "yellow"),
+            ):
+                Image.new("RGB", (32, 32), color).save(directory / name)
+            data = yaml.safe_load(config.path.read_text(encoding="utf-8"))
+            data["characters"] = {"directory": "characters", "protagonist": "A", "creature": "B"}
+            data["llm"]["send_reference_images"] = True
+            config.path.write_text(yaml.safe_dump(data), encoding="utf-8")
+            config = load_config(config.path)
+            chosen = [directory / name for name in ("A000.jpg", "B001.jpg", "A001.jpg", "B000.jpg")]
+            with patch("birthday_stickers.pipeline.secrets.choice", side_effect=chosen):
+                run(config)
+            for index in range(2):
+                meta = json.loads(
+                    (config.output.directory / "metadata" / f"stiker-{index:04d}.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+                self.assertEqual(
+                    [Path(ref["path"]).name for ref in meta["references"]],
+                    [path.name for path in chosen[2 * index : 2 * index + 2]],
+                )
+                graph = service.graphs[index * 2]
+                self.assertEqual(
+                    graph["514"]["inputs"]["image"], f"refs/upload-{1 + 3 * index}.png"
+                )
+                self.assertEqual(
+                    graph["516"]["inputs"]["image"], f"refs/upload-{2 + 3 * index}.png"
+                )
+                for request in service.chats[index * 2 : index * 2 + 2]:
+                    parts = request["messages"][-1]["content"]
+                    for slot in range(2):
+                        encoded = parts[slot + 1]["image_url"]["url"].split(",", 1)[1]
+                        with Image.open(io.BytesIO(base64.b64decode(encoded))) as preview:
+                            with Image.open(chosen[index * 2 + slot]) as original:
+                                self.assertEqual(
+                                    preview.getpixel((16, 16)), original.getpixel((16, 16))
+                                )
+
+    def test_missing_character_variants_fail_before_any_network_work(self):
+        with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
+            config = self.configuration(temp, service)
+            config.character_directory = Path(temp)
+            config.protagonist, config.creature = "A", "B"
+            Image.new("RGB", (32, 32)).save(Path(temp) / "A000.jpg")
+            with self.assertRaisesRegex(ValueError, "No references for creature character B"):
+                run(config)
+            self.assertEqual(service.chats, [])
             self.assertEqual(service.graphs, [])

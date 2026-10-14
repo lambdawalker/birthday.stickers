@@ -15,6 +15,7 @@ from .comfy import ComfyClient
 from .config import Config, auth_headers
 from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
 from .llm import LLMClient, compose_refinement
+from .references import reference_pools
 from .workflows import build_flux, build_qwen, load_workflow
 
 log = logging.getLogger(__name__)
@@ -28,9 +29,10 @@ def write_json(path: Path, value: dict) -> None:
 
 
 def validate_local(config: Config) -> dict:
+    pools = reference_pools(config)
     for path in (
-        config.protagonist,
-        config.creature,
+        *pools[0],
+        *pools[1],
         config.planning,
         config.refinement,
         config.guide,
@@ -39,7 +41,7 @@ def validate_local(config: Config) -> dict:
     ):
         if not path.is_file():
             raise ValueError(f"Required file is missing: {path}")
-    for path in (config.protagonist, config.creature):
+    for path in (*pools[0], *pools[1]):
         decode_image(path)
     planning = config.planning.read_text(encoding="utf-8").strip()
     guide = config.guide.read_text(encoding="utf-8").strip()
@@ -79,6 +81,7 @@ def validate_local(config: Config) -> dict:
         ),
     )
     return {
+        "reference_pools": pools,
         "planning": planning,
         "guide": guide,
         "refinement": refinement,
@@ -145,11 +148,13 @@ def run(config: Config) -> list[Path]:
     auth_headers(config.llm.api_key_env)
     comfy = ComfyClient(config.comfy)
     comfy.preflight(*local["graphs"])
-    llm = LLMClient(config.llm, (config.protagonist, config.creature))
-    references = None
+    uploaded_references: dict[Path, str] = {}
     final_paths = []
     previous_scenes = []
     for iteration in range(config.generation.count):
+        protagonist = secrets.choice(local["reference_pools"][0])
+        creature = secrets.choice(local["reference_pools"][1])
+        llm = LLMClient(config.llm, (protagonist, creature))
         index, name, metadata_path = reserve_sticker(config.output.directory)
         root = config.output.directory
         prompt_path = root / "prompts" / f"{name}.md"
@@ -177,8 +182,8 @@ def run(config: Config) -> list[Path]:
                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                 }
                 for role, path in (
-                    ("protagonist", config.protagonist),
-                    ("creature", config.creature),
+                    ("protagonist", protagonist),
+                    ("creature", creature),
                 )
             ],
         }
@@ -204,11 +209,10 @@ def run(config: Config) -> list[Path]:
                 )
             metadata["status"] = "rendering_qwen"
             write_json(metadata_path, metadata)
-            if references is None:
-                references = (
-                    comfy.upload(config.protagonist, "protagonist"),
-                    comfy.upload(config.creature, "creature"),
-                )
+            for role, path in (("protagonist", protagonist), ("creature", creature)):
+                if path not in uploaded_references:
+                    uploaded_references[path] = comfy.upload(path, role)
+            references = (uploaded_references[protagonist], uploaded_references[creature])
             graph = build_qwen(
                 local["qwen"],
                 config.qwen.nodes,
