@@ -72,7 +72,7 @@ class StickerApp(App):
     Input { background: #1b2233; border: tall #565277; }
     Input:focus { border: tall #b7a1e8; }
     .buttons { height: auto; margin-top: 0; }
-    Button { margin-right: 2; min-width: 16; }
+    Button { margin: 1 1; padding: 0 2; min-width: 16; }
     Button.-primary { background: #b7a1e8; color: #101522; }
     Button.-success { background: #8dd5c8; color: #101522; }
     Button.-warning { background: #f5dba7; color: #101522; }
