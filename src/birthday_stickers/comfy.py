@@ -17,7 +17,8 @@ log = logging.getLogger(__name__)
 
 
 class ComfyClient:
-    def __init__(self, config: ComfyConfig):
+    def __init__(self, config: ComfyConfig, worker="images"):
+        self.worker = worker
         self.config = config
         self.client_id = str(uuid.uuid4())
         self.http = HTTPClient(
@@ -102,7 +103,7 @@ class ComfyClient:
         prompt_id = response.get("prompt_id")
         if not isinstance(prompt_id, str) or not prompt_id:
             raise ServiceError(f"ComfyUI did not return a prompt_id: {response}")
-        log.info("ComfyUI queued %s", prompt_id)
+        log.info("ComfyUI queued %s", prompt_id, extra={"worker": self.worker})
         return prompt_id
 
     def wait_image(
@@ -145,7 +146,11 @@ class ComfyClient:
                         )
                         return self.http.request("GET", "/view?" + query, deadline=deadline)
                 if time.monotonic() >= next_notice:
-                    log.info("Waiting for ComfyUI job %s (queued or executing)", prompt_id)
+                    log.info(
+                        "Waiting for ComfyUI job %s (queued or executing)",
+                        prompt_id,
+                        extra={"worker": self.worker},
+                    )
                     next_notice = time.monotonic() + 30
                 time.sleep(min(self.config.poll_interval, max(0, deadline - time.monotonic())))
         except (TimeoutError, ServiceError) as error:

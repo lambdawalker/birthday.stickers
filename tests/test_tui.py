@@ -110,6 +110,8 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                         {
                             **item,
                             "prompts_completed": 4,
+                            "images_completed": 3,
+                            "outpainting_completed": 1,
                             "completed": 1,
                             "prompts_stage": "refining",
                             "prompts_sticker": "stiker-0004",
@@ -120,13 +122,19 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                 )
                 await pilot.pause()
                 self.assertEqual(app.query_one("#prompts-progress", ProgressBar).progress, 4)
-                self.assertEqual(app.query_one("#images-progress", ProgressBar).progress, 1)
+                self.assertEqual(app.query_one("#images-progress", ProgressBar).progress, 3)
+                self.assertEqual(app.query_one("#outpainting-progress", ProgressBar).progress, 1)
+                app.on_log_line(LogLine("Flux finished in 30.00s", "outpainting"))
                 app.on_log_line(LogLine("Plan scene finished in 1.25s", "prompts"))
                 app.on_log_line(LogLine("Qwen render finished in 20.50s", "images"))
                 await pilot.pause()
                 self.assertIn("Plan scene", str(app.query_one("#prompts-logs", RichLog).lines))
                 self.assertNotIn("Qwen render", str(app.query_one("#prompts-logs", RichLog).lines))
                 self.assertIn("Qwen render", str(app.query_one("#images-logs", RichLog).lines))
+                self.assertIn(
+                    "Flux finished", str(app.query_one("#outpainting-logs", RichLog).lines)
+                )
+                self.assertNotIn("Flux finished", str(app.query_one("#images-logs", RichLog).lines))
 
     async def test_invalid_count_and_start_error_are_visible(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

@@ -180,7 +180,7 @@ def run(
     progress: Callable[[int, str, str], None] = lambda *_: None,
     worker_progress: Callable[[str, int, str, str], None] = lambda *_: None,
 ) -> list[Path]:
-    """Run an LLM producer and a ComfyUI consumer with durable scene handoff."""
+    """Run prompt, image, and outpainting workers with durable scene handoff."""
     from .engine import execute
 
     return execute(config, resume, control or RunControl(), progress, worker_progress)

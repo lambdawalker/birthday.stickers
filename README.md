@@ -7,7 +7,7 @@ ComfyUI renders it with Qwen 2.1 and extends it with Flux Fill to your final siz
 The default command opens a Textual session picker and live generation dashboard.
 Each session has its own folder under `output/sessions/YYYY-MM-DD-NNN/`.
 
-Two workers run in parallel: the LLM prepares prompts for upcoming scenes while
+Three workers form a pipeline: the LLM prepares prompts for upcoming scenes while
 ComfyUI renders earlier ones. For each of N scenes (paths below are relative to
 that session folder):
 
@@ -83,18 +83,19 @@ Choose **New session**, or select a row and choose **Resume selected** (Enter al
 resumes a selected row). Names are automatically filled from your computer's local
 date plus a daily counter, for example `2026-10-14-001` and `2026-10-14-002`.
 
-The active dashboard has separate **LLM / Prompts** and **ComfyUI / Images** panels.
+The active dashboard has **LLM / Prompts**, **ComfyUI / Images**, and
+**ComfyUI / Outpainting** panels.
 Each shows its current sticker and step, a progress bar, and its own timed log.
 The prompt bar counts scenes with both raw and refined prompts saved; the image
-bar counts final JPEGs saved. The summary also shows how many prepared scenes
-are awaiting final images.
+bar counts generated images saved. The outpainting bar counts completed final
+images when enabled. The summary shows final output count and effective GPU mode.
 
-- **Pause:** checkpoint both workers and stay on the dashboard; **Resume** continues.
+- **Pause:** checkpoint all workers and stay on the dashboard; **Resume** continues.
 - **Stop:** save progress and return to the session picker. The session stays resumable.
 - **Sessions:** return to the picker when generation is paused, finished, or failed.
 - **Q / Ctrl+C / Ctrl+Q:** save and quit. On restart, unfinished sessions remain listed.
 
-Controls are cooperative: both workers stop starting new operations, and an
+Controls are cooperative: all workers stop starting new operations, and an
 in-flight LLM or HTTP request finishes or times out before pausing. ComfyUI polling can pause between requests. Already-submitted GPU
 jobs may continue on the server; resuming reconnects using the saved job ID.
 The app never sends a global ComfyUI interrupt that could affect other users.
@@ -104,8 +105,8 @@ scene enters the renderer's queue only after both prompts and their metadata are
 saved. On restart the queue is rebuilt from these records, so ready prompts are
 reused, partial LLM work resumes from the saved raw description, and submitted GPU
 jobs reconnect by ID. Scene numbers, character choices, and activity history stay
-consistent even when the prompt worker is far ahead. If either worker fails, the
-other stops at its next checkpoint; in-flight responses are saved before the
+consistent even when the prompt worker is far ahead. If any worker fails, the
+others stop at their next checkpoint; in-flight responses are saved before the
 session reports the original error. Existing sequential sessions can also resume.
 
 Log lines include durations, for example `Plan scene finished in 2.31s` and
@@ -400,7 +401,7 @@ uv run birthday-stickers --config config.dragon.yaml --headless
 uv run birthday-stickers --config config.yaml --headless
 ```
 
-Both types share the session picker, pause/stop/resume, parallel prompt and image
+Both types share the session picker, pause/stop/resume, three pipeline
 workers, per-step timings, Markdown prompts, and `stiker-0000.jpg` naming.
 The session records its type; resuming uses its saved configuration. Both configs
 use the same output directory, so either launcher lists all incomplete sessions.
@@ -522,3 +523,33 @@ is still read for compatibility. Every new session saves its resolved outpaintin
 prompt as `inputs/outpainting.md`, including when starting from a legacy inline
 config. Resuming reads this saved file, so editing `common/outpainting.md` only
 changes new sessions. The flows and their assets are included in the wheel.
+
+### Separate generation and outpainting servers
+
+The dashboard shows three progress bars and logs: prompts, generated images, and
+outpainted images. Prompt planning always runs independently. Configure GPU work:
+
+```yaml
+generation:
+  gpu_mode: parallel  # sequential (default) or parallel
+comfy:
+  base_url: http://192.168.1.186:8188
+comfy_outpainting:
+  base_url: http://192.168.1.187:8188
+```
+
+`comfy_outpainting: null` reuses the generation server. Secondary settings inherit
+primary timeouts, retries, and authentication unless explicitly overridden.
+Each server is checked only for its own workflow's required nodes and models.
+
+Sequential mode runs generation → outpainting for each sticker before generating
+the next. Parallel mode lets generation get ahead while a second server outpaints.
+Identical hosts or overlapping resolved IP addresses **always force sequential
+mode**, even with different ports. If distinct IPs cannot be verified, execution
+also falls back to sequential mode. The effective mode and reason are logged.
+
+Sessions snapshot both endpoints and the requested mode. Pause and resume retain
+prompts, intermediate images, and submitted job IDs, so each stage resumes its
+unfinished work. Job IDs are tied to their original endpoint; changing an endpoint
+for an already submitted job is rejected. With outpainting disabled, only the
+primary ComfyUI server is used.

@@ -155,6 +155,9 @@ class SessionStore:
             data = {
                 "llm": asdict(config.llm),
                 "comfy": asdict(config.comfy),
+                "comfy_outpainting": asdict(config.comfy_outpainting)
+                if config.comfy_outpainting
+                else None,
                 "generation": {**asdict(config.generation), "count": target},
                 "output": output,
                 "characters": characters,
@@ -170,6 +173,9 @@ class SessionStore:
                 "count": target,
                 "completed": 0,
                 "prompts_completed": 0,
+                "images_completed": 0,
+                "outpainting_completed": 0,
+                "gpu_mode": config.generation.gpu_mode,
                 "status": "ready",
                 "created_at": now(),
                 "updated_at": now(),
@@ -203,9 +209,15 @@ class SessionStore:
                     notify(dict(manifest))
 
             def worker_update(lane, done, sticker, stage):
-                key = "prompts_completed" if lane == "prompts" else "completed"
+                key = f"{lane}_completed"
+                extra = {}
+                if lane == ("outpainting" if config.generation.outpainting else "images"):
+                    extra["completed"] = done
+                if stage.startswith("gpu_mode_"):
+                    extra["effective_gpu_mode"] = stage.removeprefix("gpu_mode_")
                 update(
                     **{key: done, f"{lane}_stage": stage, f"{lane}_sticker": sticker},
+                    **extra,
                     sticker=sticker,
                     stage=stage,
                 )
@@ -221,11 +233,18 @@ class SessionStore:
                     status="running",
                     completed=completed,
                     prompts_completed=prompts_completed,
+                    images_completed=sum(
+                        bool(m.get("intermediate_saved")) or m.get("status") == "complete"
+                        for _, m in records
+                    ),
+                    outpainting_completed=completed if config.generation.outpainting else 0,
                     prompts_stage="starting",
                     images_stage="starting",
+                    outpainting_stage="starting" if config.generation.outpainting else "disabled",
                     error="",
                     prompts_sticker="",
                     images_sticker="",
+                    outpainting_sticker="",
                     stage="Checking services",
                 )
                 run(
@@ -240,6 +259,9 @@ class SessionStore:
                     prompts_completed=manifest["count"],
                     prompts_stage="done",
                     images_stage="done",
+                    images_completed=manifest["count"],
+                    outpainting_completed=manifest["count"] if config.generation.outpainting else 0,
+                    outpainting_stage="done" if config.generation.outpainting else "disabled",
                     stage="All stickers saved",
                 )
             except RunHalted as error:
@@ -248,6 +270,7 @@ class SessionStore:
                     stage="Progress saved",
                     prompts_stage=error.status,
                     images_stage=error.status,
+                    outpainting_stage=error.status,
                 )
             except KeyboardInterrupt:
                 update(status="stopped", stage="Progress saved")
@@ -259,5 +282,6 @@ class SessionStore:
                     stage="Needs attention",
                     prompts_stage="stopped",
                     images_stage="stopped",
+                    outpainting_stage="stopped",
                 )
             return manifest

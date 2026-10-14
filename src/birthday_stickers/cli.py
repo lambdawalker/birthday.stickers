@@ -43,7 +43,11 @@ def main(argv: list[str] | None = None) -> int:
             local = validate_local(config)
             print("Local files, character images, workflow mappings, and dimensions are valid.")
             if args.check:
-                ComfyClient(config.comfy).preflight(*local["graphs"])
+                ComfyClient(config.comfy).preflight(local["graphs"][0])
+                if config.generation.outpainting:
+                    ComfyClient(config.outpainting_comfy, "outpainting").preflight(
+                        local["graphs"][1]
+                    )
                 llm = HTTPClient(
                     config.llm.base_url, config.llm.timeout, auth_headers(config.llm.api_key_env)
                 )

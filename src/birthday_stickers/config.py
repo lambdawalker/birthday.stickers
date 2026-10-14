@@ -2,7 +2,7 @@
 
 import math
 import os
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -41,6 +41,7 @@ class ComfyConfig:
 class GenerationConfig:
     type: str = "multi_character_reference"
     outpainting: bool = True
+    gpu_mode: str = "sequential"
     count: int = 10
     width: int = 1024
     height: int = 1024
@@ -84,6 +85,11 @@ class Config:
     character_directory: Path | None = None
     activities: Path | None = None
     outpainting: Path | None = None
+    comfy_outpainting: ComfyConfig | None = None
+
+    @property
+    def outpainting_comfy(self) -> ComfyConfig:
+        return self.comfy_outpainting or self.comfy
 
     @property
     def flow(self):
@@ -166,11 +172,32 @@ def load_config(path: Path) -> Config:
     if not isinstance(data, dict):
         raise ValueError("Config must be a YAML mapping")
     data = expand_config(data, path.parent)
-    expected = {"llm", "comfy", "generation", "output", "characters", "prompts", "workflows"}
+    expected = {
+        "llm",
+        "comfy",
+        "generation",
+        "output",
+        "characters",
+        "prompts",
+        "workflows",
+        "comfy_outpainting",
+    }
     if set(data) - expected:
         raise ValueError(f"Unknown config sections: {set(data) - expected}")
     llm = section(data, "llm", LLMConfig)
     comfy = section(data, "comfy", ComfyConfig)
+    secondary_raw = data.get("comfy_outpainting")
+    if secondary_raw is not None and not isinstance(secondary_raw, dict):
+        raise ValueError("comfy_outpainting must be a YAML mapping or null")
+    comfy_outpainting = (
+        section(
+            {"comfy_outpainting": {**asdict(comfy), **secondary_raw}},
+            "comfy_outpainting",
+            ComfyConfig,
+        )
+        if secondary_raw is not None
+        else None
+    )
     generation = section(data, "generation", GenerationConfig)
     output = section(data, "output", OutputConfig)
     generation.type = canonical_name(generation.type)
@@ -179,7 +206,10 @@ def load_config(path: Path) -> Config:
         generation.outpainting = not dragon  # Preserve older session behavior.
     if type(generation.outpainting) is not bool:
         raise ValueError("generation.outpainting must be true or false")
-    for name, item in (("llm", llm), ("comfy", comfy)):
+    endpoints = [("llm", llm), ("comfy", comfy)]
+    if comfy_outpainting is not None:
+        endpoints.append(("comfy_outpainting", comfy_outpainting))
+    for name, item in endpoints:
         validate_url(item.base_url, name + ".base_url")
         if item.api_key_env is not None and (
             not isinstance(item.api_key_env, str) or not item.api_key_env.strip()
@@ -198,10 +228,13 @@ def load_config(path: Path) -> Config:
         number(getattr(llm, key), "llm." + key, 0, True)
     number(llm.timeout, "llm.timeout", 0)
     integer(llm.max_tokens, "llm.max_tokens", 1)
-    for key in ("request_timeout", "job_timeout", "poll_interval"):
-        number(getattr(comfy, key), "comfy." + key, 0)
-    number(comfy.retry_delay, "comfy.retry_delay", 0, True)
-    integer(comfy.get_retries, "comfy.get_retries", 0, 20)
+    for name, server in endpoints[1:]:
+        for key in ("request_timeout", "job_timeout", "poll_interval"):
+            number(getattr(server, key), name + "." + key, 0)
+        number(server.retry_delay, name + ".retry_delay", 0, True)
+        integer(server.get_retries, name + ".get_retries", 0, 20)
+    if generation.gpu_mode not in ("sequential", "parallel"):
+        raise ValueError("generation.gpu_mode must be sequential or parallel")
     integer(generation.count, "generation.count", 1)
     if generation.seed is not None:
         integer(generation.seed, "generation.seed", 0)
@@ -292,4 +325,6 @@ def load_config(path: Path) -> Config:
         if not isinstance(item.overrides, dict):
             raise ValueError(f"workflows.{key}.overrides must be a mapping")
         paths[key] = item
-    return Config(path, llm, comfy, generation, output, **paths)
+    return Config(
+        path, llm, comfy, generation, output, comfy_outpainting=comfy_outpainting, **paths
+    )

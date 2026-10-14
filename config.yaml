@@ -20,11 +20,19 @@ comfy:
   poll_interval: 2
   get_retries: 3
   retry_delay: 1
+# Optional second ComfyUI instance. null reuses comfy above.
+# To use another machine, replace null with a mapping, e.g.:
+# comfy_outpainting:
+#   base_url: http://192.168.1.187:8188
+# Unspecified timeout/auth/retry settings inherit from comfy.
+comfy_outpainting: null
+
 characters:
   directory: assets/characters
   protagonist: A
   creature: B
 generation:
+  gpu_mode: sequential  # parallel requires different ComfyUI IPs
   outpainting: true
   count: 10
   width: 1024

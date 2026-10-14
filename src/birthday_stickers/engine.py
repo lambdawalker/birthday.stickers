@@ -1,4 +1,4 @@
-"""Two-worker pipeline: prompts are saved before ownership passes to the renderer."""
+"""Three workers with durable prompt/image handoff and optional GPU overlap."""
 
 import hashlib
 import logging
@@ -29,6 +29,7 @@ from .pipeline import (
     write_prompts,
 )
 from .references import reference_pools
+from .scheduling import gpu_policy
 from .workflows import build_flux
 
 log = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ class Pipeline:
         self.worker_progress = worker_progress
         self.abort = Event()
         self.report_lock = RLock()
-        self.counts = {"prompts": 0, "images": 0}
+        self.counts = {"prompts": 0, "images": 0, "outpainting": 0}
         self.uploaded: dict[tuple[Path, str], str] = {}
 
     def check(self):
@@ -213,6 +214,23 @@ class Scene:
         self.meta["status"] = "prompts_ready"
         self.save()
 
+    def client(self, kind):
+        client = (
+            getattr(self.pipeline, "comfy_outpainting", self.pipeline.comfy)
+            if kind == "flux"
+            else self.pipeline.comfy
+        )
+        endpoint = client.config.base_url.rstrip("/")
+        key = f"{kind}_server"
+        if self.meta.get(f"{kind}_prompt_id") or self.meta.get(f"{kind}_submission_pending"):
+            previous = self.meta.get(key)
+            if previous is not None and previous != endpoint:
+                raise ValueError(
+                    f"{kind} job belongs to {previous}; restore that endpoint to resume"
+                )
+        self.meta[key] = endpoint
+        return client
+
     def submit(self, kind, graph):
         key = f"{kind}_prompt_id"
         pending = f"{kind}_submission_pending"
@@ -226,19 +244,28 @@ class Scene:
         self.pipeline.check()
         self.meta[pending] = True
         self.save()
-        self.meta[key] = self.pipeline.comfy.submit(graph)
+        self.meta[key] = self.client(kind).submit(graph)
         self.meta.pop(pending)
         self.save()
 
     def complete(self):
         self.meta.update(status="complete", finished_at=datetime.now(UTC).isoformat())
         self.save()
-        self.pipeline.report("images", self.name, "complete", increment=1)
+        self.pipeline.report(self.lane, self.name, "complete", increment=1)
 
     def render(self):
-        config, local, comfy = self.config, self.pipeline.local, self.pipeline.comfy
+        """Compatibility entry point for running one scene synchronously."""
+        self.generate_image()
+        if self.config.generation.outpainting:
+            self.lane = "outpainting"
+            self.outpaint()
+
+    def generate_image(self):
+        if self.meta.get("intermediate_saved"):
+            return
+        config, local, comfy = self.config, self.pipeline.local, self.client("qwen")
         references = self.references()
-        raw, refined = self.meta["raw_scene"], self.meta["refined_scene"]
+        refined = self.meta["refined_scene"]
         if not self.meta.get("intermediate_saved"):
             if references and "qwen_prompt_id" not in self.meta:
                 with self.step("upload_references", "Upload character references"):
@@ -289,6 +316,13 @@ class Scene:
                     config.output.jpeg_background,
                 )
                 self.meta["intermediate_saved"] = True
+        self.meta["status"] = "image_ready"
+        self.save()
+        self.pipeline.report("images", self.name, "image_ready", increment=1)
+
+    def outpaint(self):
+        config, local, comfy = self.config, self.pipeline.local, self.client("flux")
+        raw = self.meta["raw_scene"]
         source = decode_image(self.intermediate)
         padding = plan_padding(source.size, config.final_size)
         self.meta["padding"] = asdict(padding)
@@ -349,14 +383,19 @@ def execute(
     pipeline.check()
     pipeline.local = validate_local(config)
     auth_headers(config.llm.api_key_env)
-    pipeline.comfy = ComfyClient(config.comfy)
-    start = time.perf_counter()
-    pipeline.comfy.preflight(*pipeline.local["graphs"])
-    log.info(
-        "[images] Service checks finished in %.2fs",
-        time.perf_counter() - start,
-        extra={"worker": "images"},
+    pipeline.comfy = ComfyClient(config.comfy, "images")
+    pipeline.comfy_outpainting = (
+        ComfyClient(config.outpainting_comfy, "outpainting")
+        if config.generation.outpainting
+        else pipeline.comfy
     )
+    mode, reason = gpu_policy(config)
+    log.info("GPU mode: %s · %s", mode, reason)
+    start = time.perf_counter()
+    pipeline.comfy.preflight(pipeline.local["graphs"][0])
+    if config.generation.outpainting:
+        pipeline.comfy_outpainting.preflight(pipeline.local["graphs"][1])
+    log.info("Service checks finished in %.2fs", time.perf_counter() - start)
     records = scene_records(config.output.directory) if resume else []
     completed = [(p, m) for p, m in records if m.get("status") == "complete"]
     final_paths = [config.output.directory / "final" / f"{m['sticker']}.jpg" for _, m in completed]
@@ -364,11 +403,17 @@ def execute(
         if decode_image(path).size != config.final_size:
             raise ValueError(f"Completed image is missing or has the wrong dimensions: {path}")
     pending = [(p, m) for p, m in records if m.get("status") != "complete"]
-    pipeline.counts["images"] = len(completed)
+    pipeline.counts["images"] = sum(
+        bool(m.get("intermediate_saved")) or m.get("status") == "complete" for _, m in records
+    )
+    pipeline.counts["outpainting"] = len(completed) if config.generation.outpainting else 0
     pipeline.counts["prompts"] = sum(
         "refined_scene" in m or m.get("status") == "complete" for _, m in records
     )
+    pipeline.report("images", "", "gpu_mode_" + mode)
     ready: Queue[tuple[Path, dict]] = Queue()
+    images: Queue[tuple[Path, dict, Event]] = Queue()
+    images_done = Event()
     producer_done = Event()
     errors: Queue[BaseException] = Queue()
 
@@ -397,23 +442,60 @@ def execute(
 
     def consume():
         pipeline.report("images", "", "waiting_for_prompts")
+        try:
+            while True:
+                pipeline.check()
+                try:
+                    path, meta = ready.get(timeout=0.1)
+                except Empty:
+                    if producer_done.is_set() and ready.empty():
+                        break
+                    continue
+                scene = Scene(pipeline, path, meta, "images")
+                with scene.guard():
+                    scene.generate_image()
+                if config.generation.outpainting:
+                    settled = Event()
+                    # Transfer ownership; this worker must not write scene metadata again.
+                    images.put((path, meta, settled))
+                    if mode == "sequential":
+                        pipeline.report("images", scene.name, "waiting_for_outpainting")
+                        while not settled.wait(0.1):
+                            pipeline.check()
+                        pipeline.check()
+                else:
+                    final_paths.append(scene.final)
+                if ready.empty() and not producer_done.is_set():
+                    pipeline.report("images", "", "waiting_for_prompts")
+            pipeline.report("images", "", "done")
+        finally:
+            images_done.set()
+
+    def extend():
+        if not config.generation.outpainting:
+            pipeline.report("outpainting", "", "disabled")
+            return
+        pipeline.report("outpainting", "", "waiting_for_images")
         while True:
             pipeline.check()
             try:
-                path, meta = ready.get(timeout=0.1)
+                path, meta, settled = images.get(timeout=0.1)
             except Empty:
-                if producer_done.is_set() and ready.empty():
+                if images_done.is_set() and images.empty():
                     break
                 continue
-            scene = Scene(pipeline, path, meta, "images")
-            with scene.guard():
-                scene.render()
-                final_paths.append(scene.final)
-            if ready.empty() and not producer_done.is_set():
-                pipeline.report("images", "", "waiting_for_prompts")
-        pipeline.report("images", "", "done")
+            scene = Scene(pipeline, path, meta, "outpainting")
+            try:
+                with scene.guard():
+                    scene.outpaint()
+                    final_paths.append(scene.final)
+            finally:
+                settled.set()
+            if images.empty() and not images_done.is_set():
+                pipeline.report("outpainting", "", "waiting_for_images")
+        pipeline.report("outpainting", "", "done")
 
-    finished = [Event(), Event()]
+    finished = [Event(), Event(), Event()]
     launch = Event()
 
     def worker(function, done):
@@ -430,6 +512,7 @@ def execute(
     threads = [
         Thread(target=worker, args=(produce, finished[0]), name="sticker-prompts"),
         Thread(target=worker, args=(consume, finished[1]), name="sticker-images"),
+        Thread(target=worker, args=(extend, finished[2]), name="sticker-outpainting"),
     ]
     interrupted = False
     startup_error = None

@@ -86,7 +86,7 @@ class StickerApp(App):
     #stage { margin: 1 0; color: #a9d9ed; }
     #workers { height: 1fr; min-height: 16; }
     .worker { width: 1fr; height: 100%; border: round #565277; padding: 0 1; }
-    #prompt-worker { margin-right: 1; }
+    #prompt-worker, #image-worker { margin-right: 1; }
     .worker-stage { height: 3; color: #a9d9ed; }
     .worker-count { height: 1; color: #acb4ca; }
     ProgressBar { width: 100%; margin: 1 0; }
@@ -185,22 +185,19 @@ class StickerApp(App):
                     id="hint",
                 )
             with Horizontal(id="workers"):
-                with Vertical(id="prompt-worker", classes="worker"):
-                    yield Label("LLM · PROMPTS", classes="title")
-                    yield Static("Waiting to start", id="prompts-stage", classes="worker-stage")
-                    yield ProgressBar(total=100, show_eta=False, id="prompts-progress")
-                    yield Static("", id="prompts-count", classes="worker-count")
-                    yield RichLog(
-                        id="prompts-logs", wrap=True, min_width=1, markup=False, max_lines=1000
-                    )
-                with Vertical(id="image-worker", classes="worker"):
-                    yield Label("COMFYUI · IMAGES", classes="title")
-                    yield Static("Waiting for prompts", id="images-stage", classes="worker-stage")
-                    yield ProgressBar(total=100, show_eta=False, id="images-progress")
-                    yield Static("", id="images-count", classes="worker-count")
-                    yield RichLog(
-                        id="images-logs", wrap=True, min_width=1, markup=False, max_lines=1000
-                    )
+                for lane, panel, title in (
+                    ("prompts", "prompt", "LLM · PROMPTS"),
+                    ("images", "image", "COMFYUI · IMAGES"),
+                    ("outpainting", "outpainting", "COMFYUI · OUTPAINT"),
+                ):
+                    with Vertical(id=f"{panel}-worker", classes="worker"):
+                        yield Label(title, classes="title")
+                        yield Static("Waiting to start", id=f"{lane}-stage", classes="worker-stage")
+                        yield ProgressBar(total=100, show_eta=False, id=f"{lane}-progress")
+                        yield Static("", id=f"{lane}-count", classes="worker-count")
+                        yield RichLog(
+                            id=f"{lane}-logs", wrap=True, min_width=1, markup=False, max_lines=1000
+                        )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -277,6 +274,8 @@ class StickerApp(App):
                 # Connection settings and the session collection belong to the launcher.
                 selected.llm = copy.deepcopy(self.launch_config.llm)
                 selected.comfy = copy.deepcopy(self.launch_config.comfy)
+                selected.comfy_outpainting = copy.deepcopy(self.launch_config.comfy_outpainting)
+                selected.generation.gpu_mode = self.launch_config.generation.gpu_mode
                 selected.output.directory = self.launch_config.output.directory
                 selected.generation.count = self.launch_config.generation.count
             self.config = selected
@@ -307,7 +306,7 @@ class StickerApp(App):
         self.query_one("#type-picker").display = False
         self.query_one("#home").display = False
         self.query_one("#dashboard").display = True
-        for lane in ("prompts", "images"):
+        for lane in ("prompts", "images", "outpainting"):
             self.query_one(f"#{lane}-logs", RichLog).clear()
         self.query_one("#hint", Static).update(
             "Pause keeps this screen. Stop returns to sessions. Both save progress."
@@ -336,7 +335,7 @@ class StickerApp(App):
         self.query_one("#stage", Static).update("Preparing session…")
         self.query_one("#totals", Static).update("")
         self.query_one("#output", Static).update("")
-        for lane in ("prompts", "images"):
+        for lane in ("prompts", "images", "outpainting"):
             self.query_one(f"#{lane}-progress", ProgressBar).update(total=count or 100, progress=0)
             self.query_one(f"#{lane}-stage", Static).update("Waiting to start")
             self.query_one(f"#{lane}-count", Static).update("")
@@ -365,10 +364,11 @@ class StickerApp(App):
         )
         status = item["status"].upper()
         if self.busy and self.control.requested.is_set():
-            status = "SAVING BOTH WORKERS"
+            status = "SAVING ALL WORKERS"
         self.query_one("#stage", Static).update(Text(status))
         prompt_count = item.get("prompts_completed", item.get("completed", 0))
-        image_count = item.get("completed", 0)
+        image_count = item.get("images_completed", item.get("completed", 0))
+        outpainting_count = item.get("outpainting_completed", 0)
         stages = {
             "planning": "Planning scene",
             "refining": "Refining Qwen prompt",
@@ -386,6 +386,7 @@ class StickerApp(App):
         for lane, done, label in (
             ("prompts", prompt_count, "prompts ready"),
             ("images", image_count, "images saved"),
+            ("outpainting", outpainting_count, "outpainted"),
         ):
             self.query_one(f"#{lane}-progress", ProgressBar).update(
                 total=item["count"], progress=done
@@ -398,7 +399,8 @@ class StickerApp(App):
             )
         self.query_one("#totals", Static).update(
             f"{prompt_count} prompts ready · {image_count} images saved · "
-            f"{max(0, prompt_count - image_count)} awaiting final images"
+            f"{item.get('completed', 0)} final · "
+            f"GPU: {item.get('effective_gpu_mode', item.get('gpu_mode', 'sequential'))}"
         )
         self.query_one("#output", Static).update(
             Text(f"Images: {self.store.directory(item['name']) / 'final'}")
@@ -423,7 +425,11 @@ class StickerApp(App):
             self.show_home()
 
     def on_log_line(self, event: LogLine) -> None:
-        lanes = (event.worker,) if event.worker in ("prompts", "images") else ("prompts", "images")
+        lanes = (
+            (event.worker,)
+            if event.worker in ("prompts", "images", "outpainting")
+            else ("prompts", "images", "outpainting")
+        )
         for lane in lanes:
             self.query_one(f"#{lane}-logs", RichLog).write(Text(event.text))
 
