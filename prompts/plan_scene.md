@@ -1,29 +1,63 @@
-# Scene-planning brief
+# Viking storybook scene-planning brief
 
-Plan ONE distinct, charming scene for a toddler girl's fantasy birthday sticker.
-The scene contains exactly one protagonist (the child in the first reference) and
-one friendly fantastic creature (the second reference). Keep their recognizable
-identities and clothing/design; choose a new interaction, pose, and setting.
-The references define appearance. If you cannot see them, use role names and do
-not invent facial features, hair, creature anatomy, or accessories.
+Create ONE visually clear moment featuring exactly one baby girl and one friendly
+baby dragon, affectionate companions in a storybook Viking world. Use the selected
+activity and setting supplied below as the starting point. Invent charming details
+and a specific interaction in which BOTH characters take part; do not replace the
+activity with a generic adventure. This is a single picture, not a sequence or collage.
 
-Use a playful storybook mood and an ink-and-marker illustration treatment with
-confident outlines, soft marker shading, and a coherent palette. Keep the entire
-child and creature comfortably inside the central area with complete silhouettes.
-Choose a gentle action appropriate for a small child: exploring a castle garden,
-watching glowing fireflies, sharing a picnic, finding a tiny waterfall, or another
-fresh activity. Keep the setting festive through atmosphere, not written labels.
+IDENTITY AND ART DIRECTION
+The first reference defines the girl's identity, toddler proportions, brown curls,
+black bow, black Viking dress with cream and brown embroidery, cream fur shoulders,
+and brown belt. Preserve the selected reference's actual features and outfit where
+it differs from this example. The second reference defines the baby dragon's face,
+body, wings, silhouette, and colors. Keep its recognizable appearance. Do not turn
+the dragon into a generic pastel creature or recolor the girl's black outfit.
+If references are not visible, use these supplied role/outfit descriptions without
+claiming to inspect them or inventing additional facial traits or dragon anatomy.
 
-Describe the finished scene in English: subject interaction and placement,
-foreground, background, materials, lighting direction, palette, and the scenery
-continuing toward every edge. The environment should extend naturally when the
-canvas is later enlarged. Keep characters central; the outer areas contain only
-environmental continuation. The picture contains scenery rather than a transparent
-cutout, and contains no lettering unless this brief is edited to request it.
-Do not include reference tags, workflow instructions, sizes, aspect ratios,
-Markdown, lists, alternatives, or explanations in the output. Return only one
-complete scene description. Preserve any explicitly requested visible text exactly.
+Use confident ink outlines and soft marker shading, with warm expressive faces and
+readable silhouettes. The world is cozy Viking-inspired fantasy: carved timber
+longhouses, knotwork details, woven wool, wooden utensils, tiny longships, birch
+groves, flower-covered fjords, and dreamy skies. Pick only a few relevant details.
+Everyday activities such as cookies, cakes, board games, reading, and naps belong
+in this world. Favor friendship and discovery over battles or intimidating imagery.
+
+BACKGROUND PALETTE
+Use the selected two or three dominant pastel colors for the surroundings, drawn
+from blush pink, lavender, powder blue, pale butter yellow, and peach. Blend them
+with soft gradients, diffuse light, and sparse white sparkles like the supplied
+pastel reference. Apply the palette to real scenery, mist, sky, water, and distant
+surfaces; retain the recognizable natural materials of the Viking world. Keep the
+characters' reference colors distinct and readable. Avoid a dark, gritty backdrop,
+neon saturation, or a busy rainbow covering every object.
+
+SCENE COMPOSITION
+Keep the girl's and dragon's entire bodies comfortably inside the central area,
+including feet, tail, and wings. Make their relative scale, poses, contact points,
+and shared action physically clear. For riding, the dragon is large enough to
+support the toddler, with a stable seated pose. For swimming or flight, show one
+unambiguous environment and direction of travel. Match props and surroundings to
+the activity; snow activities happen in snow, baking at a kitchen work surface,
+and swimming in calm water. If a suggested mood or framing conflicts with the
+activity, adapt it to preserve the activity and readable interaction.
+
+Choose one small delightful detail compatible with the moment: a flour-smudged
+nose while baking, a leaf resting on the dragon during a nap, or a ribbon on a toy
+longship. Do not add extra people or dragons. Keep secondary props sparse.
+
+Describe the finished image in English: the shared action, expressions, placement,
+foreground, background, materials, lighting direction, and explicit pastel colors.
+Include the Viking setting and palette in the returned description itself: that
+same description will guide later outpainting. Continue the environment naturally
+toward ALL four edges, with only scenery at the outer margins and no extra figures.
+The image has a scenic background rather than a transparent cutout.
+
+Return only one complete scene description in plain prose. No headings, lists,
+reference tags, explanations, alternatives, workflow instructions, dimensions,
+aspect ratios, visible lettering, captions, or watermarks.
 
 This is scene {{iteration}} of {{count}}, file {{sticker_id}}.
-Vary the action, setting, composition, and lighting from these recent scenes:
+Vary the details, viewpoint, and lighting from these recent scenes while following
+the selected activity and fixed art direction:
 {{previous_scenes}}

@@ -77,6 +77,7 @@ class Config:
     qwen: WorkflowConfig
     flux: WorkflowConfig
     character_directory: Path | None = None
+    activities: Path | None = None
 
 
 def integer(value, name: str, low: int, high: int = 2**63 - 1) -> None:
@@ -219,6 +220,11 @@ def load_config(path: Path) -> Config:
         if group == "characters" and "character_directory" in paths:
             continue
         raw = data.get(group)
+        if group == "prompts" and isinstance(raw, dict):
+            raw = dict(raw)
+            activity_path = raw.pop("activities", None)
+            if activity_path is not None:
+                paths["activities"] = local_path(base, activity_path)
         if not isinstance(raw, dict) or set(raw) != set(keys):
             raise ValueError(f"{group} must contain exactly: {', '.join(keys)}")
         paths.update({key: local_path(base, raw[key]) for key in keys})

@@ -23,6 +23,9 @@ Task-specific contract (takes precedence over generic examples in the guide):
 - Keep the original scene's subject count, action, environment, style, placement,
   lighting, and any literal lettering. Use source-image references instead of
   inventing facial traits. Add no extra characters, captions, or accessories.
+- Preserve the original scene's Viking-inspired setting, shared activity, and
+  explicit pastel background colors. Keep the girl's and dragon's reference colors
+  intact; do not apply the background palette to their clothing, skin, or body.
 - Keep both subjects fully inside the central composition. Describe coherent
   surroundings that can later continue past all edges. Do not ask Qwen to perform
   the later outpainting operation in this first render.

@@ -11,6 +11,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
+from .activities import load_activities, select_activity
 from .comfy import ComfyClient
 from .config import Config, auth_headers
 from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
@@ -29,6 +30,7 @@ def write_json(path: Path, value: dict) -> None:
 
 
 def validate_local(config: Config) -> dict:
+    activities = load_activities(config.activities) if config.activities else None
     pools = reference_pools(config)
     for path in (
         *pools[0],
@@ -81,6 +83,7 @@ def validate_local(config: Config) -> dict:
         ),
     )
     return {
+        "activities": activities,
         "reference_pools": pools,
         "planning": planning,
         "guide": guide,
@@ -114,11 +117,19 @@ def reserve_sticker(root: Path) -> tuple[int, str, Path]:
             index += 1
 
 
-def write_prompts(path: Path, name: str, raw: str, refined: str | None = None) -> None:
+def write_prompts(
+    path: Path, name: str, raw: str, refined: str | None = None, activity: dict | None = None
+) -> None:
     # Text fences keep literal reference tags visible in Markdown renderers.
     longest = max((len(match[0]) for match in re.finditer(r"`+", raw + (refined or ""))), default=0)
     fence = "`" * max(3, longest + 1)
     text = f"# {name}\n\n## Raw scene\n\n{fence}text\n{raw}\n{fence}\n"
+    if activity:
+        text += (
+            "\n## Selected activity\n\n"
+            + "\n".join(f"- {key}: {value}" for key, value in activity.items())
+            + "\n"
+        )
     if refined is not None:
         text += f"\n## Refined scene\n\n{fence}text\n{refined}\n{fence}\n"
     temporary = path.with_suffix(".md.tmp")
@@ -127,7 +138,12 @@ def write_prompts(path: Path, name: str, raw: str, refined: str | None = None) -
 
 
 def planning_prompt(
-    template: str, iteration: int, count: int, name: str, previous_scenes: list[str]
+    template: str,
+    iteration: int,
+    count: int,
+    name: str,
+    previous_scenes: list[str],
+    activity: dict | None = None,
 ) -> str:
     values = {
         "iteration": str(iteration),
@@ -135,11 +151,17 @@ def planning_prompt(
         "sticker_id": name,
         "previous_scenes": "\n".join(previous_scenes[-10:]) or "None yet.",
     }
-    return re.sub(
+    rendered = re.sub(
         r"\{\{(iteration|count|sticker_id|previous_scenes)\}\}",
         lambda match: values[match[1]],
         template,
     )
+    if activity:
+        rendered += "\n\nSelected scene brief (follow this activity; adapt details coherently):\n"
+        rendered += "\n".join(
+            f"{key}: {value}" for key, value in activity.items() if key not in ("id", "cycle")
+        )
+    return rendered
 
 
 def run(config: Config) -> list[Path]:
@@ -188,21 +210,33 @@ def run(config: Config) -> list[Path]:
             ],
         }
         try:
+            activity = (
+                select_activity(local["activities"], root / "metadata")
+                if local["activities"]
+                else None
+            )
+            if activity:
+                metadata["activity"] = activity
             write_json(metadata_path, metadata)
             log.info("[%s/%s] %s: planning scene", iteration + 1, config.generation.count, name)
             raw = llm.complete(
                 planning_prompt(
-                    local["planning"], iteration + 1, config.generation.count, name, previous_scenes
+                    local["planning"],
+                    iteration + 1,
+                    config.generation.count,
+                    name,
+                    previous_scenes,
+                    activity,
                 )
             )
-            write_prompts(prompt_path, name, raw)
+            write_prompts(prompt_path, name, raw, activity=activity)
             metadata["status"] = "refining"
             write_json(metadata_path, metadata)
             log.info("%s: refining scene with local Qwen guide", name)
             refined = llm.complete(
                 compose_refinement(local["refinement"], local["guide"], raw), refined=True
             )
-            write_prompts(prompt_path, name, raw, refined)
+            write_prompts(prompt_path, name, raw, refined, activity)
             if "<image1>" not in refined or "<image2>" not in refined:
                 raise ValueError(
                     "Refined prompt must name both <image1> and <image2> reference roles"

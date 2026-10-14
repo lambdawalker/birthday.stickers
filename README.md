@@ -252,3 +252,32 @@ Tests use actual local HTTP servers to exercise uploads, LLM requests, workflow
 submission, history polling, output downloads, and disk artifacts. They do not
 load AI models or verify visual quality. CI runs the suite on Windows and Linux.
 Live generation still needs your character images and reachable model servers.
+
+## Diverse Viking scenes
+
+The default planning prompt features a baby girl and baby dragon in a cozy Viking
+storybook world. Backgrounds use blush pink, lavender, powder blue, pale butter
+yellow, and peach, with soft gradients and sparse white sparkles. Character colors
+and the girl's Viking outfit remain faithful to the chosen references. The planner
+includes this art direction in the raw scene, which also guides Flux outpainting;
+the refinement prompt explicitly preserves it for Qwen.
+
+`prompts.activities` in YAML points to `prompts/activities.json`: 300 editable
+activities in 12 categories, each with compatible settings. For each scene the
+program samples an unused activity, avoids the preceding category when possible,
+and selects a setting, mood, framing, and pastel palette. The LLM supplies the
+specific poses and delightful details. The sampler is independent of diffusion
+seeds. Set `prompts.activities: null` (or omit it) to use only your planning prompt.
+
+Selection history lives in the per-sticker JSON files under `output/metadata`.
+It persists across runs using the same output directory. Every activity is used
+before a new cycle starts; failed attempts also consume their chosen activity.
+The selected brief is saved before the LLM request and appears in the prompt
+Markdown alongside the raw and refined descriptions. Keep metadata to retain
+history; use a new output directory to start a fresh collection. Run only one
+process per output directory when using activity sampling.
+
+Catalog IDs must be unique and stable. Each record needs `id`, `category`,
+`activity`, and a nonempty `settings` list. Editing the catalog recalculates history
+against the currently available IDs; adding activities makes them available in the
+current cycle. Reference images remain local and are not embedded in the catalog.

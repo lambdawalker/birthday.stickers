@@ -27,6 +27,7 @@ characters:
   creature: B     # Random B<number>.jpg reference; Qwen socket 2
 
 prompts:
+  activities: prompts/activities.json # Set null to disable activity sampling
   planning: prompts/plan_scene.md
   refinement: prompts/refine_scene.md
   guide: docs/Qwen_Image_2_1_Ultimate_Prompt_Guide.md

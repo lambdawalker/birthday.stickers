@@ -186,6 +186,7 @@ class PipelineTests(unittest.TestCase):
     def configuration(self, temp, services, count=1):
         directory = Path(temp)
         data = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+        data["prompts"].pop("activities", None)
         data["characters"] = {}  # Exercise legacy explicit-path configurations too.
         for key in ("protagonist", "creature"):
             path = directory / (key + ".png")
@@ -253,6 +254,33 @@ class PipelineTests(unittest.TestCase):
             config.generation.count = 1
             run(config)
             self.assertTrue((root / "final/stiker-0002.jpg").exists())
+
+    def test_activity_brief_reaches_llm_and_persists_across_failed_runs(self):
+        with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
+            config = self.configuration(temp, service)
+            data = yaml.safe_load(config.path.read_text(encoding="utf-8"))
+            data["prompts"]["activities"] = str(ROOT / "prompts/activities.json")
+            data["prompts"]["planning"] = str(ROOT / "prompts/plan_scene.md")
+            config.path.write_text(yaml.safe_dump(data), encoding="utf-8")
+            config = load_config(config.path)
+            service.fail_refine = True
+            with self.assertRaisesRegex(RuntimeError, "stiker-0000"):
+                run(config)
+            root = config.output.directory
+            first = json.loads((root / "metadata/stiker-0000.json").read_text(encoding="utf-8"))
+            self.assertEqual(first["status"], "failed")
+            service.fail_refine = False
+            run(config)
+            second = json.loads((root / "metadata/stiker-0001.json").read_text(encoding="utf-8"))
+            self.assertNotEqual(first["activity"]["id"], second["activity"]["id"])
+            for index, meta in enumerate((first, second)):
+                request = service.chats[index * 2]["messages"][-1]["content"]
+                self.assertIn(meta["activity"]["activity"], request)
+                self.assertIn(meta["activity"]["setting"], request)
+                self.assertIn("Viking", request)
+                self.assertIn("blush pink", request)
+                markdown = (root / "prompts" / f"stiker-{index:04d}.md").read_text(encoding="utf-8")
+                self.assertIn(meta["activity"]["id"], markdown)
 
     def test_refinement_failure_preserves_raw_scene(self):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
