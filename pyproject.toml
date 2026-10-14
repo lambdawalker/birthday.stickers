@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling>=1.26,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "birthday-stickers"
+version = "0.1.0"
+description = "Plan scenes with an OpenAI-compatible LLM, render with Qwen, and outpaint with ComfyUI."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["Pillow>=11,<13", "PyYAML>=6.0.2,<7"]
+
+[project.scripts]
+birthday-stickers = "birthday_stickers.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/birthday_stickers"]
+
+[dependency-groups]
+dev = ["ruff>=0.11,<1"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
