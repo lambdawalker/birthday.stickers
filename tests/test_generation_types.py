@@ -73,7 +73,7 @@ class GenerationTypeTests(unittest.TestCase):
             store = SessionStore(Path(temp) / "sessions")
             session = store.create(config)
             saved = load_config(store.directory(session["name"]) / "config.yaml")
-            self.assertEqual(saved.character_directory, folder)
+            self.assertEqual(saved.character_directory, folder.resolve())
             self.assertFalse((store.directory(session["name"]) / "inputs/characters").exists())
             pipeline = Pipeline(saved, RunControl(), lambda *_: None, lambda *_: None)
             pipeline.local = validate_local(saved)
