@@ -75,7 +75,8 @@ class Pipeline:
             qwen_seed=seed,
             flux_seed=(seed + 1) % SEED_MODULUS,
             generation_size=[self.config.generation.width, self.config.generation.height],
-            target_size=[self.config.output.width, self.config.output.height],
+            target_size=list(self.config.final_size),
+            outpainting=self.config.generation.outpainting,
             references=[
                 {
                     "role": role,
@@ -229,48 +230,17 @@ class Scene:
         self.meta.pop(pending)
         self.save()
 
-    def render_dragon(self):
-        config = self.config
-        with self.step("rendering_qwen", "Qwen render and download"):
-            if "qwen_prompt_id" not in self.meta:
-                graph = build_text_qwen(
-                    self.pipeline.local["qwen"],
-                    config.qwen.nodes,
-                    config.qwen.overrides,
-                    self.meta["refined_scene"],
-                    config.generation.width,
-                    config.generation.height,
-                    self.meta["qwen_seed"],
-                    self.name + "-qwen",
-                )
-                self.submit("qwen", graph)
-            data = self.pipeline.comfy.wait_image(
-                self.meta["qwen_prompt_id"], config.qwen.nodes["output"], self.pipeline.check
-            )
-        with self.step("save_final", "Save final JPEG"):
-            image = decode_image(data)
-            if image.size != (config.generation.width, config.generation.height):
-                raise ValueError("Qwen returned an unexpected image size")
-            save_jpeg(
-                image,
-                self.final,
-                config.output.jpeg_quality,
-                config.output.jpeg_subsampling,
-                config.output.jpeg_background,
-            )
+    def complete(self):
         self.meta.update(status="complete", finished_at=datetime.now(UTC).isoformat())
         self.save()
         self.pipeline.report("images", self.name, "complete", increment=1)
 
     def render(self):
         config, local, comfy = self.config, self.pipeline.local, self.pipeline.comfy
-        if config.generation.type == "baby_dragon":
-            self.render_dragon()
-            return
         references = self.references()
         raw, refined = self.meta["raw_scene"], self.meta["refined_scene"]
         if not self.meta.get("intermediate_saved"):
-            if "qwen_prompt_id" not in self.meta:
+            if references and "qwen_prompt_id" not in self.meta:
                 with self.step("upload_references", "Upload character references"):
                     for role, path in zip(("protagonist", "creature"), references, strict=True):
                         self.pipeline.check()
@@ -279,24 +249,51 @@ class Scene:
                             self.pipeline.uploaded[key] = comfy.upload(path, role)
             with self.step("rendering_qwen", "Qwen render and download"):
                 if "qwen_prompt_id" not in self.meta:
-                    graph = build_qwen(
-                        local["qwen"],
-                        config.qwen.nodes,
-                        config.qwen.overrides,
-                        refined,
-                        *(
-                            self.pipeline.uploaded[(p, ref["sha256"])]
-                            for p, ref in zip(references, self.meta["references"], strict=True)
-                        ),
-                        config.generation.width,
-                        config.generation.height,
-                        self.meta["qwen_seed"],
-                        self.name + "-qwen",
-                    )
+                    if config.generation.type == "baby_dragon":
+                        graph = build_text_qwen(
+                            local["qwen"],
+                            config.qwen.nodes,
+                            config.qwen.overrides,
+                            refined,
+                            config.generation.width,
+                            config.generation.height,
+                            self.meta["qwen_seed"],
+                            self.name + "-qwen",
+                        )
+                    else:
+                        graph = build_qwen(
+                            local["qwen"],
+                            config.qwen.nodes,
+                            config.qwen.overrides,
+                            refined,
+                            *(
+                                self.pipeline.uploaded[(p, ref["sha256"])]
+                                for p, ref in zip(references, self.meta["references"], strict=True)
+                            ),
+                            config.generation.width,
+                            config.generation.height,
+                            self.meta["qwen_seed"],
+                            self.name + "-qwen",
+                        )
                     self.submit("qwen", graph)
                 data = comfy.wait_image(
                     self.meta["qwen_prompt_id"], config.qwen.nodes["output"], self.pipeline.check
                 )
+            if not config.generation.outpainting:
+                with self.step("save_final", "Save final JPEG (outpainting off)"):
+                    image = decode_image(data)
+                    if image.size != config.final_size:
+                        raise ValueError("Qwen returned an unexpected image size")
+                    save_jpeg(
+                        image,
+                        self.final,
+                        config.output.jpeg_quality,
+                        config.output.jpeg_subsampling,
+                        config.output.jpeg_background,
+                    )
+                    self.meta["outpaint_skipped"] = "Disabled for this session"
+                self.complete()
+                return
             with self.step("save_intermediate", "Save intermediate JPEG"):
                 save_jpeg(
                     data,
@@ -307,7 +304,7 @@ class Scene:
                 )
                 self.meta["intermediate_saved"] = True
         source = decode_image(self.intermediate)
-        padding = plan_padding(source.size, (config.output.width, config.output.height))
+        padding = plan_padding(source.size, config.final_size)
         self.meta["padding"] = asdict(padding)
         if source.size == padding.target:
             with self.step("save_final", "Save final JPEG (outpainting not needed)"):
@@ -349,9 +346,7 @@ class Scene:
                     config.output.jpeg_subsampling,
                     config.output.jpeg_background,
                 )
-        self.meta.update(status="complete", finished_at=datetime.now(UTC).isoformat())
-        self.save()
-        self.pipeline.report("images", self.name, "complete", increment=1)
+        self.complete()
 
 
 def execute(
@@ -377,7 +372,7 @@ def execute(
     completed = [(p, m) for p, m in records if m.get("status") == "complete"]
     final_paths = [config.output.directory / "final" / f"{m['sticker']}.jpg" for _, m in completed]
     for path in final_paths:
-        if decode_image(path).size != (config.output.width, config.output.height):
+        if decode_image(path).size != config.final_size:
             raise ValueError(f"Completed image is missing or has the wrong dimensions: {path}")
     pending = [(p, m) for p, m in records if m.get("status") != "complete"]
     pipeline.counts["images"] = len(completed)

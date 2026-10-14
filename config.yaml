@@ -33,6 +33,7 @@ prompts:
   guide: docs/Qwen_Image_2_1_Ultimate_Prompt_Guide.md
 
 generation:
+  outpainting: true                # UI toggle default for new sessions
   type: viking_duo                  # Two reference characters, Qwen Edit + Flux outpaint
   count: 10
   width: 1024                       # Qwen canvas, multiples of 32

@@ -18,6 +18,7 @@ from textual.widgets import (
     ProgressBar,
     RichLog,
     Static,
+    Switch,
 )
 
 from .config import Config, load_config
@@ -71,6 +72,9 @@ class StickerApp(App):
     .field { width: 1fr; height: auto; margin-right: 2; }
     Input { background: #1b2233; border: tall #565277; }
     Input:focus { border: tall #b7a1e8; }
+    .toggle-row { height: 3; align-vertical: middle; }
+    .toggle-row Label { width: auto; margin: 1 2 0 1; }
+    #outpaint-size { height: auto; color: #acb4ca; }
     .buttons { height: auto; margin-top: 0; }
     Button { margin: 1 1; padding: 0 2; min-width: 16; }
     Button.-primary { background: #b7a1e8; color: #101522; }
@@ -118,12 +122,14 @@ class StickerApp(App):
             )
             with Vertical(classes="card"):
                 yield Label("GIRL + DRAGON", classes="title")
-                yield Static("Two character references · Qwen Edit + outpainting", classes="muted")
+                yield Static(
+                    "Two character references · Qwen Edit · optional outpainting", classes="muted"
+                )
                 yield Button("Girl + dragon", variant="primary", id="choose-duo")
             with Vertical(classes="card"):
                 yield Label("BABY DRAGON ONLY", classes="title")
                 yield Static(
-                    "300 solo activities · text-to-image · no references needed", classes="muted"
+                    "300 solo activities · text-to-image · optional outpainting", classes="muted"
                 )
                 yield Button("Baby dragon only", variant="success", id="choose-dragon")
             yield Static("", id="type-error")
@@ -144,6 +150,10 @@ class StickerApp(App):
                     with Vertical(classes="field"):
                         yield Label("Number of stickers")
                         yield Input(str(self.config.generation.count), type="integer", id="count")
+                with Horizontal(classes="toggle-row"):
+                    yield Label("Outpainting", id="outpaint-label")
+                    yield Switch(self.config.generation.outpainting, id="outpainting")
+                yield Static("", id="outpaint-size")
                 with Horizontal(classes="buttons"):
                     yield Button("New session", variant="primary", id="new")
                     yield Button("Change type", id="change-type")
@@ -194,9 +204,10 @@ class StickerApp(App):
 
     def on_mount(self) -> None:
         self.query_one("#sessions", DataTable).add_columns(
-            "Session", "Type", "Progress", "Status", "Last step"
+            "Session", "Type", "Outpaint", "Progress", "Status", "Last step"
         )
         self.refresh_sessions()
+        self.update_outpaint_summary()
         self.query_one("#dashboard").set_class(self.size.height < 32, "compact")
         logger = logging.getLogger("birthday_stickers")
         self.old_log_level = logger.level
@@ -223,6 +234,11 @@ class StickerApp(App):
             table.add_row(
                 item["name"],
                 item.get("generation_type", "viking_duo"),
+                "On"
+                if item.get(
+                    "outpainting", item.get("generation_type", "viking_duo") == "viking_duo"
+                )
+                else "Off",
                 f"{item.get('prompts_completed', item.get('completed', 0))} prompts / "
                 f"{item.get('completed', 0)} images / {item['count']}",
                 status,
@@ -263,11 +279,25 @@ class StickerApp(App):
         except (OSError, ValueError) as error:
             self.query_one("#type-error", Static).update(Text(f"Unable to load this type: {error}"))
             return
+        self.query_one("#outpainting", Switch).value = selected.generation.outpainting
+        self.update_outpaint_summary()
         self.query_one("#new-type", Label).update(f"NEW SESSION · {generation_type}")
         self.query_one("#count", Input).value = str(selected.generation.count)
         self.query_one("#type-error", Static).update("")
         self.show_home()
         self.query_one("#new", Button).focus()
+
+    def update_outpaint_summary(self) -> None:
+        enabled = self.query_one("#outpainting", Switch).value
+        size = self.config.output if enabled else self.config.generation
+        self.query_one("#outpaint-size", Static).update(
+            f"New sessions: {'extend background' if enabled else 'Qwen only'} · "
+            f"final {size.width} × {size.height}. Resume keeps the saved setting."
+        )
+
+    @on(Switch.Changed, "#outpainting")
+    def outpainting_changed(self, event: Switch.Changed) -> None:
+        self.update_outpaint_summary()
 
     def show_dashboard(self) -> None:
         self.query_one("#type-picker").display = False
@@ -414,6 +444,7 @@ class StickerApp(App):
             except ValueError:
                 self.notify("Enter a positive number of stickers.", severity="error")
                 return
+            self.config.generation.outpainting = self.query_one("#outpainting", Switch).value
             self.active = None
             self.begin(count=count)
         elif action == "open":

@@ -35,7 +35,7 @@ def validate_local(config: Config) -> dict:
         config.refinement,
         config.guide,
         config.qwen.path,
-        *([config.flux.path] if config.flux else []),
+        *([config.flux.path] if config.generation.outpainting and config.flux else []),
     ):
         if not path.is_file():
             raise ValueError(f"Required file is missing: {path}")
@@ -49,34 +49,18 @@ def validate_local(config: Config) -> dict:
     compose_refinement(refinement, guide, "validation scene")
     qwen = load_workflow(config.qwen.path)
     if config.generation.type == "baby_dragon":
-        return {
-            "activities": activities,
-            "reference_pools": pools,
-            "planning": planning,
-            "guide": guide,
-            "refinement": refinement,
-            "qwen": qwen,
-            "flux": None,
-            "graphs": (
-                build_text_qwen(
-                    qwen,
-                    config.qwen.nodes,
-                    config.qwen.overrides,
-                    "validation",
-                    config.generation.width,
-                    config.generation.height,
-                    0,
-                    "validation",
-                ),
-            ),
-        }
-    flux = load_workflow(config.flux.path)
-    padding = plan_padding(
-        (config.generation.width, config.generation.height),
-        (config.output.width, config.output.height),
-    )
-    graphs = (
-        build_qwen(
+        graph = build_text_qwen(
+            qwen,
+            config.qwen.nodes,
+            config.qwen.overrides,
+            "validation",
+            config.generation.width,
+            config.generation.height,
+            0,
+            "validation",
+        )
+    else:
+        graph = build_qwen(
             qwen,
             config.qwen.nodes,
             config.qwen.overrides,
@@ -87,19 +71,29 @@ def validate_local(config: Config) -> dict:
             config.generation.height,
             0,
             "validation",
-        ),
-        build_flux(
-            flux,
-            config.flux.nodes,
-            config.flux.overrides,
-            "validation",
-            "intermediate.jpg",
-            padding,
-            config.output.feathering,
-            0,
-            "validation",
-        ),
-    )
+        )
+    graphs = [graph]
+    flux = None
+    if config.generation.outpainting:
+        if config.flux is None:
+            raise ValueError("Outpainting requires workflows.flux")
+        padding = plan_padding(
+            (config.generation.width, config.generation.height), config.final_size
+        )
+        flux = load_workflow(config.flux.path)
+        graphs.append(
+            build_flux(
+                flux,
+                config.flux.nodes,
+                config.flux.overrides,
+                "validation",
+                "intermediate.jpg",
+                padding,
+                config.output.feathering,
+                0,
+                "validation",
+            )
+        )
     return {
         "activities": activities,
         "reference_pools": pools,

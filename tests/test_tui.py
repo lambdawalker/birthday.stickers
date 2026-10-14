@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import test_pipeline as fixtures
-from textual.widgets import DataTable, Input, ProgressBar, RichLog, Static
+from textual.widgets import DataTable, Input, ProgressBar, RichLog, Static, Switch
 
 from birthday_stickers.control import RunHalted
 from birthday_stickers.sessions import SessionStore
@@ -32,12 +32,14 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                 async with app.run_test(size=(110, 40)) as pilot:
                     self.assertTrue(app.query_one("#new-name", Input).value.endswith("-001"))
                     await pilot.click("#choose-duo")
+                    await pilot.click("#outpainting")
                     await pilot.click("#new")
                     for _ in range(60):
                         if started.is_set():
                             break
                         await pilot.pause(0.05)
                     self.assertTrue(started.is_set())
+                    self.assertFalse(store.list_incomplete()[0]["outpainting"])
                     await pilot.click("#pause")
                     for _ in range(60):
                         if not app.busy:
@@ -160,6 +162,9 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                 with patch("birthday_stickers.tui.load_config", return_value=dragon):
                     await pilot.click("#choose-dragon")
                 self.assertEqual(app.config.generation.type, "baby_dragon")
+                self.assertFalse(app.query_one("#outpainting", Switch).value)
+                await pilot.click("#outpainting")
+                self.assertTrue(app.query_one("#outpainting", Switch).value)
                 self.assertEqual(app.config.llm.base_url, config.llm.base_url)
                 self.assertEqual(app.config.comfy.base_url, config.comfy.base_url)
                 self.assertEqual(app.config.output.directory, config.output.directory)

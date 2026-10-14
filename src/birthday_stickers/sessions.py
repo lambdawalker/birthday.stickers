@@ -126,7 +126,7 @@ class SessionStore:
                     prompts[key] = str(destination.relative_to(directory))
             workflows = {}
             for key, workflow in (("qwen", config.qwen), ("flux", config.flux)):
-                if workflow is None:
+                if workflow is None or (key == "flux" and not config.generation.outpainting):
                     continue
                 destination = snapshots / f"{key}.json"
                 shutil.copyfile(workflow.path, destination)
@@ -158,6 +158,7 @@ class SessionStore:
             manifest = {
                 "version": 1,
                 "generation_type": config.generation.type,
+                "outpainting": config.generation.outpainting,
                 "name": name,
                 "count": target,
                 "completed": 0,

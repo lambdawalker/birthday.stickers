@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("LLM model and ComfyUI nodes/model files are available. No images generated.")
             print(
                 f"Ready for {config.generation.count} scene(s); final size "
-                f"{config.output.width}x{config.output.height}; output: {config.output.directory}"
+                f"{config.final_size[0]}x{config.final_size[1]}; output: {config.output.directory}"
             )
         elif args.headless:
             from .control import RunControl

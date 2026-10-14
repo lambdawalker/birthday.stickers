@@ -38,6 +38,7 @@ class ComfyConfig:
 @dataclass
 class GenerationConfig:
     type: str = "viking_duo"
+    outpainting: bool = True
     count: int = 10
     width: int = 1024
     height: int = 1024
@@ -79,6 +80,12 @@ class Config:
     flux: WorkflowConfig | None
     character_directory: Path | None = None
     activities: Path | None = None
+
+    @property
+    def final_size(self) -> tuple[int, int]:
+        if self.generation.outpainting:
+            return self.output.width, self.output.height
+        return self.generation.width, self.generation.height
 
 
 def integer(value, name: str, low: int, high: int = 2**63 - 1) -> None:
@@ -160,8 +167,10 @@ def load_config(path: Path) -> Config:
     if generation.type not in ("viking_duo", "baby_dragon"):
         raise ValueError("generation.type must be viking_duo or baby_dragon")
     dragon = generation.type == "baby_dragon"
-    if dragon:
-        output.width, output.height = generation.width, generation.height
+    if "outpainting" not in data.get("generation", {}):
+        generation.outpainting = not dragon  # Preserve older session behavior.
+    if type(generation.outpainting) is not bool:
+        raise ValueError("generation.outpainting must be true or false")
     for name, item in (("llm", llm), ("comfy", comfy)):
         validate_url(item.base_url, name + ".base_url")
         if item.api_key_env is not None and (
@@ -193,7 +202,7 @@ def load_config(path: Path) -> Config:
         if getattr(generation, key) % 32:
             raise ValueError(f"generation.{key} must be a multiple of 32")
         integer(getattr(output, key), "output." + key, 1, 16384)
-        if getattr(output, key) < getattr(generation, key):
+        if generation.outpainting and getattr(output, key) < getattr(generation, key):
             raise ValueError(f"output.{key} is smaller than generation.{key}")
     integer(output.jpeg_quality, "output.jpeg_quality", 1, 100)
     integer(output.jpeg_subsampling, "output.jpeg_subsampling", 0, 2)
@@ -206,7 +215,7 @@ def load_config(path: Path) -> Config:
         raise ValueError(f"output.jpeg_background: {error}") from error
     base = path.parent
     output.directory = local_path(base, output.directory)
-    paths = {}
+    paths = {"flux": None}
     characters = data.get("characters")
     if dragon:
         paths.update(protagonist="", creature="", flux=None)
@@ -237,17 +246,19 @@ def load_config(path: Path) -> Config:
             raise ValueError(f"{group} must contain exactly: {', '.join(keys)}")
         paths.update({key: local_path(base, raw[key]) for key in keys})
     workflows = data.get("workflows")
-    if not isinstance(workflows, dict) or set(workflows) != (
-        {"qwen"} if dragon else {"qwen", "flux"}
+    if (
+        not isinstance(workflows, dict)
+        or "qwen" not in workflows
+        or set(workflows) - {"qwen", "flux"}
     ):
-        raise ValueError(
-            "workflows must contain only qwen" if dragon else "workflows must contain qwen and flux"
-        )
+        raise ValueError("workflows must contain qwen and optionally flux")
+    if generation.outpainting and "flux" not in workflows:
+        raise ValueError("Outpainting requires workflows.flux")
     for key, roles in (
         ("qwen", {"protagonist", "creature", "encoder", "latent", "sampler", "output"}),
         ("flux", {"image", "prompt", "pad", "sampler", "conditioning", "output"}),
     ):
-        if dragon and key == "flux":
+        if key == "flux" and key not in workflows:
             continue
         if dragon:
             roles = roles - {"protagonist", "creature"}

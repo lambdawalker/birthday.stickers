@@ -106,3 +106,69 @@ class GenerationTypeTests(unittest.TestCase):
                 Scene(pipeline, path, meta, "images").render()
             # Two initial references, two intermediates, one changed protagonist.
             self.assertEqual(len(service.uploads), 5)
+
+    def test_dragon_outpaint_uses_raw_prompt_and_resumes_flux_job(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = load_config(fixtures.ROOT / "config.dragon.yaml")
+            config.llm.base_url = service.url + "/v1"
+            config.comfy.base_url = service.url
+            config.comfy.poll_interval = 0.002
+            config.generation.width = config.generation.height = 32
+            config.generation.count = 1
+            config.generation.outpainting = True
+            config.output.width, config.output.height = 53, 55
+            store = SessionStore(Path(temp) / "sessions")
+            session = store.create(config)
+            control = RunControl()
+            original = ComfyClient.wait_image
+
+            def pause(client, prompt_id, output_id, checkpoint=lambda: None):
+                if output_id == "9":
+                    control.request()
+                return original(client, prompt_id, output_id, checkpoint)
+
+            with patch.object(ComfyClient, "wait_image", pause):
+                result = store.execute(session["name"], control)
+            self.assertEqual(result["status"], "paused", result.get("error"))
+            result = store.execute(session["name"], RunControl())
+            self.assertEqual(result["status"], "complete", result.get("error"))
+            self.assertTrue(result["outpainting"])
+            self.assertEqual(len(service.chats), 2)
+            self.assertEqual(len(service.graphs), 2)
+            self.assertEqual(len(service.uploads), 1)
+            self.assertEqual(
+                service.graphs[1]["23"]["inputs"]["text"],
+                "One baby dragon curls up beside a pastel Viking longhouse.",
+            )
+            with Image.open(store.directory(session["name"]) / "final/stiker-0000.jpg") as image:
+                self.assertEqual(image.size, (53, 55))
+
+    def test_duo_can_disable_outpainting_without_flux_files(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            config.generation.outpainting = False
+            config.flux.path = Path(temp) / "missing.json"
+            store = SessionStore(Path(temp) / "sessions")
+            session = store.create(config)
+            result = store.execute(session["name"], RunControl())
+            self.assertEqual(result["status"], "complete", result.get("error"))
+            self.assertFalse(result["outpainting"])
+            self.assertEqual(len(service.graphs), 1)
+            self.assertEqual(len(service.uploads), 2)
+            with Image.open(store.directory(session["name"]) / "final/stiker-0000.jpg") as image:
+                self.assertEqual(image.size, (32, 32))
+
+    def test_legacy_configs_keep_their_original_outpainting_behavior(self):
+        import yaml
+
+        with tempfile.TemporaryDirectory() as temp:
+            for filename, enabled in (("config.yaml", True), ("config.dragon.yaml", False)):
+                data = yaml.safe_load((fixtures.ROOT / filename).read_text(encoding="utf-8"))
+                data["generation"].pop("outpainting")
+                if not enabled:
+                    data["workflows"].pop("flux")
+                path = Path(temp) / filename
+                path.write_text(yaml.safe_dump(data), encoding="utf-8")
+                config = load_config(path)
+                self.assertEqual(config.generation.outpainting, enabled)
+                self.assertEqual(config.final_size, (1624, 1624) if enabled else (768, 1024))

@@ -367,10 +367,11 @@ current cycle. Reference images remain local and are not embedded in the catalog
 ### Generation types
 
 - `viking_duo` (default `config.yaml`): baby girl + baby dragon identity references,
-  Qwen Edit followed by Flux outpainting.
+  Qwen Edit with optional Flux outpainting.
 - `baby_dragon` (`config.dragon.yaml`): one baby dragon, 300 dedicated activities,
   local LLM planning/refinement, and the supplied Qwen Image 2.1 text-to-image flow.
-  No references or Flux model are needed. The attached flow has no image sockets;
+  No references are needed; Flux is needed only with outpainting enabled.
+  The attached Qwen flow has no image sockets;
   edit `prompts/plan_dragon.md` to customize the dragon's appearance.
 
 The interactive app opens with a generation-type picker. Choose **Girl + dragon**
@@ -403,8 +404,9 @@ Both types share the session picker, pause/stop/resume, parallel prompt and imag
 workers, per-step timings, Markdown prompts, and `stiker-0000.jpg` naming.
 The session records its type; resuming uses its saved configuration. Both configs
 use the same output directory, so either launcher lists all incomplete sessions.
-For `baby_dragon`, `generation.width` and `generation.height` set both the canvas
-and final JPEG size; `output.width/height` are ignored because there is no outpaint.
+For both types, `generation.width/height` set the Qwen canvas. With outpainting
+off, those are also the final JPEG dimensions. With outpainting on,
+`output.width/height` set the final size and must be at least the canvas size.
 The workflow's internal text generator, resolution selector and seed node are
 pruned in favor of the local prompt, configured canvas and durable scene seed.
 
@@ -422,3 +424,23 @@ images finish. You can change references freely between sessions.
 Older sessions retain their original snapshot paths for safe resumption; their
 existing backups are not deleted or automatically migrated. New sessions do not
 create these backups. Prompt/activity/workflow snapshots are still retained.
+
+
+### Optional outpainting
+
+Before creating or selecting a session, the session screen shows an **Outpainting**
+switch and the final image dimensions. It applies to new sessions; resuming always
+uses the session's saved setting, shown in the **Outpaint** column.
+`generation.outpainting: true/false` sets the initial switch value and controls
+headless runs. The duo default is on; the solo dragon default is off.
+
+With outpainting on, either Qwen flow saves an intermediate JPEG, then uses the
+original raw scene prompt with Flux. Padding centers the source in the configured
+final canvas. With it off, Qwen saves directly to the final folder and Flux is
+not validated, uploaded to, or run. Existing sessions without this setting retain
+the old behavior: duo on, solo dragon off.
+
+Both shipped configurations include `workflows.flux`. If you have an older
+`config.dragon.local.yaml`, copy the `workflows.flux` section from the updated
+`config.dragon.yaml` and set larger `output.width/height` before enabling the switch.
+The switch is saved in the session snapshot, along with the chosen dimensions.

@@ -1,4 +1,4 @@
-# Baby dragon text-to-image. Canvas dimensions are also final JPEG dimensions.
+# Baby dragon with optional Flux outpainting.
 llm:
   base_url: http://127.0.0.1:1234/v1
   model: google/gemma-4-e2b
@@ -29,10 +29,11 @@ generation:
   height: 1024
   seed: null
   type: baby_dragon
+  outpainting: false
 output:
   directory: output
-  width: 768
-  height: 1024
+  width: 1624
+  height: 1624
   jpeg_quality: 95
   jpeg_subsampling: 0
   jpeg_background: '#ffffff'
@@ -46,4 +47,14 @@ workflows:
       latent: 459:456
       sampler: 459:458
       output: '461'
+    overrides: {}
+  flux:
+    path: workflows/flux-outpaint.json
+    nodes:
+      image: '47'
+      prompt: '23'
+      pad: '44'
+      sampler: '3'
+      conditioning: '38'
+      output: '9'
     overrides: {}
