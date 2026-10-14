@@ -186,9 +186,9 @@ class StickerApp(App):
                 )
             with Horizontal(id="workers"):
                 for lane, panel, title in (
-                    ("prompts", "prompt", "LLM · PROMPTS"),
-                    ("images", "image", "COMFYUI · IMAGES"),
-                    ("outpainting", "outpainting", "COMFYUI · OUTPAINT"),
+                    ("prompts", "prompt", "SCENE PLANNING"),
+                    ("images", "image", "IMAGE GENERATION"),
+                    ("outpainting", "outpainting", "OUTPAINTING"),
                 ):
                     with Vertical(id=f"{panel}-worker", classes="worker"):
                         yield Label(title, classes="title")
@@ -402,9 +402,9 @@ class StickerApp(App):
             f"{item.get('completed', 0)} final · "
             f"GPU: {item.get('effective_gpu_mode', item.get('gpu_mode', 'sequential'))}"
         )
-        self.query_one("#output", Static).update(
-            Text(f"Images: {self.store.directory(item['name']) / 'final'}")
-        )
+        stage_folder = "outpainting" if item.get("outpainting") else "image_generation"
+        output = self.store.directory(item["name"]) / stage_folder / "results"
+        self.query_one("#output", Static).update(Text(f"Results: {output}"))
         self.query_one("#error", Static).update(Text(item.get("error", "")))
         self.query_one("#error").display = bool(item.get("error"))
 

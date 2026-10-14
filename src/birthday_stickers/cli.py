@@ -27,7 +27,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     modes.add_argument("--headless", action="store_true", help="Run without the Textual interface")
     parser.add_argument("--resume", metavar="SESSION", help="Resume a session in headless mode")
+    parser.add_argument(
+        "--enable-outpainting",
+        action="store_true",
+        help="Add outpainting to the resumed session, keeping generated originals",
+    )
     args = parser.parse_args(argv)
+    if args.enable_outpainting and not (args.headless and args.resume):
+        parser.error("--enable-outpainting requires --headless --resume SESSION")
     if args.resume and not args.headless:
         parser.error("--resume requires --headless")
     if args.headless or args.dry_run or args.check:
@@ -68,6 +75,8 @@ def main(argv: list[str] | None = None) -> int:
 
             store = SessionStore(config.output.directory / "sessions")
             name = args.resume or store.create(config)["name"]
+            if args.enable_outpainting:
+                store.enable_outpainting(name, config)
             result = store.execute(name, RunControl())
             print(f"Session {name}: {result['status']}. Files: {store.directory(name)}")
             if result["status"] == "failed":

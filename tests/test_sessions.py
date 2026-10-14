@@ -82,7 +82,9 @@ class SessionTests(unittest.TestCase):
             self.assertEqual(len(result), 2)
             self.assertEqual(len(service.graphs), 4)
             self.assertEqual(len(service.chats), 4)
-            self.assertEqual(len(list((config.output.directory / "final").glob("*.jpg"))), 2)
+            self.assertEqual(
+                len(list((config.output.directory / "outpainting" / "results").glob("*.jpg"))), 2
+            )
 
     def test_unknown_submission_is_not_automatically_repeated(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

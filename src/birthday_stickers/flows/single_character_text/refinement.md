@@ -14,3 +14,5 @@ Guide:
 
 Original scene:
 {{scene}}
+
+The composition is a complete, borderless 2D illustration. Continuous scenery fills the canvas edge to edge; no frame, border, inset panel, blank margin, or 3D-rendered appearance. Include this edge-to-edge composition in the scene description.

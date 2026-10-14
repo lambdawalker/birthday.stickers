@@ -14,7 +14,7 @@ import yaml
 
 from .config import Config, integer, load_config
 from .control import RunControl, RunHalted
-from .pipeline import run, scene_records, validate_local, write_json
+from .pipeline import prepare_records, run, validate_local, write_json
 
 
 def now() -> str:
@@ -120,6 +120,7 @@ class SessionStore:
                 ("guide", config.guide),
                 ("activities", config.activities),
                 ("outpainting", config.outpainting),
+                ("negative", config.negative),
             ):
                 if path is not None:
                     destination = snapshots / f"{key}{path.suffix}"
@@ -188,6 +189,50 @@ class SessionStore:
             shutil.rmtree(directory)
             raise
 
+    def enable_outpainting(self, name: str, settings: Config) -> None:
+        """Add the stage to an existing session without touching generated originals."""
+        directory = self.directory(name)
+        with session_lock(directory):
+            path = directory / "config.yaml"
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            if load_config(path).generation.outpainting:
+                return
+            if settings.flux is None:
+                raise ValueError("The selected configuration needs an outpainting workflow")
+            # Use separate filenames so a failed validation cannot change active inputs.
+            workflow = directory / "inputs" / "added-outpainting.json"
+            shutil.copyfile(settings.flux.path, workflow)
+            data["workflows"]["flux"] = {**asdict(settings.flux), "path": str(workflow)}
+            prompt_text = (
+                settings.outpainting.read_text(encoding="utf-8")
+                if settings.outpainting
+                else settings.output.outpainting_prompt
+            )
+            prompt = directory / "inputs" / "added-outpainting.md"
+            prompt.write_text(prompt_text, encoding="utf-8")
+            data["prompts"]["outpainting"] = str(prompt) if prompt_text.strip() else None
+            if settings.negative and not data["prompts"].get("negative"):
+                negative = directory / "inputs" / "added-negative.md"
+                shutil.copyfile(settings.negative, negative)
+                data["prompts"]["negative"] = str(negative)
+            data["generation"]["outpainting"] = True
+            data["generation"]["gpu_mode"] = settings.generation.gpu_mode
+            data["comfy_outpainting"] = asdict(settings.outpainting_comfy)
+            for key in ("width", "height", "feathering", "preserve_center"):
+                data["output"][key] = getattr(settings.output, key)
+            temporary = directory / "enable-outpainting.yaml"
+            try:
+                temporary.write_text(yaml.safe_dump(data), encoding="utf-8")
+                validate_local(load_config(temporary))
+                temporary.replace(path)
+            finally:
+                temporary.unlink(missing_ok=True)
+            manifest = self.read(name)
+            manifest.update(
+                status="ready", outpainting=True, stage="Outpainting added", updated_at=now()
+            )
+            write_json(directory / "session.json", manifest)
+
     def execute(
         self,
         name: str,
@@ -197,8 +242,6 @@ class SessionStore:
         directory = self.directory(name)
         with session_lock(directory):
             manifest = self.read(name)
-            if manifest["status"] == "complete":
-                return manifest
 
             update_lock = RLock()
 
@@ -224,13 +267,18 @@ class SessionStore:
 
             try:
                 config = load_config(directory / "config.yaml")
-                records = scene_records(directory)
+                records = prepare_records(config)
+                if manifest["status"] == "complete" and all(
+                    m.get("status") == "complete" for _, m in records
+                ):
+                    return manifest
                 completed = sum(m.get("status") == "complete" for _, m in records)
                 prompts_completed = sum(
                     "refined_scene" in m or m.get("status") == "complete" for _, m in records
                 )
                 update(
                     status="running",
+                    outpainting=config.generation.outpainting,
                     completed=completed,
                     prompts_completed=prompts_completed,
                     images_completed=sum(

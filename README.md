@@ -15,10 +15,10 @@ that session folder):
 2. Assemble the raw scene, local Qwen guide, and refinement template locally; ask
    the same LLM for the refined Qwen editing instruction.
 3. Upload the protagonist to Qwen input 1 and the fantastic creature to input 2.
-4. Run the Qwen workflow and save `intermediate/stiker-0000.jpg`.
+4. Run the Qwen workflow and save `image_generation/results/stiker-0000.jpg`.
 5. Upload that JPEG, compute centered padding, and run Flux with the **raw** scene.
-6. Save `final/stiker-0000.jpg` at the exact configured width and height.
-7. Keep both descriptions in `prompts/stiker-0000.md`, plus job metadata
+6. Save `outpainting/results/stiker-0000.jpg` at the exact configured width and height.
+7. Keep both descriptions in `scene_planning/results/stiker-0000.md`, plus job metadata
    and the exact submitted graphs for troubleshooting.
 
 ## Quick start (Windows PowerShell)
@@ -121,8 +121,7 @@ seconds, outcome, and recording timestamp. These are client-observed durations,
 not GPU-only inference measurements.
 
 Each session stores `session.json`, a `config.yaml` snapshot, copies of the prompts
-and workflows under `inputs/`, plus `intermediate/`, `final/`,
-`prompts/` and `metadata/`. Changing the main YAML affects new sessions only. To
+and workflows under `inputs/`, plus stage folders and `metadata/`. Changing the main YAML affects new sessions only. To
 change a server address for an existing session, edit its saved `config.yaml`
 while stopped. Keep dimensions and workflows unchanged for partial
 scenes. API credentials still come from the configured environment variables.
@@ -269,9 +268,9 @@ against `output.jpeg_background`.
 
 | Folder | Files |
 |---|---|
-| `intermediate/` | `stiker-0000.jpg`, `stiker-0001.jpg`, … |
-| `final/` | Matching JPEG names at the requested dimensions |
-| `prompts/` | One matching Markdown file with raw and refined descriptions |
+| `image_generation/results/` | `stiker-0000.jpg`, `stiker-0001.jpg`, … |
+| `outpainting/results/` | Matching JPEG names at the requested dimensions |
+| `scene_planning/results/` | One matching Markdown file with raw and refined descriptions |
 | `metadata/` | Status, seeds, reference hashes, padding, prompt IDs, submitted JSON graphs |
 
 The requested spelling **`stiker`** is intentional. IDs start at zero within each
@@ -432,12 +431,13 @@ create these backups. Prompt/activity/workflow snapshots are still retained.
 Before creating or selecting a session, the session screen shows an **Outpainting**
 switch and the final image dimensions. It applies to new sessions; resuming always
 uses the session's saved setting, shown in the **Outpaint** column.
+Use the explicit command below to add outpainting to an existing session.
 `generation.outpainting: true/false` sets the initial switch value and controls
 headless runs. The duo default is on; the solo dragon default is off.
 
 With outpainting on, either Qwen flow saves an intermediate JPEG, then uses the
 original raw scene prompt with Flux. Padding centers the source in the configured
-final canvas. With it off, Qwen saves directly to the final folder and Flux is
+final canvas. With it off, Qwen saves to `image_generation/results/` and Flux is
 not validated, uploaded to, or run. Existing sessions without this setting retain
 the old behavior: duo on, solo dragon off.
 
@@ -553,3 +553,55 @@ prompts, intermediate images, and submitted job IDs, so each stage resumes its
 unfinished work. Job IDs are tied to their original endpoint; changing an endpoint
 for an already submitted job is rejected. With outpainting disabled, only the
 primary ComfyUI server is used.
+
+### Stage outputs, logs, and adding outpainting later
+
+Every session keeps independent stage folders:
+
+| Stage | Results | Logs |
+| --- | --- | --- |
+| Scene planning | `scene_planning/results/stiker-0000.md` — raw and refined descriptions | `scene_planning/logs/` |
+| Image generation | `image_generation/results/stiker-0000.jpg` — original Qwen image | `image_generation/logs/` |
+| Outpainting | `outpainting/results/stiker-0000.jpg` — extended image | `outpainting/logs/` |
+
+Stage logs are append-only JSON Lines files, one per sticker, plus `worker.jsonl`
+for worker events. They record timestamps, progress, step durations, outcomes,
+and errors. Resuming appends to the existing logs. Shared resumable state and
+submitted workflow graphs remain under `metadata/`.
+
+Base images are kept regardless of whether outpainting is enabled. To add
+outpainting to a paused **or completed** session, configure the desired Flux
+workflow, target dimensions and ComfyUI endpoint in your launch YAML, then run:
+
+```powershell
+uv run birthday-stickers --config config.yaml --headless --resume 2026-10-14-001 --enable-outpainting
+```
+
+This explicitly snapshots the outpainting settings into that session and queues
+already-generated images. Saved prompts and Qwen images are reused; originals
+are never replaced by extended images. Repeating the command skips completed
+outpainting. The regular session-picker toggle still controls new sessions only.
+
+Older sessions are supported: their `prompts/`, `intermediate/`, and `final/`
+artifacts are copied to the corresponding stage folders when resumed, without
+deleting originals or overwriting existing stage files. Historical timing data
+remains in metadata; new per-stage logs begin on the next run.
+
+### Negative prompts
+
+`flows/common/negative.md` supplies `border, 3d, incomplete image, framed.` to
+both Qwen flows. A flow-local `negative.md` overrides the common file. You can
+also set `prompts.negative: ./my-prompts/negative.md`, or use `null` to retain only
+the exported workflow's negative prompt. Configured text is appended to existing
+Qwen negatives, preserving exclusions such as the solo flow's `realistic`.
+New sessions snapshot the file as `inputs/negative.md`; edit that saved file
+while stopped to change negatives for future jobs in an existing session.
+Submitted jobs keep their original prompts.
+
+Flux receives a separate negative text-conditioning node, but its default CFG
+of 1 bypasses negative conditioning in ComfyUI. The program reports this in the
+outpainting log display. Borderless, complete, edge-to-edge 2D instructions also
+appear in the positive planning/refinement and outpainting prompts. CFG is left
+unchanged; increasing it changes rendering behavior and has not been GPU-tested
+here. Negative prompts reduce unwanted elements but do not guarantee frame-free
+results or repair frames already present in a saved source image.

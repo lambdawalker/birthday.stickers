@@ -61,3 +61,5 @@ This is scene {{iteration}} of {{count}}, file {{sticker_id}}.
 Vary the details, viewpoint, and lighting from these recent scenes while following
 the selected activity and fixed art direction:
 {{previous_scenes}}
+
+The composition is a complete, borderless 2D illustration. Continuous scenery fills the canvas edge to edge; no frame, border, inset panel, blank margin, or 3D-rendered appearance. Include this edge-to-edge composition in the scene description.

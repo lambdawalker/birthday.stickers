@@ -14,6 +14,7 @@ from queue import Empty, Queue
 from threading import Event, RLock, Thread
 
 from .activities import select_activity
+from .artifacts import ensure_layout, result_path, stage_log
 from .comfy import ComfyClient
 from .config import Config, auth_headers
 from .control import RunControl, RunHalted
@@ -22,8 +23,8 @@ from .llm import LLMClient, compose_refinement
 from .pipeline import (
     SEED_MODULUS,
     planning_prompt,
+    prepare_records,
     reserve_sticker,
-    scene_records,
     validate_local,
     write_json,
     write_prompts,
@@ -54,6 +55,9 @@ class Pipeline:
     def report(self, lane, name, stage, increment=0):
         with self.report_lock:
             self.counts[lane] += increment
+            stage_log(
+                self.config.output.directory, lane, name, stage=stage, completed=self.counts[lane]
+            )
             self.progress(self.counts[lane], name, stage)
             self.worker_progress(lane, self.counts[lane], name, stage)
 
@@ -70,6 +74,7 @@ class Pipeline:
             else (self.config.generation.seed + 2 * index) % SEED_MODULUS
         )
         metadata.update(
+            artifact_layout=2,
             created_at=datetime.now(UTC).isoformat(),
             llm_model=self.config.llm.model,
             generation_type=self.config.generation.type,
@@ -102,9 +107,11 @@ class Scene:
         self.name = metadata["sticker"]
         self.lane = lane
         self.root = self.config.output.directory
-        self.prompt_path = self.root / "prompts" / f"{self.name}.md"
-        self.intermediate = self.root / "intermediate" / f"{self.name}.jpg"
-        self.final = self.root / "final" / f"{self.name}.jpg"
+        self.prompt_path = result_path(self.root, "prompts", self.name)
+        self.intermediate = result_path(self.root, "images", self.name)
+        self.final = result_path(
+            self.root, "outpainting" if self.config.generation.outpainting else "images", self.name
+        )
 
     def save(self):
         write_json(self.path, self.meta)
@@ -126,6 +133,9 @@ class Scene:
                 error=str(error),
             )
             self.save()
+            stage_log(
+                self.root, self.lane, self.name, error=str(error), outcome=self.meta["status"]
+            )
             if isinstance(error, (RunHalted, KeyboardInterrupt)):
                 raise
             raise RuntimeError(
@@ -159,6 +169,7 @@ class Scene:
                 }
             )
             self.save()
+            stage_log(self.root, self.lane, self.name, step=key, seconds=seconds, outcome=outcome)
             log.info(
                 "[%s] %s | %s %s in %.2fs",
                 self.lane,
@@ -249,6 +260,7 @@ class Scene:
         self.save()
 
     def complete(self):
+        self.meta["outpainting_saved" if self.lane == "outpainting" else "image_saved"] = True
         self.meta.update(status="complete", finished_at=datetime.now(UTC).isoformat())
         self.save()
         self.pipeline.report(self.lane, self.name, "complete", increment=1)
@@ -262,6 +274,8 @@ class Scene:
 
     def generate_image(self):
         if self.meta.get("intermediate_saved"):
+            if not self.config.generation.outpainting:
+                self.complete()
             return
         config, local, comfy = self.config, self.pipeline.local, self.client("qwen")
         references = self.references()
@@ -305,6 +319,7 @@ class Scene:
                         config.output.jpeg_background,
                     )
                     self.meta["outpaint_skipped"] = "Disabled for this session"
+                    self.meta["intermediate_saved"] = True
                 self.complete()
                 return
             with self.step("save_intermediate", "Save intermediate JPEG"):
@@ -347,6 +362,9 @@ class Scene:
                         config.output.feathering,
                         self.meta["flux_seed"],
                         self.name + "-flux",
+                        negative=config.negative.read_text(encoding="utf-8").strip()
+                        if config.negative
+                        else None,
                     )
             with self.step("rendering_flux", "Flux outpaint and download"):
                 if "flux_prompt_id" not in self.meta:
@@ -379,6 +397,7 @@ def execute(
     progress: Callable,
     worker_progress: Callable,
 ) -> list[Path]:
+    ensure_layout(config.output.directory)
     pipeline = Pipeline(config, control, progress, worker_progress)
     pipeline.check()
     pipeline.local = validate_local(config)
@@ -389,6 +408,15 @@ def execute(
         if config.generation.outpainting
         else pipeline.comfy
     )
+    if config.generation.outpainting and config.negative:
+        cfg = pipeline.local["graphs"][1][str(config.flux.nodes["sampler"])]["inputs"].get("cfg", 1)
+        if cfg == 1:
+            message = (
+                "Outpainting CFG is 1: negative conditioning is inactive; "
+                "borderless instructions remain in the positive prompt."
+            )
+            log.info(message, extra={"worker": "outpainting"})
+            stage_log(config.output.directory, "outpainting", "", message=message)
     mode, reason = gpu_policy(config)
     log.info("GPU mode: %s · %s", mode, reason)
     start = time.perf_counter()
@@ -396,9 +424,16 @@ def execute(
     if config.generation.outpainting:
         pipeline.comfy_outpainting.preflight(pipeline.local["graphs"][1])
     log.info("Service checks finished in %.2fs", time.perf_counter() - start)
-    records = scene_records(config.output.directory) if resume else []
+    records = prepare_records(config) if resume else []
     completed = [(p, m) for p, m in records if m.get("status") == "complete"]
-    final_paths = [config.output.directory / "final" / f"{m['sticker']}.jpg" for _, m in completed]
+    final_paths = [
+        result_path(
+            config.output.directory,
+            "outpainting" if config.generation.outpainting else "images",
+            m["sticker"],
+        )
+        for _, m in completed
+    ]
     for path in final_paths:
         if decode_image(path).size != config.final_size:
             raise ValueError(f"Completed image is missing or has the wrong dimensions: {path}")

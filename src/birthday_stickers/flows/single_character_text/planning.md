@@ -15,3 +15,5 @@ Avoid crowds, weapons, text, logos, photorealism and 3D rendering.
 Return only a complete English visual description; no headings or commentary.
 Vary the details from these earlier scenes:
 {{previous_scenes}}
+
+The composition is a complete, borderless 2D illustration. Continuous scenery fills the canvas edge to edge; no frame, border, inset panel, blank margin, or 3D-rendered appearance. Include this edge-to-edge composition in the scene description.

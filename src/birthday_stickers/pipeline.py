@@ -8,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from .activities import load_activities
+from .artifacts import STAGES, ensure_layout
 from .config import Config
 from .control import RunControl
 from .images import decode_image, plan_padding
@@ -71,6 +72,9 @@ def validate_local(config: Config) -> dict:
                 config.output.feathering,
                 0,
                 "validation",
+                negative=config.negative.read_text(encoding="utf-8").strip()
+                if config.negative
+                else None,
             )
         )
     outpainting_prompt = config.output.outpainting_prompt
@@ -92,9 +96,10 @@ def validate_local(config: Config) -> dict:
 
 
 def reserve_sticker(root: Path) -> tuple[int, str, Path]:
+    ensure_layout(root)
     folders = [root / name for name in ("intermediate", "final", "prompts", "metadata")]
-    for folder in folders:
-        folder.mkdir(parents=True, exist_ok=True)
+    folders += [root / stage / "results" for stage in STAGES.values()]
+    folders = [folder for folder in folders if folder.is_dir()]
     pattern = re.compile(r"^stiker-(\d+)\.")
     used = [
         int(match[1])
@@ -184,3 +189,29 @@ def run(
     from .engine import execute
 
     return execute(config, resume, control or RunControl(), progress, worker_progress)
+
+
+def prepare_records(config: Config) -> list[tuple[Path, dict]]:
+    """Import legacy paths and reopen generated-only scenes when outpainting is enabled."""
+    from .artifacts import generated_only, import_legacy, result_path
+
+    records = scene_records(config.output.directory)
+    import_legacy(config.output.directory, records)
+    for path, meta in records:
+        if meta.get("artifact_layout") != 2:
+            meta["artifact_layout"] = 2
+            write_json(path, meta)
+        if config.generation.outpainting and generated_only(meta):
+            image = result_path(config.output.directory, "images", meta["sticker"])
+            if meta.get("status") == "complete" and not image.is_file():
+                raise ValueError(f"Cannot add outpainting: generated image is missing: {image}")
+            if image.is_file():
+                decode_image(image)
+                meta["intermediate_saved"] = True
+                meta["image_saved"] = True
+                meta["status"] = "image_ready"
+            meta["outpainting"] = True
+            meta["target_size"] = list(config.final_size)
+            meta.pop("outpaint_skipped", None)
+            write_json(path, meta)
+    return records

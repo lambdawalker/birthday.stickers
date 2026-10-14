@@ -73,6 +73,16 @@ def core_saver(graph: Graph, mapping: dict, prefix: str) -> None:
     }
 
 
+def merge_negative(existing: str, addition: str | None) -> str:
+    return ", ".join(text.strip(" ,.") for text in (existing, addition or "") if text.strip(" ,."))
+
+
+def qwen_negative(graph, nodes, negative):
+    if negative is not None:
+        encoder = mapped_inputs(graph, nodes, "encoder", "TextEncodeQwenImage21")
+        encoder["negative_prompt"] = merge_negative(encoder.get("negative_prompt", ""), negative)
+
+
 def build_qwen(
     template: Graph,
     nodes: dict,
@@ -84,6 +94,7 @@ def build_qwen(
     height: int,
     seed: int,
     prefix: str,
+    negative: str | None = None,
 ) -> Graph:
     graph = copy.deepcopy(template)
     apply_overrides(graph, overrides)
@@ -105,6 +116,7 @@ def build_qwen(
     mapped_inputs(graph, nodes, "sampler", "KSampler").update(
         seed=seed, latent_image=[str(nodes["latent"]), 0]
     )
+    qwen_negative(graph, nodes, negative)
     core_saver(graph, nodes, prefix)
     return reachable_graph(graph, str(nodes["output"]))
 
@@ -119,6 +131,7 @@ def build_flux(
     feathering: int,
     seed: int,
     prefix: str,
+    negative: str | None = None,
 ) -> Graph:
     graph = copy.deepcopy(template)
     apply_overrides(graph, overrides)
@@ -134,11 +147,23 @@ def build_flux(
     )
     mapped_inputs(graph, nodes, "conditioning", "InpaintModelConditioning")["noise_mask"] = True
     mapped_inputs(graph, nodes, "sampler", "KSampler")["seed"] = seed
+    if negative:
+        node_id = "sticker_negative"
+        while node_id in graph:
+            node_id += "_"
+        graph[node_id] = {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"clip": graph[str(nodes["prompt"])]["inputs"]["clip"], "text": negative},
+        }
+        mapped_inputs(graph, nodes, "conditioning", "InpaintModelConditioning")["negative"] = [
+            node_id,
+            0,
+        ]
     core_saver(graph, nodes, prefix)
     return reachable_graph(graph, str(nodes["output"]))
 
 
-def build_text_qwen(template, nodes, overrides, prompt, width, height, seed, prefix):
+def build_text_qwen(template, nodes, overrides, prompt, width, height, seed, prefix, negative=None):
     """Use local LLM text, pruning the supplied workflow's internal rewrite branch."""
     graph = copy.deepcopy(template)
     apply_overrides(graph, overrides)
@@ -149,5 +174,6 @@ def build_text_qwen(template, nodes, overrides, prompt, width, height, seed, pre
     mapped_inputs(graph, nodes, "sampler", "KSampler").update(
         seed=seed, latent_image=[str(nodes["latent"]), 0]
     )
+    qwen_negative(graph, nodes, negative)
     core_saver(graph, nodes, prefix)
     return reachable_graph(graph, str(nodes["output"]))

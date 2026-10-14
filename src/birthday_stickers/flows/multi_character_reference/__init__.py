@@ -16,6 +16,7 @@ def build_graph(config, template, prompt, references, seed, prefix):
         config.generation.height,
         seed,
         prefix,
+        negative=config.negative.read_text(encoding="utf-8").strip() if config.negative else None,
     )
 
 

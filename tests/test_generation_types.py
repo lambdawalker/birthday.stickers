@@ -54,7 +54,7 @@ class GenerationTypeTests(unittest.TestCase):
                 graph["459:452"]["inputs"]["prompt"],
                 "One baby dragon curls up beside a pastel Viking longhouse.",
             )
-            with Image.open(directory / "final/stiker-0000.jpg") as image:
+            with Image.open(directory / "image_generation/results/stiker-0000.jpg") as image:
                 self.assertEqual(image.size, (32, 32))
             self.assertFalse(list((directory / "intermediate").glob("*.jpg")))
             self.assertFalse((directory / "inputs/characters").exists())
@@ -144,7 +144,9 @@ class GenerationTypeTests(unittest.TestCase):
             )
             self.assertEqual(service.graphs[1]["3"]["inputs"]["steps"], 50)
             self.assertEqual(service.graphs[1]["26"]["inputs"]["guidance"], 30)
-            with Image.open(store.directory(session["name"]) / "final/stiker-0000.jpg") as image:
+            with Image.open(
+                store.directory(session["name"]) / "outpainting/results/stiker-0000.jpg"
+            ) as image:
                 self.assertEqual(image.size, (53, 55))
 
     def test_duo_can_disable_outpainting_without_flux_files(self):
@@ -159,7 +161,9 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertFalse(result["outpainting"])
             self.assertEqual(len(service.graphs), 1)
             self.assertEqual(len(service.uploads), 2)
-            with Image.open(store.directory(session["name"]) / "final/stiker-0000.jpg") as image:
+            with Image.open(
+                store.directory(session["name"]) / "image_generation/results/stiker-0000.jpg"
+            ) as image:
                 self.assertEqual(image.size, (32, 32))
 
     def test_legacy_configs_keep_their_original_outpainting_behavior(self):

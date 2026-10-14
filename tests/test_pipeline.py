@@ -251,11 +251,13 @@ class PipelineTests(unittest.TestCase):
             root = config.output.directory
             for index in range(2):
                 name = f"stiker-{index:04d}"
-                with Image.open(root / "final" / (name + ".jpg")) as image:
+                with Image.open(root / "outpainting" / "results" / (name + ".jpg")) as image:
                     self.assertEqual(image.size, (53, 55))
                     self.assertEqual(image.format, "JPEG")
                     self.assertGreater(image.getpixel((26, 27))[0], 240)
-                text = (root / "prompts" / (name + ".md")).read_text(encoding="utf-8")
+                text = (root / "scene_planning" / "results" / (name + ".md")).read_text(
+                    encoding="utf-8"
+                )
                 self.assertIn("## Raw scene", text)
                 self.assertIn("## Refined scene", text)
                 self.assertIn("<image1>", text)
@@ -267,7 +269,7 @@ class PipelineTests(unittest.TestCase):
                 self.assertIn("flux_prompt_id", meta)
             config.generation.count = 1
             run(config)
-            self.assertTrue((root / "final/stiker-0002.jpg").exists())
+            self.assertTrue((root / "outpainting/results/stiker-0002.jpg").exists())
 
     def test_activity_brief_reaches_llm_and_persists_across_failed_runs(self):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
@@ -297,7 +299,9 @@ class PipelineTests(unittest.TestCase):
                 self.assertIn(meta["activity"]["setting"], request)
                 self.assertIn("Viking", request)
                 self.assertIn("blush pink", request)
-                markdown = (root / "prompts" / f"stiker-{index:04d}.md").read_text(encoding="utf-8")
+                markdown = (
+                    root / "scene_planning" / "results" / f"stiker-{index:04d}.md"
+                ).read_text(encoding="utf-8")
                 self.assertIn(meta["activity"]["id"], markdown)
 
     def test_refinement_failure_preserves_raw_scene(self):
@@ -306,7 +310,9 @@ class PipelineTests(unittest.TestCase):
             config = self.configuration(temp, service)
             with self.assertRaisesRegex(RuntimeError, "stiker-0000"):
                 run(config)
-            text = (config.output.directory / "prompts/stiker-0000.md").read_text(encoding="utf-8")
+            text = (config.output.directory / "scene_planning/results/stiker-0000.md").read_text(
+                encoding="utf-8"
+            )
             self.assertIn("moonlit castle", text)
             self.assertEqual(len(service.graphs), 0)
 
@@ -369,7 +375,9 @@ class PipelineTests(unittest.TestCase):
             config = self.configuration(temp, service)
             with self.assertRaisesRegex(RuntimeError, "must name both"):
                 run(config)
-            saved = (config.output.directory / "prompts/stiker-0000.md").read_text(encoding="utf-8")
+            saved = (config.output.directory / "scene_planning/results/stiker-0000.md").read_text(
+                encoding="utf-8"
+            )
             self.assertIn("## Refined scene", saved)
             self.assertIn("missing reference tags", saved)
             self.assertEqual(service.graphs, [])

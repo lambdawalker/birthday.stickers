@@ -34,3 +34,5 @@ Task-specific contract (takes precedence over generic examples in the guide):
   tags, and nothing else. No JSON envelope, headings, commentary, or code fences.
   Quote only text actually meant to be printed in the image; preserve its language.
   Keep aspect ratio and resolution out of the prose: YAML controls dimensions.
+
+The composition is a complete, borderless 2D illustration. Continuous scenery fills the canvas edge to edge; no frame, border, inset panel, blank margin, or 3D-rendered appearance. Include this edge-to-edge composition in the scene description.

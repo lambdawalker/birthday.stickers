@@ -85,6 +85,7 @@ class Config:
     character_directory: Path | None = None
     activities: Path | None = None
     outpainting: Path | None = None
+    negative: Path | None = None
     comfy_outpainting: ComfyConfig | None = None
 
     @property
@@ -282,6 +283,9 @@ def load_config(path: Path) -> Config:
         raw = data.get(group)
         if group == "prompts" and isinstance(raw, dict):
             raw = dict(raw)
+            negative_path = raw.pop("negative", None)
+            if negative_path is not None:
+                paths["negative"] = legacy_asset(base, negative_path)
             outpainting_path = raw.pop("outpainting", None)
             if outpainting_path is not None:
                 paths["outpainting"] = legacy_asset(base, outpainting_path)

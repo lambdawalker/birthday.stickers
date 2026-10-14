@@ -1,3 +1,5 @@
+prompts:
+  negative: negative.md
 workflows:
   flux:
     path: flux-outpaint.json
