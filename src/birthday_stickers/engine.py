@@ -431,7 +431,7 @@ def execute(
     needs_generation = len(records) < config.generation.count or any(
         m.get("status") != "complete" and not m.get("intermediate_saved") for _, m in records
     )
-    if not config.generation.outpainting and needs_generation:
+    if (not config.generation.outpainting or mode == "sequential") and needs_generation:
         for path, meta in records:
             if meta.get("outpainting_saved") or meta.get("flux_drained"):
                 continue
@@ -478,6 +478,7 @@ def execute(
     ready: Queue[tuple[Path, dict]] = Queue()
     images: Queue[tuple[Path, dict, Event]] = Queue()
     images_done = Event()
+    images_succeeded = Event()
     producer_done = Event()
     errors: Queue[BaseException] = Queue()
 
@@ -522,7 +523,7 @@ def execute(
                     settled = Event()
                     # Transfer ownership; this worker must not write scene metadata again.
                     images.put((path, meta, settled))
-                    if mode == "sequential":
+                    if mode == "concurrent":
                         pipeline.report("images", scene.name, "waiting_for_outpainting")
                         while not settled.wait(0.1):
                             pipeline.check()
@@ -532,6 +533,7 @@ def execute(
                 if ready.empty() and not producer_done.is_set():
                     pipeline.report("images", "", "waiting_for_prompts")
             pipeline.report("images", "", "done")
+            images_succeeded.set()
         finally:
             images_done.set()
 
@@ -539,6 +541,13 @@ def execute(
         if not config.generation.outpainting:
             pipeline.report("outpainting", "", "disabled")
             return
+        if mode == "sequential":
+            pipeline.report("outpainting", "", "waiting_for_generation_batch")
+            while not images_done.wait(0.1):
+                pipeline.check()
+            pipeline.check()
+            if not images_succeeded.is_set():
+                return
         pipeline.report("outpainting", "", "waiting_for_images")
         while True:
             pipeline.check()

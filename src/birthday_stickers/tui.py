@@ -417,6 +417,7 @@ class StickerApp(App):
             "prompts_ready": "Prompt saved to queue",
             "done": "Finished",
             "waiting_for_prompts": "Waiting for a ready prompt",
+            "waiting_for_generation_batch": "Waiting for all images to finish",
             "upload_references": "Uploading character references",
             "rendering_qwen": "Rendering with Qwen",
             "save_intermediate": "Saving intermediate JPEG",

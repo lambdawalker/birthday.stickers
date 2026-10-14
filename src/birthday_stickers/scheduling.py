@@ -25,8 +25,10 @@ def host_addresses(host: str) -> set[str]:
 def gpu_policy(config) -> tuple[str, str]:
     if not config.generation.outpainting:
         return "sequential", "Outpainting is disabled"
+    if config.generation.gpu_mode == "concurrent":
+        return "concurrent", "Alternate image generation and outpainting without GPU overlap"
     if config.generation.gpu_mode == "sequential":
-        return "sequential", "Sequential GPU work requested"
+        return "sequential", "Finish all image generation before starting outpainting"
     primary = urlsplit(config.comfy.base_url).hostname.lower().rstrip(".")
     secondary = urlsplit(config.outpainting_comfy.base_url).hostname.lower().rstrip(".")
     if primary == secondary:

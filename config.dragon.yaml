@@ -28,7 +28,7 @@ comfy:
 comfy_outpainting: null
 
 generation:
-  gpu_mode: sequential  # parallel requires different ComfyUI IPs
+  gpu_mode: sequential  # sequential (whole batch), concurrent (alternate), parallel (different IPs)
   count: 10
   width: 1024
   height: 1024

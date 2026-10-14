@@ -32,7 +32,7 @@ characters:
   protagonist: A
   creature: B
 generation:
-  gpu_mode: sequential  # parallel requires different ComfyUI IPs
+  gpu_mode: sequential  # sequential (whole batch), concurrent (alternate), parallel (different IPs)
   outpainting: true
   count: 10
   width: 1024

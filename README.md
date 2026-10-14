@@ -534,7 +534,7 @@ outpainted images. Prompt planning always runs independently. Configure GPU work
 
 ```yaml
 generation:
-  gpu_mode: parallel  # sequential (default) or parallel
+  gpu_mode: parallel  # sequential (default), concurrent, or parallel
 comfy:
   base_url: http://192.168.1.186:8188
 comfy_outpainting:
@@ -545,10 +545,12 @@ comfy_outpainting:
 primary timeouts, retries, and authentication unless explicitly overridden.
 Each server is checked only for its own workflow's required nodes and models.
 
-Sequential mode runs generation → outpainting for each sticker before generating
-the next. Parallel mode lets generation get ahead while a second server outpaints.
-Identical hosts or overlapping resolved IP addresses **always force sequential
-mode**, even with different ports. If distinct IPs cannot be verified, execution
+Sequential mode completes the entire image-generation batch before outpainting
+starts. Concurrent mode alternates generation → outpainting for each sticker,
+without overlapping GPU jobs. Parallel mode lets generation get ahead while a
+second server outpaints.
+When parallel is requested, identical hosts or overlapping resolved IP addresses
+**force batch-first sequential mode**, even with different ports. If distinct IPs cannot be verified, execution
 also falls back to sequential mode. The effective mode and reason are logged.
 
 Sessions snapshot both endpoints and the requested mode. Pause and resume retain

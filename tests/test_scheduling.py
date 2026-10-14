@@ -87,7 +87,7 @@ class SchedulingTests(unittest.TestCase):
 
             with patch.object(ComfyClient, "wait_image", wait):
                 run(config)
-            self.assertEqual(order, ["images", "outpainting", "images", "outpainting"])
+            self.assertEqual(order, ["images", "images", "outpainting", "outpainting"])
 
     def test_pause_two_inflight_jobs_then_resume_without_resubmitting(self):
         from pathlib import Path
@@ -134,3 +134,63 @@ class SchedulingTests(unittest.TestCase):
             self.assertEqual(len(generation.graphs), 2)
             self.assertEqual(len(outpaint.graphs), 2)
             self.assertEqual(len(generation.chats), 4)
+
+    def test_explicit_sequential_and_concurrent_orders(self):
+        for mode, expected in (
+            ("sequential", ["images", "images", "outpainting", "outpainting"]),
+            ("concurrent", ["images", "outpainting", "images", "outpainting"]),
+        ):
+            with (
+                self.subTest(mode=mode),
+                tempfile.TemporaryDirectory() as temp,
+                fixtures.FakeServices() as service,
+            ):
+                config = fixtures.PipelineTests().configuration(temp, service, count=2)
+                config.generation.gpu_mode = mode
+                order = []
+                original = ComfyClient.wait_image
+
+                def wait(client, *args, order=order, original=original, **kwargs):
+                    order.append(client.worker)
+                    return original(client, *args, **kwargs)
+
+                with patch.object(ComfyClient, "wait_image", wait):
+                    run(config)
+                self.assertEqual(order, expected)
+
+    def test_sequential_pause_resumes_generated_batch_before_outpainting(self):
+        from birthday_stickers.control import RunControl, RunHalted
+
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service, count=2)
+            config.generation.gpu_mode = "sequential"
+            control = RunControl()
+
+            def report(lane, done, name, stage):
+                if lane == "images" and stage == "image_ready" and done == 1:
+                    control.request("paused")
+
+            with self.assertRaises(RunHalted):
+                run(config, control=control, worker_progress=report)
+            self.assertEqual(len(service.graphs), 1)
+            self.assertEqual(len(run(config, resume=True)), 2)
+            self.assertEqual(len(service.graphs), 4)
+            self.assertIn("461", service.graphs[1])
+            self.assertIn("9", service.graphs[2])
+
+    def test_sequential_generation_failure_does_not_start_outpainting(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service, count=2)
+            config.generation.gpu_mode = "sequential"
+            original = ComfyClient.wait_image
+
+            def wait(client, prompt_id, *args, **kwargs):
+                if prompt_id == "job-2":
+                    raise RuntimeError("Qwen failed")
+                return original(client, prompt_id, *args, **kwargs)
+
+            with patch.object(ComfyClient, "wait_image", wait):
+                with self.assertRaisesRegex(RuntimeError, "Qwen failed"):
+                    run(config)
+            self.assertEqual(len(service.graphs), 2)
+            self.assertTrue(all("461" in graph for graph in service.graphs))

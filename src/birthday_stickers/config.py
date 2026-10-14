@@ -234,8 +234,8 @@ def load_config(path: Path) -> Config:
             number(getattr(server, key), name + "." + key, 0)
         number(server.retry_delay, name + ".retry_delay", 0, True)
         integer(server.get_retries, name + ".get_retries", 0, 20)
-    if generation.gpu_mode not in ("sequential", "parallel"):
-        raise ValueError("generation.gpu_mode must be sequential or parallel")
+    if generation.gpu_mode not in ("sequential", "parallel", "concurrent"):
+        raise ValueError("generation.gpu_mode must be sequential, parallel, or concurrent")
     integer(generation.count, "generation.count", 1)
     if generation.seed is not None:
         integer(generation.seed, "generation.seed", 0)

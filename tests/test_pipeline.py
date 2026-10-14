@@ -216,7 +216,7 @@ class PipelineTests(unittest.TestCase):
         data["comfy"].update(
             base_url=services.url, poll_interval=0.002, retry_delay=0, job_timeout=2
         )
-        data["generation"].update(count=count, width=32, height=32, seed=100)
+        data["generation"].update(count=count, width=32, height=32, seed=100, gpu_mode="concurrent")
         data["output"].update(
             directory=str(directory / "output"),
             width=53,
