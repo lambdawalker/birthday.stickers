@@ -204,3 +204,39 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("Unable to load", str(app.query_one("#type-error", Static).render()))
                 await pilot.click("#choose-duo")
                 self.assertTrue(app.query_one("#home").display)
+
+    async def test_saved_session_toggle_tracks_selection_and_applies_on_resume(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            store = SessionStore(Path(temp) / "sessions")
+            first = store.create(config)
+            config.generation.outpainting = False
+            second = store.create(config)
+            app = StickerApp(config, store)
+            async with app.run_test(size=(110, 45)) as pilot:
+                await pilot.click("#choose-duo")
+                await pilot.pause()
+                table = app.query_one("#sessions", DataTable)
+                switch = app.query_one("#session-outpainting", Switch)
+                self.assertFalse(switch.value)
+                table.move_cursor(row=1)
+                await pilot.pause()
+                self.assertTrue(switch.value)
+                table.focus()
+                with patch.object(app, "begin") as begin:
+                    await pilot.press("enter")
+                    begin.assert_not_called()
+                await pilot.click("#session-outpainting")
+                self.assertFalse(switch.value)
+                with patch.object(app, "begin") as begin:
+                    await pilot.click("#open")
+                    begin.assert_called_once_with(first["name"])
+                self.assertFalse(store.read(first["name"])["outpainting"])
+                table.move_cursor(row=0)
+                await pilot.pause()
+                self.assertFalse(switch.value)
+                await pilot.click("#session-outpainting")
+                with patch.object(app, "begin") as begin:
+                    await pilot.click("#open")
+                    begin.assert_called_once_with(second["name"])
+                self.assertTrue(store.read(second["name"])["outpainting"])

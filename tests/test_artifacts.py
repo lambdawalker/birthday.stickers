@@ -96,3 +96,87 @@ class ArtifactTests(unittest.TestCase):
             config.output.width = 999
             store.enable_outpainting(session["name"], config)
             self.assertEqual(path.read_bytes(), before)
+
+    def test_disable_then_reenable_preserves_finished_outpainting(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            store = SessionStore(Path(temp) / "sessions")
+            name = store.create(config)["name"]
+            self.assertEqual(store.execute(name, RunControl())["status"], "complete")
+            output = result_path(store.directory(name), "outpainting", "stiker-0000")
+            original = output.read_bytes()
+            store.set_outpainting(name, False, config)
+            self.assertEqual(store.execute(name, RunControl())["status"], "complete")
+            self.assertEqual(output.read_bytes(), original)
+            config.output.width = 999  # Re-enabling must retain the existing stage's settings.
+            store.set_outpainting(name, True, config)
+            self.assertEqual(store.execute(name, RunControl())["status"], "complete")
+            self.assertEqual(output.read_bytes(), original)
+            self.assertEqual(len(service.graphs), 2)
+            self.assertEqual(len(service.chats), 2)
+
+    def test_disable_pending_outpaint_then_reenable_reuses_job(self):
+        from unittest.mock import patch
+
+        from birthday_stickers.comfy import ComfyClient
+
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service, count=2)
+            store = SessionStore(Path(temp) / "sessions")
+            name = store.create(config)["name"]
+            control = RunControl()
+            original_wait = ComfyClient.wait_image
+
+            def wait(client, *args, **kwargs):
+                if client.worker == "outpainting":
+                    control.request("paused")
+                    control.check()
+                return original_wait(client, *args, **kwargs)
+
+            with patch.object(ComfyClient, "wait_image", wait):
+                self.assertEqual(store.execute(name, control)["status"], "paused")
+            store.set_outpainting(name, False, config)
+            order = []
+
+            def track_wait(client, *args, **kwargs):
+                order.append(client.worker)
+                return original_wait(client, *args, **kwargs)
+
+            original_terminal = ComfyClient.wait_terminal
+
+            def track_terminal(client, *args, **kwargs):
+                order.append(client.worker)
+                return original_terminal(client, *args, **kwargs)
+
+            with (
+                patch.object(ComfyClient, "wait_image", track_wait),
+                patch.object(ComfyClient, "wait_terminal", track_terminal),
+            ):
+                self.assertEqual(store.execute(name, RunControl())["status"], "complete")
+            self.assertEqual(order, ["outpainting", "images"])
+            store.set_outpainting(name, True, config)
+            self.assertEqual(store.execute(name, RunControl())["status"], "complete")
+            self.assertEqual(len(service.graphs), 4)
+
+    def test_disabled_stage_drain_accepts_terminal_failure_but_not_network_failure(self):
+        from unittest.mock import patch
+
+        from birthday_stickers.comfy import ComfyClient
+        from birthday_stickers.http import ServiceError
+
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            client = ComfyClient(config.comfy, "outpainting")
+            failed = {
+                "job-1": {
+                    "status": {
+                        "status_str": "error",
+                        "messages": [["execution_error", {"exception_message": "GPU OOM"}]],
+                    }
+                }
+            }
+            with patch.object(client.http, "json", return_value=failed):
+                client.wait_terminal("job-1")
+            with patch.object(client.http, "json", side_effect=ServiceError("offline")):
+                with self.assertRaisesRegex(ServiceError, "offline"):
+                    client.wait_terminal("job-1")

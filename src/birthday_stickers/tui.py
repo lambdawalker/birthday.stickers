@@ -76,6 +76,8 @@ class StickerApp(App):
     .toggle-row { height: 3; align-vertical: middle; }
     .toggle-row Label { width: auto; margin: 1 2 0 1; }
     #outpaint-size { height: auto; color: #acb4ca; }
+    .session-actions Label { margin: 2 1 0 1; }
+    .session-actions Switch { margin-top: 1; }
     .buttons { height: auto; margin-top: 0; }
     Button { margin: 1 1; padding: 0 2; min-width: 16; }
     Button.-primary { background: #b7a1e8; color: #101522; }
@@ -138,7 +140,7 @@ class StickerApp(App):
         with VerticalScroll(id="home"):
             yield Static("A new adventure, or right where you left off.", classes="title")
             yield Static(
-                "Create a collection, or resume any unfinished session.",
+                "Create a collection, or update and resume a saved session.",
                 classes="muted",
             )
             with Vertical(classes="card"):
@@ -152,21 +154,22 @@ class StickerApp(App):
                     with Vertical(classes="field"):
                         yield Label("Number of stickers")
                         yield Input(str(self.config.generation.count), type="integer", id="count")
-                with Horizontal(classes="toggle-row"):
+                with Horizontal(classes="buttons session-actions"):
+                    yield Button("New session", variant="primary", id="new")
                     yield Label("Outpainting", id="outpaint-label")
                     yield Switch(self.config.generation.outpainting, id="outpainting")
                 yield Static("", id="outpaint-size")
-                with Horizontal(classes="buttons"):
-                    yield Button("New session", variant="primary", id="new")
-                    yield Button("Change type", id="change-type")
+                yield Button("Change type", id="change-type")
                 yield Static(
                     "Prompts/settings are saved; new scenes use live character references.",
                     classes="muted",
                 )
-            yield Label("UNFINISHED SESSIONS", classes="title")
+            yield Label("SAVED SESSIONS", classes="title")
             yield DataTable(id="sessions", cursor_type="row")
             yield Static("", id="empty", classes="muted")
-            with Horizontal(classes="buttons"):
+            with Horizontal(classes="buttons session-actions"):
+                yield Label("Outpainting")
+                yield Switch(False, id="session-outpainting", disabled=True)
                 yield Button("Resume selected", variant="success", id="open")
                 yield Button("Refresh", id="refresh")
         with VerticalScroll(id="dashboard"):
@@ -226,7 +229,7 @@ class StickerApp(App):
     def refresh_sessions(self) -> None:
         table = self.query_one("#sessions", DataTable)
         table.clear()
-        items = self.store.list_incomplete()
+        items = self.store.list_sessions()
         for item in items:
             status = item["status"]
             if status == "running":
@@ -249,15 +252,41 @@ class StickerApp(App):
                 key=item["name"],
             )
         self.query_one("#open", Button).disabled = not items
+        self.query_one("#session-outpainting", Switch).disabled = not items
+        if items:
+            self.sync_session_toggle(items[0]["name"])
         text = (
-            "Select a session and press Resume. Enter also opens the selected row."
+            "Select a session, choose Outpainting, then press Resume selected."
             if items
-            else ("No unfinished sessions yet. Start your first collection above.")
+            else ("No saved sessions yet. Start your first collection above.")
         )
         if self.store.errors:
             text += "\nUnreadable sessions: " + "; ".join(self.store.errors)
         self.query_one("#empty", Static).update(Text(text))
         self.query_one("#new-name", Input).value = self.store.next_name()
+
+    def sync_session_toggle(self, name: str) -> None:
+        try:
+            saved = load_config(self.store.directory(name) / "config.yaml")
+            self.query_one("#session-outpainting", Switch).value = saved.generation.outpainting
+        except (OSError, ValueError) as error:
+            self.notify(str(error), severity="error")
+
+    @on(DataTable.RowHighlighted, "#sessions")
+    def highlighted_session(self, event: DataTable.RowHighlighted) -> None:
+        if event.row_key.value is not None:
+            self.sync_session_toggle(str(event.row_key.value))
+
+    def resume_selected(self, name: str) -> None:
+        if self.busy:
+            return
+        try:
+            enabled = self.query_one("#session-outpainting", Switch).value
+            self.store.set_outpainting(name, enabled, self.config)
+        except (OSError, ValueError, RuntimeError) as error:
+            self.notify(f"Cannot update session: {error}", severity="error")
+            return
+        self.begin(name)
 
     def choose_type(self, generation_type: str) -> None:
         if self.busy:
@@ -297,7 +326,7 @@ class StickerApp(App):
         size = self.config.output if enabled else self.config.generation
         self.query_one("#outpaint-size", Static).update(
             f"New sessions: {'extend background' if enabled else 'Qwen only'} · "
-            f"final {size.width} × {size.height}. Resume keeps the saved setting."
+            f"final {size.width} × {size.height}."
         )
 
     @on(Switch.Changed, "#outpainting")
@@ -448,7 +477,7 @@ class StickerApp(App):
 
     @on(DataTable.RowSelected, "#sessions")
     def selected(self, event: DataTable.RowSelected) -> None:
-        self.begin(str(event.row_key.value))
+        self.sync_session_toggle(str(event.row_key.value))
 
     @on(Button.Pressed)
     def pressed(self, event: Button.Pressed) -> None:
@@ -475,7 +504,7 @@ class StickerApp(App):
         elif action == "open":
             table = self.query_one("#sessions", DataTable)
             if table.row_count:
-                self.begin(str(table.get_row_at(table.cursor_row)[0]))
+                self.resume_selected(str(table.get_row_at(table.cursor_row)[0]))
         elif action == "refresh":
             self.refresh_sessions()
         elif action == "pause" and self.busy:

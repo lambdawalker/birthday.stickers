@@ -93,12 +93,15 @@ class SessionStore:
         return data
 
     def list_incomplete(self) -> list[dict]:
+        return self.list_sessions(include_complete=False)
+
+    def list_sessions(self, include_complete: bool = True) -> list[dict]:
         self.errors = []
         result = []
         for path in sorted(self.root.glob("*/session.json"), reverse=True):
             try:
                 item = self.read(path.parent.name)
-                if item["status"] != "complete":
+                if include_complete or item["status"] != "complete":
                     result.append(item)
             except (OSError, ValueError, KeyError) as error:
                 self.errors.append(f"{path.parent.name}: {error}")
@@ -198,6 +201,37 @@ class SessionStore:
             shutil.rmtree(directory)
             raise
 
+    def _save_outpainting_mode(self, name: str, data: dict, enabled: bool) -> None:
+        directory = self.directory(name)
+        data["generation"]["outpainting"] = enabled
+        temporary = directory / "outpainting-setting.yaml"
+        try:
+            temporary.write_text(yaml.safe_dump(data), encoding="utf-8")
+            load_config(temporary)
+            temporary.replace(directory / "config.yaml")
+        finally:
+            temporary.unlink(missing_ok=True)
+        manifest = self.read(name)
+        manifest.update(
+            status="ready",
+            outpainting=enabled,
+            stage="Outpainting setting updated",
+            updated_at=now(),
+        )
+        write_json(directory / "session.json", manifest)
+
+    def set_outpainting(self, name: str, enabled: bool, settings: Config) -> None:
+        if enabled:
+            self.enable_outpainting(name, settings)
+            return
+        directory = self.directory(name)
+        with session_lock(directory):
+            path = directory / "config.yaml"
+            if not load_config(path).generation.outpainting:
+                return
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            self._save_outpainting_mode(name, data, False)
+
     def enable_outpainting(self, name: str, settings: Config) -> None:
         """Add the stage to an existing session without touching generated originals."""
         directory = self.directory(name)
@@ -205,6 +239,9 @@ class SessionStore:
             path = directory / "config.yaml"
             data = yaml.safe_load(path.read_text(encoding="utf-8"))
             if load_config(path).generation.outpainting:
+                return
+            if data.get("workflows", {}).get("flux"):
+                self._save_outpainting_mode(name, data, True)
                 return
             if settings.flux is None:
                 raise ValueError("The selected configuration needs an outpainting workflow")

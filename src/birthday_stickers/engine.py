@@ -425,6 +425,35 @@ def execute(
         pipeline.comfy_outpainting.preflight(pipeline.local["graphs"][1])
     log.info("Service checks finished in %.2fs", time.perf_counter() - start)
     records = prepare_records(config) if resume else []
+    # Disabling a stage cannot cancel work already submitted to its server.
+    # Drain those jobs before starting more GPU work, including separate ports
+    # that may share the same physical GPU. Keep IDs for later re-enabling.
+    needs_generation = len(records) < config.generation.count or any(
+        m.get("status") != "complete" and not m.get("intermediate_saved") for _, m in records
+    )
+    if not config.generation.outpainting and needs_generation:
+        for path, meta in records:
+            if meta.get("outpainting_saved") or meta.get("flux_drained"):
+                continue
+            if meta.get("flux_submission_pending") and not meta.get("flux_prompt_id"):
+                raise ValueError(
+                    "An earlier outpainting submission has an unknown outcome. "
+                    "Resolve its saved job ID before starting more GPU work."
+                )
+            if not meta.get("flux_prompt_id"):
+                continue
+            if config.flux is None:
+                raise ValueError("Keep the saved Flux workflow to finish its submitted job")
+            pipeline.comfy_outpainting = ComfyClient(config.outpainting_comfy, "outpainting")
+            scene = Scene(pipeline, path, meta, "outpainting")
+            pipeline.report("outpainting", scene.name, "waiting_for_submitted_job")
+            log.info(
+                "Waiting for previously submitted outpainting before new GPU work",
+                extra={"worker": "outpainting"},
+            )
+            scene.client("flux").wait_terminal(meta["flux_prompt_id"], pipeline.check)
+            meta["flux_drained"] = True
+            scene.save()
     completed = [(p, m) for p, m in records if m.get("status") == "complete"]
     final_paths = [
         result_path(

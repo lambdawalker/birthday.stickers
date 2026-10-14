@@ -198,20 +198,28 @@ def prepare_records(config: Config) -> list[tuple[Path, dict]]:
     records = scene_records(config.output.directory)
     import_legacy(config.output.directory, records)
     for path, meta in records:
+        original = dict(meta)
+        was_generated_only = generated_only(meta)
         if meta.get("artifact_layout") != 2:
             meta["artifact_layout"] = 2
-            write_json(path, meta)
-        if config.generation.outpainting and generated_only(meta):
-            image = result_path(config.output.directory, "images", meta["sticker"])
-            if meta.get("status") == "complete" and not image.is_file():
-                raise ValueError(f"Cannot add outpainting: generated image is missing: {image}")
+        if meta.get("status") == "complete" and not was_generated_only:
+            meta["outpainting_saved"] = True
+        image = result_path(config.output.directory, "images", meta["sticker"])
+        if config.generation.outpainting != meta.get("outpainting", not was_generated_only):
             if image.is_file():
                 decode_image(image)
                 meta["intermediate_saved"] = True
                 meta["image_saved"] = True
-                meta["status"] = "image_ready"
-            meta["outpainting"] = True
+                meta["status"] = (
+                    "complete"
+                    if not config.generation.outpainting or meta.get("outpainting_saved")
+                    else "image_ready"
+                )
+            elif meta.get("status") == "complete":
+                raise ValueError(f"Cannot change outpainting: generated image is missing: {image}")
+            meta["outpainting"] = config.generation.outpainting
             meta["target_size"] = list(config.final_size)
             meta.pop("outpaint_skipped", None)
+        if meta != original:
             write_json(path, meta)
     return records

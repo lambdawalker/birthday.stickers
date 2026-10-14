@@ -183,4 +183,5 @@ class GenerationTypeTests(unittest.TestCase):
                 path.write_text(yaml.safe_dump(data), encoding="utf-8")
                 config = load_config(path)
                 self.assertEqual(config.generation.outpainting, enabled)
-                self.assertEqual(config.final_size, (1624, 1624) if enabled else (768, 1024))
+                expected = data["output"] if enabled else data["generation"]
+                self.assertEqual(config.final_size, (expected["width"], expected["height"]))

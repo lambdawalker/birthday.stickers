@@ -106,6 +106,32 @@ class ComfyClient:
         log.info("ComfyUI queued %s", prompt_id, extra={"worker": self.worker})
         return prompt_id
 
+    def wait_terminal(self, prompt_id: str, checkpoint: Callable[[], None] = lambda: None) -> None:
+        """Wait until previously submitted work stops, even if it failed or was interrupted."""
+        deadline = time.monotonic() + self.config.job_timeout
+        while time.monotonic() < deadline:
+            checkpoint()
+            history = self.http.json(
+                "GET", "/history/" + quote(prompt_id, safe=""), deadline=deadline
+            )
+            entry = history.get(prompt_id)
+            if entry:
+                status = entry.get("status", {})
+                failed = status.get("status_str") == "error" or any(
+                    kind in ("execution_error", "execution_interrupted")
+                    for kind, _ in status.get("messages", [])
+                )
+                if status.get("completed") or failed:
+                    log.info(
+                        "Previous ComfyUI job %s is terminal%s",
+                        prompt_id,
+                        " (failed/interrupted)" if failed else "",
+                        extra={"worker": self.worker},
+                    )
+                    return
+            time.sleep(min(self.config.poll_interval, max(0, deadline - time.monotonic())))
+        raise ServiceError(self.timeout_message(prompt_id))
+
     def wait_image(
         self, prompt_id: str, output_id: str, checkpoint: Callable[[], None] = lambda: None
     ) -> bytes:

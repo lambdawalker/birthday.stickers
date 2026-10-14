@@ -78,9 +78,9 @@ the LLM and ComfyUI servers run the models.
 ## Sessions and controls
 
 Run `uv run birthday-stickers --config config.local.yaml` to open the interface.
-The home screen lists unfinished sessions with their progress and last stage.
-Choose **New session**, or select a row and choose **Resume selected** (Enter also
-resumes a selected row). Names are automatically filled from your computer's local
+The home screen lists saved sessions, including completed ones, with progress and last stage.
+Choose **New session**, or select a row, adjust its outpainting toggle, and choose
+**Resume selected**. Clicking or pressing Enter selects a row without starting work. Names are automatically filled from your computer's local
 date plus a daily counter, for example `2026-10-14-001` and `2026-10-14-002`.
 
 The active dashboard has **LLM / Prompts**, **ComfyUI / Images**, and
@@ -377,7 +377,7 @@ current cycle. Reference images remain local and are not embedded in the catalog
   edit `src/birthday_stickers/flows/single_character_text/planning.md` to customize the dragon's appearance.
 
 The interactive app opens with a generation-type picker. Choose **Girl + dragon**
-or **Baby dragon only**, then create a session or resume an unfinished one.
+or **Baby dragon only**, then create a session or resume a saved one.
 Use **Change type** on the session screen to return to the picker.
 
 Start the app normally (including your personal server settings):
@@ -430,10 +430,11 @@ create these backups. Prompt/activity/workflow snapshots are still retained.
 
 ### Optional outpainting
 
-Before creating or selecting a session, the session screen shows an **Outpainting**
-switch and the final image dimensions. It applies to new sessions; resuming always
-uses the session's saved setting, shown in the **Outpaint** column.
-Use the explicit command below to add outpainting to an existing session.
+The **Outpainting** switch beside **New session** controls new sessions.
+**Change type** is below those controls. A separate **Outpainting** switch beside
+**Resume selected** follows the highlighted saved-session row, including completed
+sessions. Change it and press **Resume selected** to apply the setting
+and resume. Switching rows discards an unapplied toggle change.
 `generation.outpainting: true/false` sets the initial switch value and controls
 headless runs. The duo default is on; the solo dragon default is off.
 
@@ -582,7 +583,13 @@ uv run birthday-stickers --config config.yaml --headless --resume 2026-10-14-001
 This explicitly snapshots the outpainting settings into that session and queues
 already-generated images. Saved prompts and Qwen images are reused; originals
 are never replaced by extended images. Repeating the command skips completed
-outpainting. The regular session-picker toggle still controls new sessions only.
+outpainting. You can also use the selected-session toggle in the interface.
+Disabling outpainting preserves extended images and any submitted Flux job IDs.
+If an earlier Flux job is still pending, it is allowed to finish before more
+Qwen jobs start; the toggle does not cancel submitted server work.
+Re-enabling it reuses completed outputs and reconnects to pending jobs using the
+session's existing outpainting settings. Settings from the current profile are
+imported only when adding outpainting to a session that has no saved Flux workflow.
 
 Older sessions are supported: their `prompts/`, `intermediate/`, and `final/`
 artifacts are copied to the corresponding stage folders when resumed, without
