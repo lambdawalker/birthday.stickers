@@ -444,3 +444,25 @@ Both shipped configurations include `workflows.flux`. If you have an older
 `config.dragon.local.yaml`, copy the `workflows.flux` section from the updated
 `config.dragon.yaml` and set larger `output.width/height` before enabling the switch.
 The switch is saved in the session snapshot, along with the chosen dimensions.
+
+
+### Avoiding foggy outpaint borders
+
+Both example YAML files use 50 Flux Fill steps (node `3`) instead of the supplied
+workflow's 20, retaining guidance 30, CFG 1 and denoise 1. This matches the model
+publisher's example sampling budget: https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev.
+It is a quality-oriented starting point, not a guarantee of sharper results, and
+increases sampling time. Keep denoise at 1 for newly padded empty regions.
+
+`output.outpainting_prompt` appends local continuity instructions to the **original
+raw scene**, requesting consistent detail, lighting and focus rather than a vignette
+or blurred frame. The exact combined prompt is saved as `outpainting_prompt` in
+scene metadata and in the submitted Flux graph. Set it to `""` for raw-only behavior.
+The 24-pixel feather and center preservation remain unchanged: they only blend the
+source boundary, and do not blur the entire generated border.
+
+Copy these settings into your personal YAML to use them. Existing session snapshots
+and already-submitted jobs retain their previous settings. Compare new sessions with
+the same scene/seed before deciding whether the new settings improve your output.
+For a paused session, changes to its saved YAML only affect Flux jobs not yet submitted;
+never clear a saved job ID to rerender a job that may still be running.

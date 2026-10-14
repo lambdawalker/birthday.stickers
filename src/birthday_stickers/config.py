@@ -55,6 +55,7 @@ class OutputConfig:
     jpeg_background: str = "#ffffff"
     feathering: int = 24
     preserve_center: bool = True
+    outpainting_prompt: str = ""
 
 
 @dataclass
@@ -207,6 +208,8 @@ def load_config(path: Path) -> Config:
     integer(output.jpeg_quality, "output.jpeg_quality", 1, 100)
     integer(output.jpeg_subsampling, "output.jpeg_subsampling", 0, 2)
     integer(output.feathering, "output.feathering", 0, 8192)
+    if not isinstance(output.outpainting_prompt, str):
+        raise ValueError("output.outpainting_prompt must be a string")
     try:
         color = ImageColor.getrgb(output.jpeg_background)
         if len(color) != 3:

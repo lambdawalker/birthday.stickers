@@ -314,11 +314,14 @@ class Scene:
             if "flux_prompt_id" not in self.meta:
                 with self.step("upload_intermediate", "Upload intermediate image"):
                     uploaded = comfy.upload(self.intermediate, "intermediate")
+                    self.meta["outpainting_prompt"] = "\n\n".join(
+                        text for text in (raw, config.output.outpainting_prompt.strip()) if text
+                    )
                     graph = build_flux(
                         local["flux"],
                         config.flux.nodes,
                         config.flux.overrides,
-                        raw,
+                        self.meta["outpainting_prompt"],
                         uploaded,
                         padding,
                         config.output.feathering,

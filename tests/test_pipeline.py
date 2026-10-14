@@ -210,7 +210,11 @@ class PipelineTests(unittest.TestCase):
         )
         data["generation"].update(count=count, width=32, height=32, seed=100)
         data["output"].update(
-            directory=str(directory / "output"), width=53, height=55, feathering=4
+            directory=str(directory / "output"),
+            width=53,
+            height=55,
+            feathering=4,
+            outpainting_prompt="",
         )
         path = directory / "config.yaml"
         path.write_text(yaml.safe_dump(data), encoding="utf-8")

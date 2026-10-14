@@ -138,8 +138,11 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertEqual(len(service.uploads), 1)
             self.assertEqual(
                 service.graphs[1]["23"]["inputs"]["text"],
-                "One baby dragon curls up beside a pastel Viking longhouse.",
+                "One baby dragon curls up beside a pastel Viking longhouse.\n\n"
+                + config.output.outpainting_prompt.strip(),
             )
+            self.assertEqual(service.graphs[1]["3"]["inputs"]["steps"], 50)
+            self.assertEqual(service.graphs[1]["26"]["inputs"]["guidance"], 30)
             with Image.open(store.directory(session["name"]) / "final/stiker-0000.jpg") as image:
                 self.assertEqual(image.size, (53, 55))
 
