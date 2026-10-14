@@ -61,6 +61,12 @@ output:
     the outer margins. No vignette, foggy border, blurred frame, tunnel effect, dark halo,
     radial blur, new depth-of-field blur, or extra characters. Preserve the existing scene
     and character identity; only complete the surrounding environment.
+    The added area contains scenery and inanimate environmental details only.
+    Do not introduce any new people, babies, animals, dragons, creatures, faces,
+    silhouettes or background crowds. Do not duplicate, mirror or repeat the existing
+    characters or invent extra heads, limbs, wings or tails. If an existing character
+    crosses the source boundary, continue only that same character anatomically;
+    otherwise keep every character entirely within the original scene.
 
 workflows:
   qwen:

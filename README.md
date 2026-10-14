@@ -456,7 +456,9 @@ increases sampling time. Keep denoise at 1 for newly padded empty regions.
 
 `output.outpainting_prompt` appends local continuity instructions to the **original
 raw scene**, requesting consistent detail, lighting and focus rather than a vignette
-or blurred frame. The exact combined prompt is saved as `outpainting_prompt` in
+or blurred frame. Added regions must contain scenery only, with no new characters
+or duplicated faces/bodies; an existing character crossing the boundary may be
+continued anatomically. The exact combined prompt is saved as `outpainting_prompt` in
 scene metadata and in the submitted Flux graph. Set it to `""` for raw-only behavior.
 The 24-pixel feather and center preservation remain unchanged: they only blend the
 source boundary, and do not blur the entire generated border.
