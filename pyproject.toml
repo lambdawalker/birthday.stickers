@@ -8,7 +8,11 @@ version = "0.1.0"
 description = "Plan scenes with an OpenAI-compatible LLM, render with Qwen, and outpaint with ComfyUI."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["Pillow>=11,<13", "PyYAML>=6.0.2,<7"]
+dependencies = [
+    "Pillow>=11,<13",
+    "PyYAML>=6.0.2,<7",
+    "textual>=1,<7",
+]
 
 [project.scripts]
 birthday-stickers = "birthday_stickers.cli:main"

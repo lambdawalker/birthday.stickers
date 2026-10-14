@@ -5,6 +5,7 @@ import logging
 import mimetypes
 import time
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import quote, urlencode
 
@@ -104,11 +105,14 @@ class ComfyClient:
         log.info("ComfyUI queued %s", prompt_id)
         return prompt_id
 
-    def wait_image(self, prompt_id: str, output_id: str) -> bytes:
+    def wait_image(
+        self, prompt_id: str, output_id: str, checkpoint: Callable[[], None] = lambda: None
+    ) -> bytes:
         deadline = time.monotonic() + self.config.job_timeout
         next_notice = time.monotonic() + 30
         try:
             while time.monotonic() < deadline:
+                checkpoint()
                 history = self.http.json(
                     "GET", "/history/" + quote(prompt_id, safe=""), deadline=deadline
                 )

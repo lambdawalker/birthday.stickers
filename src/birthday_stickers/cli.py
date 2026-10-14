@@ -7,7 +7,7 @@ from pathlib import Path
 from .comfy import ComfyClient
 from .config import auth_headers, integer, load_config
 from .http import HTTPClient
-from .pipeline import run, validate_local
+from .pipeline import validate_local
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -25,8 +25,15 @@ def main(argv: list[str] | None = None) -> int:
     modes.add_argument(
         "--check", action="store_true", help="Also check LLM model and ComfyUI nodes/models"
     )
+    modes.add_argument("--headless", action="store_true", help="Run without the Textual interface")
+    parser.add_argument("--resume", metavar="SESSION", help="Resume a session in headless mode")
     args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
+    if args.resume and not args.headless:
+        parser.error("--resume requires --headless")
+    if args.headless or args.dry_run or args.check:
+        logging.basicConfig(
+            level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S"
+        )
     try:
         config = load_config(args.config)
         if args.count is not None:
@@ -51,9 +58,21 @@ def main(argv: list[str] | None = None) -> int:
                 f"Ready for {config.generation.count} scene(s); final size "
                 f"{config.output.width}x{config.output.height}; output: {config.output.directory}"
             )
+        elif args.headless:
+            from .control import RunControl
+            from .sessions import SessionStore
+
+            store = SessionStore(config.output.directory / "sessions")
+            name = args.resume or store.create(config)["name"]
+            result = store.execute(name, RunControl())
+            print(f"Session {name}: {result['status']}. Files: {store.directory(name)}")
+            if result["status"] == "failed":
+                logging.error("%s", result.get("error", "Generation failed"))
+                return 1
         else:
-            results = run(config)
-            print(f"Saved {len(results)} sticker(s) to {config.output.directory / 'final'}")
+            from .tui import StickerApp
+
+            StickerApp(config).run()
         return 0
     except KeyboardInterrupt:
         print("Interrupted. Saved artifacts remain; submitted ComfyUI jobs may still be running.")

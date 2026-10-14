@@ -9,12 +9,23 @@ import argparse
 import os
 import sys
 from pathlib import Path
+
 from PIL import Image, ImageColor, ImageOps
 
 # Common image extensions to process
 SUPPORTED_EXTENSIONS = {
-    ".png", ".webp", ".bmp", ".tiff", ".tif", ".gif",
-    ".jpeg", ".jfif", ".ico", ".ppm", ".pgm", ".pbm"
+    ".png",
+    ".webp",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".gif",
+    ".jpeg",
+    ".jfif",
+    ".ico",
+    ".ppm",
+    ".pgm",
+    ".pbm",
 }
 
 
@@ -27,34 +38,37 @@ def parse_args():
         type=str,
         nargs="?",
         default=".",
-        help="Path to the directory containing images (default: current directory)."
+        help="Path to the directory containing images (default: current directory).",
     )
     parser.add_argument(
-        "-q", "--quality",
+        "-q",
+        "--quality",
         type=int,
         default=95,
-        help="JPEG compression quality from 1 to 100 (default: 95)."
+        help="JPEG compression quality from 1 to 100 (default: 95).",
     )
     parser.add_argument(
-        "-r", "--recursive",
-        action="store_true",
-        help="Scan subdirectories recursively."
+        "-r", "--recursive", action="store_true", help="Scan subdirectories recursively."
     )
     parser.add_argument(
-        "-b", "--background",
+        "-b",
+        "--background",
         type=str,
         default="#FFFFFF",
-        help="Hex color or name for background when flattening transparent images (default: #FFFFFF / white)."
+        help=(
+            "Hex color or name for background when flattening transparent images "
+            "(default: #FFFFFF / white)."
+        ),
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Preview what files will be converted and deleted without modifying anything."
+        help="Preview what files will be converted and deleted without modifying anything.",
     )
     parser.add_argument(
         "--keep-originals",
         action="store_true",
-        help="Keep the original image files instead of deleting them."
+        help="Keep the original image files instead of deleting them.",
     )
     return parser.parse_args()
 
@@ -64,7 +78,7 @@ def convert_image_to_jpg(
     quality: int = 95,
     bg_color: tuple = (255, 255, 255),
     dry_run: bool = False,
-    delete_original: bool = True
+    delete_original: bool = True,
 ) -> bool:
     """
     Converts a single image file to .jpg and deletes the original if successful.
@@ -79,7 +93,10 @@ def convert_image_to_jpg(
         return True
 
     if dry_run:
-        print(f"[DRY-RUN] Would convert: {file_path.name} -> {dest_path.name} (and delete {file_path.name})")
+        print(
+            f"[DRY-RUN] Would convert: {file_path.name} -> {dest_path.name} "
+            f"(and delete {file_path.name})"
+        )
         return True
 
     temp_path = file_path.parent / f".tmp_{file_path.stem}_{os.getpid()}.jpg"
@@ -173,7 +190,7 @@ def main():
             quality=args.quality,
             bg_color=bg_rgb,
             dry_run=args.dry_run,
-            delete_original=not args.keep_originals
+            delete_original=not args.keep_originals,
         )
         if success:
             success_count += 1

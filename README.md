@@ -4,16 +4,19 @@ Generate a batch of illustrated scenes with two consistent character references.
 An OpenAI-compatible LLM plans each scene and refines it with a local Qwen guide;
 ComfyUI renders it with Qwen 2.1 and extends it with Flux Fill to your final size.
 
-For each of N iterations:
+The default command opens a Textual session picker and live generation dashboard.
+Each session has its own folder under `output/sessions/YYYY-MM-DD-NNN/`.
+
+For each of N iterations (paths below are relative to that session folder):
 
 1. Read `prompts/plan_scene.md` and ask LLM A for a raw scene.
 2. Assemble the raw scene, local Qwen guide, and refinement template locally; ask
    the same LLM for the refined Qwen editing instruction.
 3. Upload the protagonist to Qwen input 1 and the fantastic creature to input 2.
-4. Run the Qwen workflow and save `output/intermediate/stiker-0000.jpg`.
+4. Run the Qwen workflow and save `intermediate/stiker-0000.jpg`.
 5. Upload that JPEG, compute centered padding, and run Flux with the **raw** scene.
-6. Save `output/final/stiker-0000.jpg` at the exact configured width and height.
-7. Keep both descriptions in `output/prompts/stiker-0000.md`, plus job metadata
+6. Save `final/stiker-0000.jpg` at the exact configured width and height.
+7. Keep both descriptions in `prompts/stiker-0000.md`, plus job metadata
    and the exact submitted graphs for troubleshooting.
 
 ## Quick start (Windows PowerShell)
@@ -61,7 +64,7 @@ uv run birthday-stickers --config config.local.yaml --dry-run
 # Also check the LLM model and ComfyUI nodes/model filenames, without generating:
 uv run birthday-stickers --config config.local.yaml --check
 
-# Start with one image, then run the configured batch:
+# Open the session picker (optionally prefill a one-sticker session):
 uv run birthday-stickers --config config.local.yaml --count 1
 uv run birthday-stickers --config config.local.yaml
 ```
@@ -69,6 +72,57 @@ uv run birthday-stickers --config config.local.yaml
 Linux/macOS use the same commands, with `cp config.yaml config.local.yaml`.
 Python 3.11+ is supported. No CUDA/PyTorch installation is needed on the client;
 the LLM and ComfyUI servers run the models.
+
+## Sessions and controls
+
+Run `uv run birthday-stickers --config config.local.yaml` to open the interface.
+The home screen lists unfinished sessions with their progress and last stage.
+Choose **New session**, or select a row and choose **Resume selected** (Enter also
+resumes a selected row). Names are automatically filled from your computer's local
+date plus a daily counter, for example `2026-10-14-001` and `2026-10-14-002`.
+
+The active dashboard shows the current stage, completed-sticker progress, output
+folder, and live logs:
+
+- **Pause:** save the current checkpoint and stay on the dashboard; **Resume** continues.
+- **Stop:** save progress and return to the session picker. The session stays resumable.
+- **Sessions:** return to the picker when generation is paused, finished, or failed.
+- **Q / Ctrl+C / Ctrl+Q:** save and quit. On restart, unfinished sessions remain listed.
+
+Controls are cooperative: an in-flight LLM or HTTP request finishes or times out
+before pausing. ComfyUI polling can pause between requests. Already-submitted GPU
+jobs may continue on the server; resuming reconnects using the saved job ID.
+The app never sends a global ComfyUI interrupt that could affect other users.
+
+Each session stores `session.json`, a `config.yaml` snapshot, copies of the prompts,
+workflows and character references under `inputs/`, plus `intermediate/`, `final/`,
+`prompts/` and `metadata/`. Changing the main YAML affects new sessions only. To
+change a server address for an existing session, edit its saved `config.yaml`
+while stopped. Keep dimensions, workflows and references unchanged for partial
+scenes. API credentials still come from the configured environment variables.
+
+Only one process can run a session at a time. Process locks release automatically
+on exit or a crash. A stale **Running / interrupted** entry can be resumed after
+its previous process exits. A new session uses a separate output folder, so sticker
+names can start at `stiker-0000.jpg` again without overwriting another session.
+
+For scripts or terminals without an interactive display:
+
+```powershell
+uv run birthday-stickers --config config.local.yaml --headless --count 10
+uv run birthday-stickers --config config.local.yaml --headless --resume 2026-10-14-001
+```
+
+`--count` sets the total for a new session; resuming retains the saved session total.
+`--dry-run` and `--check` remain noninteractive and do not create a session.
+
+If a submission connection fails before its job ID is received, the app leaves an
+explicit pending-submission marker instead of risking a duplicate GPU job. Inspect
+ComfyUI's queue/history, then add the known `qwen_prompt_id` or `flux_prompt_id` to
+that sticker's metadata. Remove the matching `*_submission_pending` marker only
+if you confirm no job was queued. A job that failed on ComfyUI requires fixing the
+server issue and deliberately clearing that stage's job ID before retrying. Keep
+server history and output files available until the session has downloaded them.
 
 ## Configuration
 
@@ -82,7 +136,8 @@ single quotes, for example `'D:\Art\protagonist.png'`.
 | `comfy.base_url` | IP B and ComfyUI port |
 | `characters.directory` | Folder containing all character reference variants |
 | `characters.protagonist`, `characters.creature` | Character IDs (default A and B), first and second socket |
-| `generation.count` | Number of new scenes for this invocation |
+| `generation.count` | Default total stickers for a new session; editable in the interface |
+| `output.directory` | Parent folder containing the `sessions/` directory |
 | `generation.width`, `generation.height` | Qwen output canvas; multiples of 32 |
 | `output.width`, `output.height` | Exact final width M and height N in pixels |
 | `output.jpeg_quality` | Default 95; lower values save more space |
@@ -153,7 +208,7 @@ configured tokens as Bearer headers. It never stores their values in output meta
 Edit [the scene brief](prompts/plan_scene.md) to set theme, medium, activities,
 subjects, or any requested lettering. Its optional placeholders are
 `{{iteration}}`, `{{count}}`, `{{sticker_id}}`, and `{{previous_scenes}}`. The last
-placeholder includes up to ten earlier scenes from the current invocation to
+placeholder includes up to ten earlier completed scenes from the session to
 encourage variety; it is not a guarantee against duplicate compositions.
 
 The [refinement template](prompts/refine_scene.md) must contain `{{guide}}` and
@@ -188,15 +243,16 @@ against `output.jpeg_background`.
 
 | Folder | Files |
 |---|---|
-| `output/intermediate/` | `stiker-0000.jpg`, `stiker-0001.jpg`, … |
-| `output/final/` | Matching JPEG names at the requested dimensions |
-| `output/prompts/` | One matching Markdown file with raw and refined descriptions |
-| `output/metadata/` | Status, seeds, reference hashes, padding, prompt IDs, submitted JSON graphs |
+| `intermediate/` | `stiker-0000.jpg`, `stiker-0001.jpg`, … |
+| `final/` | Matching JPEG names at the requested dimensions |
+| `prompts/` | One matching Markdown file with raw and refined descriptions |
+| `metadata/` | Status, seeds, reference hashes, padding, prompt IDs, submitted JSON graphs |
 
-The requested spelling **`stiker`** is intentional. IDs start at zero and continue
-after existing output files. Failed items retain their IDs and partial artifacts;
-later invocations append new IDs. There is no automatic resume/retry of incomplete
-items in this version. Do not delete the metadata if you need to inspect a failed job.
+The requested spelling **`stiker`** is intentional. IDs start at zero within each
+session. Resuming skips completed images and continues the unfinished sticker from
+its saved stage, using the same references, prompts, seeds, and ComfyUI job IDs.
+Keep session metadata and inputs alongside the images. Legacy output from before
+sessions remains untouched and is not automatically imported into the session list.
 
 Local images are JPEG. ComfyUI still keeps its own generated PNGs and uploaded input
 files on IP B, so clean those through your normal server maintenance if needed.
@@ -230,8 +286,8 @@ and missing model dropdown entries before you spend time on generation.
   It reports execution errors and has a configurable timeout that includes queue time.
 - Timeouts or Ctrl+C leave server jobs alone. Check ComfyUI's queue/history and the
   saved prompt ID before manually submitting again. No global interrupt is sent.
-- A failure stops the batch and returns a nonzero exit code. Previously completed
-  scenes, prompt files, and intermediates remain on disk.
+- A failure stops the session and displays the error in the dashboard. Headless
+  mode returns a nonzero exit code. Saved scenes and partial artifacts remain.
 
 If your LLM reports HTTP 400, check its model ID, supported token-limit field,
 context window, and whether it supports `image_url` input. No tool-calling support
@@ -269,8 +325,8 @@ and selects a setting, mood, framing, and pastel palette. The LLM supplies the
 specific poses and delightful details. The sampler is independent of diffusion
 seeds. Set `prompts.activities: null` (or omit it) to use only your planning prompt.
 
-Selection history lives in the per-sticker JSON files under `output/metadata`.
-It persists across runs using the same output directory. Every activity is used
+Selection history lives in the per-sticker JSON files under each session's `metadata/`.
+It persists when resuming that session. New sessions start a fresh activity cycle. Every activity is used
 before a new cycle starts; failed attempts also consume their chosen activity.
 The selected brief is saved before the LLM request and appears in the prompt
 Markdown alongside the raw and refined descriptions. Keep metadata to retain
