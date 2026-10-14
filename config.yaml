@@ -13,10 +13,10 @@ llm:
   extra_body: {}                   # e.g. chat_template_kwargs: {enable_thinking: false}
 
 comfy:
-  base_url: http://127.0.0.1:8188     # IP B
+  base_url: http://192.168.1.186:8188/     # IP B
   api_key_env: null
   request_timeout: 60
-  job_timeout: 1800                 # includes time spent waiting in ComfyUI's queue
+  job_timeout: 9999999                 # includes time spent waiting in ComfyUI's queue
   poll_interval: 2
   get_retries: 3                    # GET only; submissions/uploads are never auto-retried
   retry_delay: 1
