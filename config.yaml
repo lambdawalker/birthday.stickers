@@ -2,7 +2,7 @@
 # Every relative path is resolved from the directory containing THIS YAML.
 llm:
   base_url: http://127.0.0.1:1234/v1  # IP A; include /v1
-  model: your-loaded-model-id
+  model: "google/gemma-4-e2b"
   api_key_env: null                 # e.g. LLM_API_KEY; null for an unauthenticated LAN server
   timeout: 300
   temperature: 0.9
@@ -40,8 +40,8 @@ generation:
 
 output:
   directory: output
-  width: 1536                       # final JPEG width M; may be any positive integer
-  height: 1536                      # final JPEG height N
+  width: 1624                       # final JPEG width M; may be any positive integer
+  height: 1624                      # final JPEG height N
   jpeg_quality: 95
   jpeg_subsampling: 0               # 0 = 4:4:4, useful for illustration edges; 2 = smaller files
   jpeg_background: "#ffffff"        # JPEG cannot keep transparency
