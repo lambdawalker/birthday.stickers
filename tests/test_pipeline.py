@@ -62,17 +62,20 @@ class FakeServices:
                         else "Create a castle scene with the protagonist from <image1> "
                         "and the creature from <image2>, preserving their identities."
                     )
-                    if (
-                        "The only reference, <image1>"
-                        in service.chats[-1]["messages"][0]["content"]
-                    ):
+                    content = service.chats[-1]["messages"][-1]["content"]
+                    if isinstance(content, list):
+                        content = content[0]["text"]
+                    import re
+
+                    tags = re.findall(
+                        r"(?:^- .+?\): |^Identity reference: )(<image\d+>)", content, re.MULTILINE
+                    )
+                    if "<image2>" not in tags:
                         text = (
-                            "Create a scene with the girl from <image1> and a black baby dragon "
-                            "with green eyes, pointed ears, no horns, four legs, "
-                            "two wings, and a tail."
+                            "Create a scene with the girl from <image1> and a black baby dragon."
+                            if "<image1>" in tags
+                            else "One baby dragon curls up beside a pastel Viking longhouse."
                         )
-                    if "This is text-to-image" in service.chats[-1]["messages"][0]["content"]:
-                        text = "One baby dragon curls up beside a pastel Viking longhouse."
                     if service.bad_refinement and len(service.chats) % 2 == 0:
                         text = (
                             "Create a castle scene with both characters but missing reference tags."
@@ -111,7 +114,7 @@ class FakeServices:
                                 encoding="utf-8"
                             )
                         )
-                        for name in ("multi_character_reference/qwen", "common/flux-outpaint")
+                        for name in ("scene_preset/qwen", "common/flux-outpaint")
                     ]
                     info = {
                         node["class_type"]: {"input": {"required": {}}}
@@ -215,30 +218,16 @@ class FakeServices:
 class PipelineTests(unittest.TestCase):
     def configuration(self, temp, services, count=1):
         directory = Path(temp)
-        data = expand_config(
-            {
-                **{
-                    k: v
-                    for k, v in yaml.safe_load(
-                        (ROOT / "config.yaml").read_text(encoding="utf-8")
-                    ).items()
-                    if k != "preset"
-                },
-                "flow": "multi_character_reference",
-            },
-            ROOT,
-        )
-        data["prompts"].pop("activities", None)
-        data["prompts"].pop("outpainting", None)
-        data["characters"] = {}  # Exercise legacy explicit-path configurations too.
-        for key in ("protagonist", "creature"):
-            path = directory / (key + ".png")
-            Image.new("RGB", (32, 32), "green").save(path)
-            data["characters"][key] = str(path)
+        data = expand_config(yaml.safe_load((ROOT / "config.yaml").read_text()), ROOT)
+        folder = directory / "fixture_references"
+        folder.mkdir()
+        for name in ("A0.jpg", "B0.jpg"):
+            Image.new("RGB", (32, 32), "green").save(folder / name)
+        data["characters"] = {"directory": str(folder)}
         for key, text in {
-            "planning": "Plan one scene. {{iteration}} of {{count}}.",
+            "planning": "Plan one scene. {{iteration}} of {{count}}. {{scene_brief}}",
             "guide": "GUIDE MARKER: keep identities.",
-            "refinement": "Use this guide: {{guide}}\nScene: {{scene}}",
+            "refinement": "Use this guide: {{guide}}\nScene: {{scene}}\n{{character_sources}}",
         }.items():
             path = directory / (key + ".md")
             path.write_text(text, encoding="utf-8")
@@ -255,7 +244,6 @@ class PipelineTests(unittest.TestCase):
             width=53,
             height=55,
             feathering=4,
-            outpainting_prompt="",
         )
         path = directory / "config.yaml"
         path.write_text(yaml.safe_dump(data), encoding="utf-8")
@@ -271,13 +259,18 @@ class PipelineTests(unittest.TestCase):
             refined_request = service.chats[1]["messages"][-1]["content"]
             self.assertIn("GUIDE MARKER", refined_request)
             self.assertIn("moonlit castle", refined_request)
-            self.assertEqual(service.graphs[0]["514"]["inputs"]["image"], "refs/upload-1.png")
-            self.assertEqual(service.graphs[0]["516"]["inputs"]["image"], "refs/upload-2.png")
+            self.assertEqual(
+                service.graphs[0]["character_reference_1"]["inputs"]["image"], "refs/upload-1.png"
+            )
+            self.assertEqual(
+                service.graphs[0]["character_reference_2"]["inputs"]["image"], "refs/upload-2.png"
+            )
             self.assertEqual(service.graphs[1]["47"]["inputs"]["image"], "refs/upload-3.png")
             self.assertIn("<image1>", service.graphs[0]["459:474"]["inputs"]["prompt"])
             self.assertEqual(
                 service.graphs[1]["23"]["inputs"]["text"],
-                "A child and a creature explore a moonlit castle.",
+                "A child and a creature explore a moonlit castle.\n\n"
+                + config.outpainting.read_text(encoding="utf-8").strip(),
             )
             self.assertEqual(service.graphs[0]["459:458"]["inputs"]["seed"], 100)
             self.assertEqual(service.graphs[1]["3"]["inputs"]["seed"], 101)
@@ -303,39 +296,6 @@ class PipelineTests(unittest.TestCase):
             config.generation.count = 1
             run(config)
             self.assertTrue((root / "outpainting/results/stiker-0002.jpg").exists())
-
-    def test_activity_brief_reaches_llm_and_persists_across_failed_runs(self):
-        with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
-            config = self.configuration(temp, service)
-            data = yaml.safe_load(config.path.read_text(encoding="utf-8"))
-            data["prompts"]["activities"] = str(
-                ROOT / "src/birthday_stickers/flows/multi_character_reference/activities.json"
-            )
-            data["prompts"]["planning"] = str(
-                ROOT / "src/birthday_stickers/flows/multi_character_reference/planning.md"
-            )
-            config.path.write_text(yaml.safe_dump(data), encoding="utf-8")
-            config = load_config(config.path)
-            service.fail_refine = True
-            with self.assertRaisesRegex(RuntimeError, "stiker-0000"):
-                run(config)
-            root = config.output.directory
-            first = json.loads((root / "metadata/stiker-0000.json").read_text(encoding="utf-8"))
-            self.assertEqual(first["status"], "failed")
-            service.fail_refine = False
-            run(config)
-            second = json.loads((root / "metadata/stiker-0001.json").read_text(encoding="utf-8"))
-            self.assertNotEqual(first["activity"]["id"], second["activity"]["id"])
-            for index, meta in enumerate((first, second)):
-                request = service.chats[index * 2]["messages"][-1]["content"]
-                self.assertIn(meta["activity"]["activity"], request)
-                self.assertIn(meta["activity"]["setting"], request)
-                self.assertIn("Viking", request)
-                self.assertIn("blush pink", request)
-                markdown = (
-                    root / "scene_planning" / "results" / f"stiker-{index:04d}.md"
-                ).read_text(encoding="utf-8")
-                self.assertIn(meta["activity"]["id"], markdown)
 
     def test_refinement_failure_preserves_raw_scene(self):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
@@ -409,19 +369,6 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(service.chats, [])
             self.assertEqual(service.graphs, [])
 
-    def test_invalid_refinement_is_saved_for_inspection(self):
-        with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
-            service.bad_refinement = True
-            config = self.configuration(temp, service)
-            with self.assertRaisesRegex(RuntimeError, "must name reference roles"):
-                run(config)
-            saved = (config.output.directory / "scene_planning/results/stiker-0000.md").read_text(
-                encoding="utf-8"
-            )
-            self.assertIn("## Refined scene", saved)
-            self.assertIn("missing reference tags", saved)
-            self.assertEqual(service.graphs, [])
-
     def test_random_pair_is_selected_per_scene_and_shared_with_vision_and_qwen(self):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
             config = self.configuration(temp, service, count=2)
@@ -435,7 +382,7 @@ class PipelineTests(unittest.TestCase):
             ):
                 Image.new("RGB", (32, 32), color).save(directory / name)
             data = yaml.safe_load(config.path.read_text(encoding="utf-8"))
-            data["characters"] = {"directory": "characters", "protagonist": "A", "creature": "B"}
+            data["characters"] = {"directory": "characters"}
             data["llm"]["send_reference_images"] = True
             config.path.write_text(yaml.safe_dump(data), encoding="utf-8")
             config = load_config(config.path)
@@ -454,10 +401,12 @@ class PipelineTests(unittest.TestCase):
                 )
                 graph = service.graphs[index * 2]
                 self.assertEqual(
-                    graph["514"]["inputs"]["image"], f"refs/upload-{1 + 3 * index}.png"
+                    graph["character_reference_1"]["inputs"]["image"],
+                    f"refs/upload-{1 + 3 * index}.png",
                 )
                 self.assertEqual(
-                    graph["516"]["inputs"]["image"], f"refs/upload-{2 + 3 * index}.png"
+                    graph["character_reference_2"]["inputs"]["image"],
+                    f"refs/upload-{2 + 3 * index}.png",
                 )
                 for request in service.chats[index * 2 : index * 2 + 2]:
                     parts = request["messages"][-1]["content"]
@@ -473,9 +422,8 @@ class PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
             config = self.configuration(temp, service)
             config.character_directory = Path(temp)
-            config.protagonist, config.creature = "A", "B"
             Image.new("RGB", (32, 32)).save(Path(temp) / "A000.jpg")
-            with self.assertRaisesRegex(ValueError, "No references for creature character B"):
+            with self.assertRaisesRegex(ValueError, "No references for dragon"):
                 run(config)
             self.assertEqual(service.chats, [])
             self.assertEqual(service.graphs, [])

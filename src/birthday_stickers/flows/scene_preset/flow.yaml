@@ -2,7 +2,6 @@ prompts:
   planning: planning_master.md
   guide: guide.md
   refinement: refinement_master.md
-  activities: null
   outpainting: outpainting.md
 workflows:
   qwen:

@@ -26,7 +26,6 @@ from .config import Config, load_config
 from .control import RunControl
 from .flows import get_flow
 from .presets import discover_presets, with_preset
-from .references import discover_characters
 from .retry import retry_scope
 from .sessions import SessionStore, service_urls
 from .workflows import load_workflow
@@ -123,8 +122,7 @@ class StickerApp(App):
         self.quitting = False
         self.handler = UILogHandler(self)
         self.preset_choices = discover_presets(config.path)
-        if config.preset:
-            self.preset_choices[config.preset.directory.name] = config.preset.directory
+        self.preset_choices[config.preset.directory.name] = config.preset.directory
         self.preset_buttons = {
             f"choose-preset-{index}": path
             for index, path in enumerate(self.preset_choices.values())
@@ -258,13 +256,11 @@ class StickerApp(App):
                 status = "Running / interrupted"
             table.add_row(
                 item["name"],
-                item.get("preset_name") or item.get("generation_type", "multi_character_reference"),
+                item.get("preset_name") or item.get("generation_type", "scene_preset"),
                 "On"
                 if item.get(
                     "outpainting",
-                    get_flow(
-                        item.get("generation_type", "multi_character_reference")
-                    ).uses_references,
+                    get_flow(item.get("generation_type", "scene_preset")).uses_references,
                 )
                 else "Off",
                 f"{item.get('prompts_completed', item.get('completed', 0))} prompts / "
@@ -341,41 +337,29 @@ class StickerApp(App):
         self.query_one("#new", Button).focus()
 
     def update_reference_settings(self) -> None:
-        self.query_one("#reference-settings").display = (
-            bool(self.config.preset) or self.config.flow.uses_references
-        )
-        if not self.config.preset and not self.config.flow.uses_references:
-            return
+        self.query_one("#reference-settings").display = True
         try:
-            if self.config.preset:
-                import re
+            import re
 
-                directory = self.config.character_directory
-                files = list(directory.iterdir()) if directory and directory.is_dir() else []
-                counts = []
-                for character in self.config.preset.characters:
-                    prefix = character.get("imagePrefix")
-                    if prefix:
-                        pattern = re.compile(
-                            re.escape(prefix) + r"[0-9]+\.(?i:jpg|jpeg|png|webp|bmp|tiff|tif)"
-                        )
-                        matches = [p for p in files if p.is_file() and pattern.fullmatch(p.name)]
-                        count = sum(p.suffix.lower() == ".jpg" for p in matches)
-                        originals = len(matches) - count
-                        counts.append(
-                            f"{character['name']} ({character['id']}): {count} JPG"
-                            + (f" + {originals} source files" if originals else "")
-                        )
-                    else:
-                        counts.append(f"{character['name']} ({character['id']}): text")
-                text = "Character sources · " + " · ".join(counts)
-            elif self.config.character_directory:
-                groups = discover_characters(self.config.character_directory)
-                text = "Character versions · " + " · ".join(
-                    f"{label}: {len(paths)}" for label, paths in sorted(groups.items())
-                )
-            else:
-                text = "Character versions · 1 explicit reference per role"
+            directory = self.config.character_directory
+            files = list(directory.iterdir()) if directory and directory.is_dir() else []
+            counts = []
+            for character in self.config.preset.characters:
+                prefix = character.get("imagePrefix")
+                if prefix:
+                    pattern = re.compile(
+                        re.escape(prefix) + r"[0-9]+\.(?i:jpg|jpeg|png|webp|bmp|tiff|tif)"
+                    )
+                    matches = [p for p in files if p.is_file() and pattern.fullmatch(p.name)]
+                    count = sum(p.suffix.lower() == ".jpg" for p in matches)
+                    originals = len(matches) - count
+                    counts.append(
+                        f"{character['name']} ({character['id']}): {count} JPG"
+                        + (f" + {originals} source files" if originals else "")
+                    )
+                else:
+                    counts.append(f"{character['name']} ({character['id']}): text")
+            text = "Character sources · " + " · ".join(counts)
             self.query_one("#reference-counts", Static).update(Text(text))
             cfg = self.config.generation.cfg
             if cfg is None:
@@ -392,8 +376,6 @@ class StickerApp(App):
             self.query_one("#reference-counts", Static).update(Text(str(error)))
 
     def apply_generation_settings(self) -> None:
-        if not self.config.preset and not self.config.flow.uses_references:
-            return
         cfg = float(self.query_one("#generation-cfg", Input).value)
         width = int(self.query_one("#generation-width", Input).value)
         height = int(self.query_one("#generation-height", Input).value)
@@ -503,10 +485,7 @@ class StickerApp(App):
             Text(
                 item["name"]
                 + " · "
-                + (
-                    item.get("preset_name")
-                    or item.get("generation_type", "multi_character_reference")
-                )
+                + (item.get("preset_name") or item.get("generation_type", "scene_preset"))
             )
         )
         status = item["status"].upper()

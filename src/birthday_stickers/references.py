@@ -45,29 +45,4 @@ def preset_reference_pools(config, convert=True):
 
 
 def reference_pools(config: Config):
-    if config.preset is not None:
-        return preset_reference_pools(config)
-    if not config.flow.uses_references:
-        return [], []
-    if config.character_directory is None:
-        # Keep existing configs with explicit image paths working.
-        return tuple(
-            [Path(getattr(config, role))] if role in config.flow.reference_roles else []
-            for role in ("protagonist", "creature")
-        )
-    convert_characters(config.character_directory)
-    groups = discover_characters(config.character_directory)
-    pools = []
-    for role, character_id in (("protagonist", config.protagonist), ("creature", config.creature)):
-        if role not in config.flow.reference_roles:
-            pools.append([])
-            continue
-        candidates = groups.get(str(character_id), [])
-        if not candidates:
-            raise ValueError(
-                f"No references for {role} character {character_id} in "
-                f"{config.character_directory}; expected {character_id}000.jpg, "
-                f"{character_id}001.jpg, ..."
-            )
-        pools.append(candidates)
-    return pools[0], pools[1]
+    return preset_reference_pools(config)

@@ -12,14 +12,6 @@ from .http import HTTPClient, ServiceError
 from .images import decode_image, rgb_image
 
 
-def compose_refinement(template: str, guide: str, scene: str) -> str:
-    if "{{guide}}" not in template or "{{scene}}" not in template:
-        raise ValueError("Refinement template must contain {{guide}} and {{scene}}")
-    # Single-pass substitution: braces in an LLM response or guide are literal data.
-    values = {"guide": guide, "scene": scene}
-    return re.sub(r"\{\{(guide|scene)\}\}", lambda match: values[match[1]], template)
-
-
 def response_text(response: dict, refined: bool) -> str:
     try:
         choice = response["choices"][0]
@@ -68,7 +60,7 @@ class LLMClient:
         self,
         config: LLMConfig,
         references: tuple[Path, ...],
-        generation_type="multi_character_reference",
+        generation_type="scene_preset",
     ):
         self.generation_type = generation_type
         self.config = config

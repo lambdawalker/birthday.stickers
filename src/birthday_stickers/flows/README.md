@@ -6,20 +6,15 @@ them to `images.image_1` through `images.image_N` on encoder `459:474`. Text-onl
 characters consume no slots. The client enforces Qwen's documented ten-reference
 limit. All presets share canvas/CFG/seed controls and common Flux outpainting.
 
-The following legacy files retain the user's original ComfyUI API exports:
-
-- `multi_character_reference/qwen.json` from `Qwen 2.1 Edit.json`
-- `common/flux-outpaint.json` from `Flux outpaint.json`
-- `single_character_text/qwen.json` from `Qwen image 2.1.json`
-
-The CLI deep-copies and patches them in memory, then saves each submitted graph
-under `output/metadata`. Change model filenames/sampler inputs with YAML overrides.
+The packaged workflows are `scene_preset/qwen.json` and
+`common/flux-outpaint.json`. The CLI copies and patches them in memory, then
+saves each submitted graph under `output/metadata`. Change model filenames and
+sampler inputs with YAML overrides. Retired flow implementations are removed.
 
 | Stage | Node | Runtime binding |
 |---|---|---|
 | Qwen (presets) | `character_reference_N` | Referenced characters in YAML order |
-| Qwen (legacy duo) | `514`, `516` | Uploaded protagonist and creature, in that order |
-| Qwen | `459:474` | Refined prompt directly; image sockets 1 and 2 remain explicit |
+| Qwen | `459:474` | Refined prompt directly; image sockets follow referenced character order |
 | Qwen | `459:456`, `459:458` | Configured empty latent size, batch 1, sampler seed |
 | Qwen | `461` | Core `SaveImage`, using the original decoded image connection |
 | Flux | `47` | Uploaded intermediate JPEG |
@@ -33,7 +28,7 @@ switches, and batching helper become unreachable and are removed from the submit
 graph. Flux's disconnected loader `17` is also removed. Model loaders, conditioning,
 cache, decoding, and sampling settings remain from the exports unless overridden.
 
-Qwen generates a new composition from two identity sources. The explicit empty
+Qwen generates a new composition from the configured character sources. The explicit empty
 latent makes generation dimensions configurable rather than inheriting the first
 reference's aspect ratio. Use a current ComfyUI build with Qwen 2.1 support: core
 `KSampler` adapts the empty latent's channel count and spatial downscale using its
@@ -67,8 +62,3 @@ Sources checked October 14, 2026:
 - [Core latent and sampler nodes](https://github.com/Comfy-Org/ComfyUI/blob/master/nodes.py)
 - [Empty-latent adaptation](https://github.com/Comfy-Org/ComfyUI/blob/master/comfy/sample.py)
 - [ComfyUI HTTP routes](https://docs.comfy.org/development/comfyui-server/comms_routes)
-
-The `protagonist_reference_creature_text` flow derives its Qwen graph from the
-multi-character export, removes the second image loader/socket and unused prompt
-enhancer branch, and binds only node `514` to the protagonist. The dragon is
-described in text. It uses the same latent, sampler, output, and outpainting nodes.

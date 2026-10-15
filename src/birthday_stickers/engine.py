@@ -13,18 +13,16 @@ from pathlib import Path
 from queue import Empty, Queue
 from threading import Event, RLock, Thread
 
-from .activities import select_activity
 from .artifacts import ensure_layout, result_path, stage_log
 from .comfy import ComfyClient
 from .config import Config, auth_headers
 from .control import RunControl, RunHalted
 from .http import RejectedSubmission
 from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
-from .llm import LLMClient, compose_refinement
+from .llm import LLMClient
 from .master_prompts import correction_request, plan_request, refine_request, tag_error
 from .pipeline import (
     SEED_MODULUS,
-    planning_prompt,
     prepare_records,
     reserve_sticker,
     validate_local,
@@ -69,7 +67,7 @@ class Pipeline:
         selected = [
             (role, secrets.choice(pool))
             for role, pool in zip(
-                self.config.reference_roles if self.config.preset else ("protagonist", "creature"),
+                self.config.reference_roles,
                 pools,
                 strict=True,
             )
@@ -99,10 +97,6 @@ class Pipeline:
                 for role, path in selected
             ],
         )
-        if self.local["activities"]:
-            metadata["activity"] = select_activity(
-                self.local["activities"], self.config.output.directory / "metadata"
-            )
 
 
 class Scene:
@@ -201,7 +195,7 @@ class Scene:
             self.save()
         # Reference selection and preset rendering are separate checkpoints. A pause
         # or error while rendering may have saved references without a planning brief.
-        if self.config.preset and "planning_prompt" not in self.meta:
+        if "planning_prompt" not in self.meta:
             from .presets import select_scene
 
             selection = self.meta.get("scene_selection")
@@ -219,7 +213,7 @@ class Scene:
         llm = LLMClient(self.config.llm, references, self.config.generation.type)
         activity = self.meta.get("activity")
         if "raw_scene" not in self.meta:
-            if self.config.preset and "planning_request" not in self.meta:
+            if "planning_request" not in self.meta:
                 self.meta["planning_request"] = plan_request(
                     local["planning"],
                     self.meta["planning_prompt"],
@@ -230,18 +224,7 @@ class Scene:
                 )
                 self.save()
             with self.step("planning", "Plan scene"):
-                self.meta["raw_scene"] = llm.complete(
-                    self.meta["planning_request"]
-                    if self.config.preset
-                    else planning_prompt(
-                        local["planning"],
-                        iteration,
-                        self.config.generation.count,
-                        self.name,
-                        previous_scenes,
-                        activity,
-                    )
-                )
+                self.meta["raw_scene"] = llm.complete(self.meta["planning_request"])
         raw = self.meta["raw_scene"]
         write_prompts(
             self.prompt_path,
@@ -251,7 +234,7 @@ class Scene:
             activity,
             self.meta.get("planning_request"),
         )
-        if "refined_scene" not in self.meta and self.config.preset:
+        if "refined_scene" not in self.meta:
             self.refine_preset(llm, local, raw)
             write_prompts(
                 self.prompt_path,
@@ -261,32 +244,6 @@ class Scene:
                 activity,
                 self.meta.get("planning_request"),
             )
-        elif "refined_scene" not in self.meta:
-            with self.step("refining", "Refine Qwen prompt"):
-                refined = llm.complete(
-                    compose_refinement(local["refinement"], local["guide"], raw),
-                    refined=True,
-                )
-                write_prompts(
-                    self.prompt_path,
-                    self.name,
-                    raw,
-                    refined,
-                    activity,
-                    self.meta.get("planning_request"),
-                )
-                required = [
-                    f"<image{i}>" for i in range(1, len(self.config.flow.reference_roles) + 1)
-                ]
-                if any(tag not in refined for tag in required):
-                    raise ValueError(
-                        "Refined prompt must name reference roles: " + ", ".join(required)
-                    )
-                if len(required) == 1 and "<image2>" in refined:
-                    raise ValueError(
-                        "This flow has no second reference; describe the dragon in text"
-                    )
-                self.meta["refined_scene"] = refined
         self.meta["status"] = "prompts_ready"
         self.save()
 

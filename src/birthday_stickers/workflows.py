@@ -85,44 +85,6 @@ def qwen_negative(graph, nodes, negative):
         encoder["negative_prompt"] = merge_negative(encoder.get("negative_prompt", ""), negative)
 
 
-def build_qwen(
-    template: Graph,
-    nodes: dict,
-    overrides: dict,
-    prompt: str,
-    protagonist: str,
-    creature: str,
-    width: int,
-    height: int,
-    seed: int,
-    prefix: str,
-    negative: str | None = None,
-) -> Graph:
-    graph = copy.deepcopy(template)
-    apply_overrides(graph, overrides)
-    if str(nodes["protagonist"]) == str(nodes["creature"]):
-        raise ValueError("Protagonist and creature must have distinct LoadImage nodes")
-    mapped_inputs(graph, nodes, "protagonist", "LoadImage")["image"] = protagonist
-    mapped_inputs(graph, nodes, "creature", "LoadImage")["image"] = creature
-    encoder = mapped_inputs(graph, nodes, "encoder", "TextEncodeQwenImage21")
-    encoder.update(
-        {
-            "prompt": prompt,
-            "images.image_1": [str(nodes["protagonist"]), 0],
-            "images.image_2": [str(nodes["creature"]), 0],
-        }
-    )
-    mapped_inputs(graph, nodes, "latent", "EmptyLatentImage").update(
-        width=width, height=height, batch_size=1
-    )
-    mapped_inputs(graph, nodes, "sampler", "KSampler").update(
-        seed=seed, latent_image=[str(nodes["latent"]), 0]
-    )
-    qwen_negative(graph, nodes, negative)
-    core_saver(graph, nodes, prefix)
-    return reachable_graph(graph, str(nodes["output"]))
-
-
 def build_flux(
     template: Graph,
     nodes: dict,

@@ -575,14 +575,14 @@ never clear a saved job ID to rerender a job that may still be running.
 The shared Qwen builder and refinement assets live in
 `src/birthday_stickers/flows/scene_preset/`. Scene content lives in
 `src/birthday_stickers/presets/`; common outpainting/negative prompts and Flux
-bindings live in `flows/common/`. Legacy flow folders remain available for explicit
-launch configurations; old saved sessions are no longer supported.
+bindings live in `flows/common/`. Only preset-based configurations are supported;
+retired flow folders and compatibility aliases have been removed.
 
 Prompt filenames are searched **in the selected flow folder first, then in
 `flows/common/`**. For example, adding `scene_preset/outpainting.md`
 overrides the shared version only for that flow. A missing file in both locations
 produces an error naming both searched directories. The same resolver is used for
-default workflow assets. Activity catalogs are resolved like prompt files.
+default workflow assets. Activity catalogs live in the preset folder.
 
 Optional config overrides still work:
 
@@ -597,20 +597,19 @@ workflows:
 ```
 
 Absolute paths and paths containing directories resolve relative to the YAML
-(as before); bare prompt filenames use flow/common lookup. For legacy flows, `prompts.activities:
-null` disables activity selection; presets always select from their own catalog, and `prompts.outpainting: null` disables the
-extra outpainting instructions. Leave a section out to use the flow defaults.
-The repository's launch YAMLs contain connection, character, canvas and output
-settings; prompt text and workflow bindings live with the flows.
+and bare prompt filenames use flow/common lookup. Presets select activities from
+their own catalog. `prompts.outpainting: null` disables extra outpainting
+instructions. Leave a section out to use the flow defaults.
 
-`viking_duo` and `baby_dragon` remain accepted launch-config aliases. Flat launch
-YAMLs continue to load, but old session manifests are rejected. Missing
-paths to the former shipped prompt/workflow files redirect to their new packaged
-locations; existing custom files take precedence. Legacy inline outpainting text
-is still read for compatibility. Every new session saves its resolved outpainting
-prompt as `inputs/outpainting.md`, including when starting from a legacy inline
-config. Resuming reads this saved file, so editing `common/outpainting.md` only
-changes new sessions. The flows and their assets are included in the wheel.
+Every launch configuration must specify `preset`. The three root `config*.yaml`
+files remain supported because they select current presets. Old flow names,
+legacy character-role mappings, JSON activity catalogs, inline
+`output.outpainting_prompt`, and redirects from former asset paths are no longer
+supported. Put outpainting instructions in a Markdown file instead.
+
+Every new session saves its resolved outpainting prompt as `inputs/outpainting.md`.
+Resuming reads that saved file, so editing `common/outpainting.md` only changes
+new sessions. The flows and their assets are included in the wheel.
 
 ### Separate generation and outpainting servers
 
@@ -687,7 +686,7 @@ no longer imports or copies the old `prompts/`, `intermediate/`, or `final/` lay
 ### Negative prompts
 
 `flows/common/negative.md` supplies `border, 3d, incomplete image, framed.` to
-the shared Qwen flow and legacy flows. A flow-local `negative.md` overrides the common file. You can
+the shared Qwen flow. A flow-local `negative.md` overrides the common file. You can
 also set `prompts.negative: ./my-prompts/negative.md`, or use `null` to retain only
 the exported workflow's negative prompt. Configured text is appended to existing
 Qwen negatives, preserving exclusions such as the solo flow's `realistic`.
@@ -785,7 +784,7 @@ flattened on white. If `A789.jpg` exists, a new number above the largest existin
 number for A is used, without overwriting it. Original files are retained. Conversion
 receipts prevent duplicates on subsequent runs; changing a source creates a new
 version, and deleting its converted JPG recreates it while the source remains.
-Preset imports use the configured prefix followed by digits; legacy flows retain A–Z labels. The standalone
+Preset imports use the configured prefix followed by digits. The standalone
 `convert_to_jpg.py` also handles name collisions without overwriting existing JPGs.
 
 ### Packaged JPG converter
