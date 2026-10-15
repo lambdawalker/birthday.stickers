@@ -218,12 +218,49 @@ Edit the selected preset's six files to change style, characters, activities,
 venues and composition. The assembled brief is saved before the LLM request, with
 up to ten recent scenes appended to encourage variety.
 
-The shared [refinement template](src/birthday_stickers/flows/scene_preset/refinement.md)
+The shared [refinement template](src/birthday_stickers/flows/common/refinement_master.md)
 and [Qwen guide](src/birthday_stickers/flows/scene_preset/guide.md) preserve the
 selected character-source assignments and scene details. Refinement uses the raw
 response plus the guide, followed by explicit reference-tag assignments. The raw
 scene remains the input to Flux; it is never replaced by the reference-tagged
 Qwen refinement. The graph's internal prompt enhancer is bypassed.
+
+### Master planning and refinement templates
+
+The shared, editable templates live in:
+
+- `src/birthday_stickers/flows/common/planning_master.md`
+- `src/birthday_stickers/flows/common/refinement_master.md`
+
+Planning inserts `{{ scene_brief }}` (required), which contains the rendered image
+style, character blocks and general direction in that order. Optional variables
+are `previous_scenes`, `iteration`, `count` and `sticker_id`. Refinement requires
+`{{ guide }}`, `{{ scene }}` and `{{ character_sources }}`; the last contains the
+exact ID/name-to-image-tag assignments and descriptions. Both use strict Jinja.
+Inserted LLM responses and preset text are data, not evaluated again as templates.
+
+To customize without editing packaged files, copy these two files and configure:
+
+```yaml
+prompts:
+  planning: ./my-prompts/planning_master.md
+  refinement: ./my-prompts/refinement_master.md
+```
+
+Switching presets keeps these overrides. New sessions snapshot the files into
+`inputs/planning.md` and `inputs/refinement.md`. The rendered `planning_request`
+and `refinement_request` are saved in scene metadata before their first LLM call.
+`--preview-prompt` now shows the final master planning request. Invalid template
+variables or missing required placeholders are reported before contacting services.
+
+If Qwen refinement omits a reference tag or invents an extra one, the planner sends
+the rejected answer back with the exact missing/unexpected tags and asks for a
+corrected scene. The raw scene, references and seeds are reused. Rejected answers
+are logged in `scene_planning/logs/`; the latest rejection is checkpointed in
+metadata until corrected. Retries wait 1, 2, 3, ... up to 15 seconds, then continue
+at 15 seconds. Pause/Stop interrupts retry waits and resume continues correction.
+Only a valid refinement is handed to image generation. Persistent mistakes remain
+visible in the logs so you can stop and adjust the LLM or master template.
 
 ## Dimensions and output files
 
@@ -330,7 +367,7 @@ the same three pipelines, session controls, CFG/resolution fields, negative
 prompt, and optional outpainting. Switching presets keeps the launcher's service
 URLs, output settings, workflow overrides and outpainting setting. Existing
 sessions resume their saved settings regardless of the chosen new-session preset.
-Legacy flows and snapshots remain supported; they are not rewritten on resume.
+Session format 2 is required. Earlier sessions are not resumable; their files remain on disk.
 
 Copy one packaged preset into `presets/my_story/` beside your launch YAML to
 customize it. The interface discovers folders there automatically; a local folder
@@ -534,8 +571,8 @@ never clear a saved job ID to rerender a job that may still be running.
 The shared Qwen builder and refinement assets live in
 `src/birthday_stickers/flows/scene_preset/`. Scene content lives in
 `src/birthday_stickers/presets/`; common outpainting/negative prompts and Flux
-bindings live in `flows/common/`. The three legacy flow folders are retained for
-existing configurations and session snapshots.
+bindings live in `flows/common/`. Legacy flow folders remain available for explicit
+launch configurations; old saved sessions are no longer supported.
 
 Prompt filenames are searched **in the selected flow folder first, then in
 `flows/common/`**. For example, adding `scene_preset/outpainting.md`
@@ -562,8 +599,8 @@ extra outpainting instructions. Leave a section out to use the flow defaults.
 The repository's launch YAMLs contain connection, character, canvas and output
 settings; prompt text and workflow bindings live with the flows.
 
-`viking_duo` and `baby_dragon` remain accepted aliases. Old flat YAMLs and saved
-session snapshots continue to load without adopting new flow defaults. Missing
+`viking_duo` and `baby_dragon` remain accepted launch-config aliases. Flat launch
+YAMLs continue to load, but old session manifests are rejected. Missing
 paths to the former shipped prompt/workflow files redirect to their new packaged
 locations; existing custom files take precedence. Legacy inline outpainting text
 is still read for compatibility. Every new session saves its resolved outpainting
@@ -637,10 +674,11 @@ Re-enabling it reuses completed outputs and reconnects to pending jobs using the
 session's existing outpainting settings. Settings from the current profile are
 imported only when adding outpainting to a session that has no saved Flux workflow.
 
-Older sessions are supported: their `prompts/`, `intermediate/`, and `final/`
-artifacts are copied to the corresponding stage folders when resumed, without
-deleting originals or overwriting existing stage files. Historical timing data
-remains in metadata; new per-stage logs begin on the next run.
+New sessions use manifest version **2**. Sessions from before the master-template
+update are unsupported and excluded from the resumable session table, with an
+explanation shown in the interface. Headless resume reports the same error. Start
+a new session after updating. Existing output folders are retained; the program
+no longer imports or copies the old `prompts/`, `intermediate/`, or `final/` layout.
 
 ### Negative prompts
 

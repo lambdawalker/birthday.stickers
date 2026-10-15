@@ -61,6 +61,7 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Prompt preview requires a scene preset")
             import random
 
+            from .master_prompts import plan_request
             from .presets import render_scene
             from .references import reference_pools
 
@@ -71,7 +72,17 @@ def main(argv: list[str] | None = None) -> int:
             ]
             activity = rng.choice(config.preset.activities)
             venue = rng.choice(config.preset.compatible(activity))
-            print(render_scene(config.preset, activity, venue, args.preview_seed, refs)["prompt"])
+            brief = render_scene(config.preset, activity, venue, args.preview_seed, refs)["prompt"]
+            print(
+                plan_request(
+                    config.planning.read_text(encoding="utf-8"),
+                    brief,
+                    [],
+                    1,
+                    config.generation.count,
+                    "preview",
+                )
+            )
             return 0
         if args.count is not None:
             integer(args.count, "--count", 1)

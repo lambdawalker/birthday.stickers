@@ -296,9 +296,10 @@ def with_preset(config, directory):
     result.preset = load_preset(directory)
     result.generation.type = "scene_preset"
     defaults = expand_config({"flow": "scene_preset"}, config.path.parent)
-    for key in ("planning", "refinement", "guide", "activities"):
-        value = defaults["prompts"].get(key)
-        setattr(result, key, Path(value) if value else None)
+    if config.preset is None:
+        for key in ("planning", "refinement", "guide", "activities"):
+            value = defaults["prompts"].get(key)
+            setattr(result, key, Path(value) if value else None)
     workflow = defaults["workflows"]["qwen"]
     if config.preset is None:
         result.qwen = WorkflowConfig(
