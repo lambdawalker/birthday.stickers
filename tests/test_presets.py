@@ -316,3 +316,26 @@ class PresetTests(unittest.TestCase):
             recovered = json.loads(path.read_text())
             self.assertEqual(recovered["scene_selection"], selection)
             self.assertEqual(recovered["planning_prompt"], selection["prompt"])
+
+    def test_activity_history_ignores_submitted_workflow_json_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            preset = load_preset(write_preset(Path(temp) / "preset"))
+            other = copy.deepcopy(preset.activities[0])
+            other["id"] = "other"
+            preset.activities.append(other)
+            metadata = Path(temp) / "metadata"
+            metadata.mkdir()
+            (metadata / "stiker-0000.json").write_text(
+                json.dumps({"scene_selection": {"activity": {"id": preset.activities[0]["id"]}}})
+            )
+            for name in (
+                "stiker-0000.qwen.json",
+                "stiker-0000.flux.json",
+                "stiker-not-a-scene.json",
+            ):
+                (metadata / name).write_text("Not scene metadata; must not be parsed")
+            try:
+                selected = select_scene(preset, metadata)
+            except ValueError as error:
+                self.fail(f"Workflow files must be ignored by activity sampling: {error}")
+            self.assertEqual(selected["activity"]["id"], "other")
