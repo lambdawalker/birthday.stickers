@@ -6,7 +6,7 @@ import test_pipeline as fixtures
 import yaml
 
 from birthday_stickers.config import load_config
-from birthday_stickers.flows import ROOT, expand_config, get_flow, legacy_asset, resolve_asset
+from birthday_stickers.flows import ROOT, asset_path, expand_config, get_flow, resolve_asset
 from birthday_stickers.sessions import SessionStore
 
 
@@ -29,44 +29,40 @@ class FlowTests(unittest.TestCase):
                 resolve_asset("outpainting.md", flow, common)
 
     def test_registry_aliases_and_defaults_with_partial_overrides(self):
-        self.assertEqual(get_flow("viking_duo").name, "multi_character_reference")
-        self.assertEqual(get_flow("baby_dragon").name, "single_character_text")
-        self.assertTrue(get_flow("viking_duo").uses_references)
-        self.assertFalse(get_flow("baby_dragon").uses_references)
+        self.assertEqual(get_flow("scene_preset").name, "scene_preset")
+        for name in (
+            "viking_duo",
+            "baby_dragon",
+            "multi_character_reference",
+            "single_character_text",
+            "protagonist_reference_creature_text",
+        ):
+            with self.assertRaisesRegex(ValueError, "Unknown flow"):
+                get_flow(name)
         data = {
-            "flow": "single_character_text",
+            "flow": "scene_preset",
             "workflows": {"flux": {"overrides": {"3": {"cfg": 1.2}}}},
         }
         expanded = expand_config(data, Path.cwd())
         self.assertEqual(expanded["workflows"]["flux"]["overrides"]["3"], {"steps": 50, "cfg": 1.2})
         self.assertEqual(Path(expanded["prompts"]["outpainting"]), ROOT / "common/outpainting.md")
         self.assertNotIn("generation", data)
-        disabled = expand_config({"flow": "baby_dragon", "prompts": {"outpainting": None}}, ROOT)
+        disabled = expand_config({"flow": "scene_preset", "prompts": {"outpainting": None}}, ROOT)
         self.assertIsNone(disabled["prompts"]["outpainting"])
 
-    def test_explicit_prompt_paths_and_legacy_redirects(self):
+    def test_explicit_paths_have_no_legacy_redirects(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             data = expand_config(
-                {"flow": "viking_duo", "prompts": {"planning": "./custom/planning.md"}}, base
+                {"flow": "scene_preset", "prompts": {"planning": "./custom/planning.md"}}, base
             )
             self.assertEqual(
                 Path(data["prompts"]["planning"]), (base / "custom/planning.md").resolve()
             )
             old = "prompts/plan_scene.md"
-            self.assertEqual(
-                legacy_asset(base, old), ROOT / "multi_character_reference/planning.md"
-            )
-            for spelling in ("./" + old, str(base / old), str(ROOT.parents[2] / old)):
-                self.assertEqual(
-                    legacy_asset(base, spelling), ROOT / "multi_character_reference/planning.md"
-                )
-            custom = base / old
-            custom.parent.mkdir()
-            custom.write_text("Existing customization", encoding="utf-8")
-            self.assertEqual(legacy_asset(base, old), custom.resolve())
+            self.assertEqual(asset_path(base, old), base / old)
 
-    def test_session_snapshots_file_prompt_and_converts_legacy_inline_text(self):
+    def test_session_snapshots_file_prompt(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
             config = fixtures.PipelineTests().configuration(temp, service)
             source = Path(temp) / "outpainting.md"
@@ -82,11 +78,6 @@ class FlowTests(unittest.TestCase):
             snapshot = yaml.safe_load(saved.path.read_text(encoding="utf-8"))
             self.assertNotIn("outpainting_prompt", snapshot["output"])
             self.assertNotIn("flow", snapshot)
-            config.outpainting = None
-            config.output.outpainting_prompt = "Legacy inline prompt"
-            legacy = store.create(config)
-            saved = load_config(store.directory(legacy["name"]) / "config.yaml")
-            self.assertEqual(saved.outpainting.read_text(encoding="utf-8"), "Legacy inline prompt")
 
     def test_protagonist_reference_text_dragon_end_to_end_and_snapshot(self):
         import json
@@ -99,19 +90,20 @@ class FlowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
             config = fixtures.PipelineTests().configuration(temp, service)
             data = yaml.safe_load(config.path.read_text(encoding="utf-8"))
-            data["flow"] = "protagonist_reference_creature_text"
+            data["flow"] = "scene_preset"
+            data["preset"] = "girl_reference_dragon_text"
             data["generation"].pop("type", None)
             data.pop("workflows")
             data.pop("prompts")
             characters = Path(temp) / "characters"
             characters.mkdir()
             Image.new("RGB", (32, 32), "green").save(characters / "A789.png")
-            data["characters"] = {"directory": str(characters), "protagonist": "A"}
+            data["characters"] = {"directory": str(characters)}
             data["generation"]["cfg"] = 2.5
             config.path.write_text(yaml.safe_dump(data), encoding="utf-8")
             config = load_config(config.path)
-            self.assertEqual(config.flow.reference_roles, ("protagonist",))
-            self.assertEqual(reference_pools(config)[1], [])
+            self.assertEqual(config.flow.reference_roles, ("girl",))
+            self.assertEqual(len(reference_pools(config)), 1)
             result = run(config)
             self.assertEqual(len(result), 1)
             graph = service.graphs[0]
@@ -133,5 +125,4 @@ class FlowTests(unittest.TestCase):
             store = SessionStore(Path(temp) / "sessions")
             item = store.create(config)
             saved = load_config(store.directory(item["name"]) / "config.yaml")
-            self.assertEqual(saved.flow.reference_roles, ("protagonist",))
-            self.assertEqual(saved.creature, "")
+            self.assertEqual(saved.flow.reference_roles, ("girl",))

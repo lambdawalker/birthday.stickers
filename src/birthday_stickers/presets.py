@@ -311,19 +311,10 @@ def with_preset(config, directory):
     result.preset = load_preset(directory)
     result.generation.type = "scene_preset"
     defaults = expand_config({"flow": "scene_preset"}, config.path.parent)
-    if config.preset is None:
-        for key in ("planning", "refinement", "guide", "activities"):
-            value = defaults["prompts"].get(key)
-            setattr(result, key, Path(value) if value else None)
     for key in MASTER_FILES:
-        previous = master_path(config.preset.directory, key) if config.preset else None
-        if config.preset is None or getattr(config, key) == previous:
+        previous = master_path(config.preset.directory, key)
+        if getattr(config, key) == previous:
             setattr(result, key, master_path(result.preset.directory, key))
-    workflow = defaults["workflows"]["qwen"]
-    if config.preset is None:
-        result.qwen = WorkflowConfig(
-            Path(workflow["path"]), workflow["nodes"], workflow["overrides"]
-        )
     if result.flux is None:
         workflow = defaults["workflows"]["flux"]
         result.flux = WorkflowConfig(

@@ -11,12 +11,19 @@ from birthday_stickers.workflows import build_flux, load_workflow
 
 
 class NegativePromptTests(unittest.TestCase):
-    def test_both_qwen_flows_receive_shared_negative_and_preserve_existing_text(self):
+    def test_all_presets_receive_shared_negative_and_preserve_existing_text(self):
         root = Path(__file__).resolve().parents[1]
-        for filename in ("config.yaml", "config.dragon.yaml"):
-            config = load_config(root / "tests/fixtures" / filename)
+        for filename in ("config.yaml", "config.dragon.yaml", "config.reference-dragon.yaml"):
+            config = load_config(root / filename)
+            template = load_workflow(config.qwen.path)
+            template[str(config.qwen.nodes["encoder"])]["inputs"]["negative_prompt"] = "existing"
             graph = config.flow.build_graph(
-                config, load_workflow(config.qwen.path), "A scene", ("a.jpg", "b.jpg"), 1, "test"
+                config,
+                template,
+                "A scene",
+                tuple(f"ref{i}.jpg" for i in config.reference_roles),
+                1,
+                "test",
             )
             encoder = graph[str(config.qwen.nodes["encoder"])]
             for term in ("border", "3d", "incomplete image", "framed"):
@@ -24,8 +31,7 @@ class NegativePromptTests(unittest.TestCase):
             sampler = graph[str(config.qwen.nodes["sampler"])]["inputs"]
             self.assertEqual(sampler["negative"], [str(config.qwen.nodes["encoder"]), 1])
             self.assertGreater(sampler["cfg"], 1)
-            if filename == "config.dragon.yaml":
-                self.assertIn("realistic", encoder["inputs"]["negative_prompt"])
+            self.assertIn("existing", encoder["inputs"]["negative_prompt"])
 
     def test_flux_negative_reaches_sampler_through_inpaint_conditioning(self):
         config = load_config(Path(__file__).resolve().parents[1] / "config.yaml")

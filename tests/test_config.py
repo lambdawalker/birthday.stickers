@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class ConfigTests(unittest.TestCase):
     def load_modified(self, mutate):
         data = expand_config(
-            yaml.safe_load((ROOT / "tests/fixtures/config.yaml").read_text(encoding="utf-8")), ROOT
+            yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8")), ROOT
         )
         mutate(data)
         with tempfile.TemporaryDirectory() as temp:
@@ -23,17 +23,13 @@ class ConfigTests(unittest.TestCase):
             return load_config(path)
 
     def test_paths_are_relative_to_yaml(self):
-        config = load_config(ROOT / "tests/fixtures/config.yaml")
+        config = load_config(ROOT / "config.yaml")
         self.assertEqual(config.character_directory, ROOT / "assets/characters")
-        self.assertEqual(config.protagonist, "A")
-        self.assertEqual(config.creature, "B")
+        self.assertEqual(config.reference_roles, ("girl", "dragon"))
         self.assertEqual(config.output.directory, ROOT / "output")
 
     def test_invalid_configs_fail_before_network_requests(self):
         cases = [
-            (lambda d: d["characters"].update(protagonist="AA"), "A-Z"),
-            (lambda d: d["characters"].update(creature="a"), "A-Z"),
-            (lambda d: d["characters"].update(creature="A"), "different character IDs"),
             (lambda d: d["generation"].update(count=0), "count"),
             (lambda d: d["generation"].update(count=True), "count"),
             (lambda d: d["generation"].update(width=1001), "multiple of 32"),
@@ -51,7 +47,19 @@ class ConfigTests(unittest.TestCase):
                 self.load_modified(mutate)
 
     def test_loading_does_not_mutate_yaml_content(self):
-        path = ROOT / "tests/fixtures/config.yaml"
+        path = ROOT / "config.yaml"
         original = copy.deepcopy(yaml.safe_load(path.read_text(encoding="utf-8")))
         load_config(path)
         self.assertEqual(yaml.safe_load(path.read_text(encoding="utf-8")), original)
+
+    def test_retired_configurations_are_rejected(self):
+        cases = [
+            (lambda d: d.pop("preset"), "preset folder is required"),
+            (lambda d: d["generation"].update(type="viking_duo"), "Unknown flow"),
+            (lambda d: d["characters"].update(protagonist="A"), "only directory"),
+            (lambda d: d["prompts"].update(activities="activities.json"), "prompts requires"),
+            (lambda d: d["output"].update(outpainting_prompt="old inline text"), "Unknown output"),
+        ]
+        for mutate, message in cases:
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                self.load_modified(mutate)

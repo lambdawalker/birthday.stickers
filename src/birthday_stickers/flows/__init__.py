@@ -7,32 +7,12 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parent
-ALIASES = {"viking_duo": "multi_character_reference", "baby_dragon": "single_character_text"}
-NAMES = (
-    "scene_preset",
-    "multi_character_reference",
-    "single_character_text",
-    "protagonist_reference_creature_text",
-)
-LEGACY_ASSETS = {
-    "prompts/plan_scene.md": "multi_character_reference/planning.md",
-    "prompts/refine_scene.md": "multi_character_reference/refinement.md",
-    "prompts/activities.json": "multi_character_reference/activities.json",
-    "docs/Qwen_Image_2_1_Ultimate_Prompt_Guide.md": "multi_character_reference/guide.md",
-    "workflows/qwen-edit.json": "multi_character_reference/qwen.json",
-    "prompts/plan_dragon.md": "single_character_text/planning.md",
-    "prompts/refine_dragon.md": "single_character_text/refinement.md",
-    "prompts/dragon_activities.json": "single_character_text/activities.json",
-    "docs/qwen-text-guide.md": "single_character_text/guide.md",
-    "workflows/qwen-text.json": "single_character_text/qwen.json",
-    "workflows/flux-outpaint.json": "common/flux-outpaint.json",
-}
+NAMES = ("scene_preset",)
 
 
 def canonical_name(name: str) -> str:
     if not isinstance(name, str):
         raise ValueError("Flow name must be a string")
-    name = ALIASES.get(name, name)
     if name not in NAMES:
         raise ValueError(f"Unknown flow {name!r}; choose {', '.join(NAMES)}")
     return name
@@ -52,25 +32,11 @@ def resolve_asset(name: str, flow_directory: Path, common_directory: Path) -> Pa
     )
 
 
-def legacy_asset(base: Path, value) -> Path:
-    """Honor existing custom files, with redirects for the former shipped locations."""
+def asset_path(base: Path, value) -> Path:
+    """Resolve explicit paths without redirects to retired assets."""
     if not isinstance(value, (str, Path)) or not str(value).strip():
         raise ValueError("File paths must be nonempty strings")
-    path = (base / Path(value).expanduser()).resolve()
-    if path.exists():
-        return path
-    # Normalize ./ spellings and absolute paths rooted at the config or repository.
-    candidates = [Path(value).as_posix()]
-    for directory in (base.resolve(), ROOT.parents[2]):
-        try:
-            candidates.append(path.relative_to(directory).as_posix())
-        except ValueError:
-            pass
-    for candidate in candidates:
-        replacement = LEGACY_ASSETS.get(candidate)
-        if replacement:
-            return ROOT / replacement
-    return path
+    return (base / Path(value).expanduser()).resolve()
 
 
 @dataclass(frozen=True)
@@ -86,11 +52,7 @@ class Flow:
     def reference_roles(self) -> tuple[str, ...]:
         if self.roles is not None:
             return self.roles
-        return getattr(
-            self.module,
-            "REFERENCE_ROLES",
-            ("protagonist", "creature") if self.uses_references else (),
-        )
+        return self.module.REFERENCE_ROLES
 
     @property
     def directory(self) -> Path:
@@ -114,7 +76,7 @@ def get_flow(name: str) -> Flow:
 
 
 def expand_config(data: dict, base: Path) -> dict:
-    """Opt-in flow defaults; flat historical/snapshot configurations stay self-contained."""
+    """Apply flow defaults; session snapshots remain self-contained."""
     result = copy.deepcopy(data)
     if "flow" not in result:
         return result
@@ -156,11 +118,11 @@ def expand_config(data: dict, base: Path) -> dict:
                 if key not in overrides or Path(value).name == value:
                     values[key] = str(resolve_asset(value, flow.directory, ROOT / "common"))
                 else:
-                    values[key] = str(legacy_asset(base, value))
+                    values[key] = str(asset_path(base, value))
             elif section == "workflows" and isinstance(value, dict) and "path" in value:
                 explicit = isinstance(overrides.get(key), dict) and "path" in overrides[key]
                 value["path"] = str(
-                    legacy_asset(base, value["path"])
+                    asset_path(base, value["path"])
                     if explicit
                     else resolve_asset(value["path"], flow.directory, ROOT / "common")
                 )

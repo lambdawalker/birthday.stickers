@@ -7,12 +7,10 @@ from unittest.mock import patch
 import test_pipeline as fixtures
 from PIL import Image
 
-from birthday_stickers.activities import load_activities
 from birthday_stickers.comfy import ComfyClient
 from birthday_stickers.config import load_config
 from birthday_stickers.control import RunControl
 from birthday_stickers.engine import Pipeline, Scene
-from birthday_stickers.flows import expand_config
 from birthday_stickers.pipeline import reserve_sticker, validate_local
 from birthday_stickers.references import discover_characters
 from birthday_stickers.sessions import SessionStore
@@ -21,7 +19,7 @@ from birthday_stickers.sessions import SessionStore
 class GenerationTypeTests(unittest.TestCase):
     def test_dragon_session_pause_resume_only_one_render_no_references(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = load_config(fixtures.ROOT / "tests/fixtures/config.dragon.yaml")
+            config = load_config(fixtures.ROOT / "config.dragon.yaml")
             config.llm.base_url = service.url + "/v1"
             config.comfy.base_url = service.url
             config.comfy.poll_interval = 0.01
@@ -51,7 +49,7 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertNotIn("13", graph)
             self.assertNotIn("484", graph)
             self.assertEqual(
-                graph["459:452"]["inputs"]["prompt"],
+                graph["459:474"]["inputs"]["prompt"],
                 "One baby dragon curls up beside a pastel Viking longhouse.",
             )
             with Image.open(directory / "image_generation/results/stiker-0000.jpg") as image:
@@ -60,7 +58,7 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertFalse((directory / "inputs/characters").exists())
             meta = json.loads((directory / "metadata/stiker-0000.json").read_text(encoding="utf-8"))
             self.assertEqual(meta["references"], [])
-            self.assertEqual(meta["generation_type"], "single_character_text")
+            self.assertEqual(meta["generation_type"], "scene_preset")
 
     def test_live_character_folder_and_unlimited_numeric_suffix(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
@@ -70,7 +68,6 @@ class GenerationTypeTests(unittest.TestCase):
             for name in ("A0.jpg", "B100.jpg", "C123456.jpg"):
                 Image.new("RGB", (32, 32)).save(folder / name)
             config.character_directory = folder
-            config.protagonist, config.creature = "A", "C"
             store = SessionStore(Path(temp) / "sessions")
             session = store.create(config)
             saved = load_config(store.directory(session["name"]) / "config.yaml")
@@ -86,10 +83,10 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertEqual(set(discover_characters(folder)), {"A", "B", "C"})
 
     def test_dragon_catalog_and_graph(self):
-        config = load_config(fixtures.ROOT / "tests/fixtures/config.dragon.yaml")
-        rows = load_activities(config.activities)
+        config = load_config(fixtures.ROOT / "config.dragon.yaml")
+        rows = config.preset.activities
         self.assertEqual(len(rows), 300)
-        self.assertEqual(len({r["activity"] for r in rows}), 300)
+        self.assertEqual(len({r["description"] for r in rows}), 300)
         self.assertEqual(len(validate_local(config)["graphs"]), 1)
 
     def test_changed_reference_is_uploaded_again_for_new_scene(self):
@@ -100,7 +97,7 @@ class GenerationTypeTests(unittest.TestCase):
             pipeline.comfy = ComfyClient(config.comfy)
             for index in range(2):
                 if index:
-                    Image.new("RGB", (32, 32), "purple").save(config.protagonist)
+                    Image.new("RGB", (32, 32), "purple").save(config.character_directory / "A0.jpg")
                 _, name, path = reserve_sticker(config.output.directory)
                 meta = {"sticker": name, "raw_scene": "A scene", "refined_scene": "A scene"}
                 pipeline.prepare_references(meta, index)
@@ -110,7 +107,7 @@ class GenerationTypeTests(unittest.TestCase):
 
     def test_dragon_outpaint_uses_raw_prompt_and_resumes_flux_job(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = load_config(fixtures.ROOT / "tests/fixtures/config.dragon.yaml")
+            config = load_config(fixtures.ROOT / "config.dragon.yaml")
             config.llm.base_url = service.url + "/v1"
             config.comfy.base_url = service.url
             config.comfy.poll_interval = 0.002
@@ -165,25 +162,3 @@ class GenerationTypeTests(unittest.TestCase):
                 store.directory(session["name"]) / "image_generation/results/stiker-0000.jpg"
             ) as image:
                 self.assertEqual(image.size, (32, 32))
-
-    def test_legacy_configs_keep_their_original_outpainting_behavior(self):
-        import yaml
-
-        with tempfile.TemporaryDirectory() as temp:
-            for filename, enabled in (("config.yaml", True), ("config.dragon.yaml", False)):
-                data = expand_config(
-                    yaml.safe_load(
-                        (fixtures.ROOT / "tests/fixtures" / filename).read_text(encoding="utf-8")
-                    ),
-                    fixtures.ROOT,
-                )
-                data["generation"].pop("outpainting")
-                data["generation"]["type"] = "viking_duo" if enabled else "baby_dragon"
-                if not enabled:
-                    data["workflows"].pop("flux")
-                path = Path(temp) / filename
-                path.write_text(yaml.safe_dump(data), encoding="utf-8")
-                config = load_config(path)
-                self.assertEqual(config.generation.outpainting, enabled)
-                expected = data["output"] if enabled else data["generation"]
-                self.assertEqual(config.final_size, (expected["width"], expected["height"]))

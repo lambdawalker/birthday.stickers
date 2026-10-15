@@ -287,7 +287,7 @@ class PresetTests(unittest.TestCase):
             self.assertEqual(recovered["status"], "prompts_ready")
             self.assertEqual(recovered["references"], original_refs)
             self.assertEqual(recovered["qwen_seed"], original_seed)
-            self.assertTrue(recovered["planning_request"].startswith(recovered["planning_prompt"]))
+            self.assertIn(recovered["planning_prompt"], recovered["planning_request"])
 
     def test_resume_restores_missing_brief_from_existing_selection(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

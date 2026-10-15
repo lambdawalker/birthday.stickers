@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 import yaml
 from PIL import ImageColor
 
-from .flows import Flow, canonical_name, expand_config, get_flow, legacy_asset
+from .flows import Flow, asset_path, canonical_name, expand_config
 from .retry import file_retry
 
 
@@ -40,7 +40,7 @@ class ComfyConfig:
 
 @dataclass
 class GenerationConfig:
-    type: str = "multi_character_reference"
+    type: str = "scene_preset"
     outpainting: bool = True
     gpu_mode: str = "sequential"
     count: int = 10
@@ -60,7 +60,6 @@ class OutputConfig:
     jpeg_background: str = "#ffffff"
     feathering: int = 24
     preserve_center: bool = True
-    outpainting_prompt: str = ""
 
 
 @dataclass
@@ -77,15 +76,12 @@ class Config:
     comfy: ComfyConfig
     generation: GenerationConfig
     output: OutputConfig
-    protagonist: Path | str
-    creature: Path | str
     planning: Path
     refinement: Path
     guide: Path
     qwen: WorkflowConfig
     flux: WorkflowConfig | None
     character_directory: Path | None = None
-    activities: Path | None = None
     outpainting: Path | None = None
     negative: Path | None = None
     comfy_outpainting: ComfyConfig | None = None
@@ -102,9 +98,7 @@ class Config:
 
     @property
     def flow(self):
-        if self.preset is not None:
-            return Flow("scene_preset", self.preset.reference_roles)
-        return get_flow(self.generation.type)
+        return Flow("scene_preset", self.preset.reference_roles)
 
     @property
     def final_size(self) -> tuple[int, int]:
@@ -183,24 +177,25 @@ def load_config(path: Path) -> Config:
         raise ValueError(f"Invalid YAML in {path}: {error}") from error
     if not isinstance(data, dict):
         raise ValueError("Config must be a YAML mapping")
-    preset = None
-    if data.get("preset"):
-        from .presets import MASTER_FILES, ROOT, load_preset, master_path
+    if not data.get("preset"):
+        raise ValueError(
+            "A preset folder is required; old generation configurations are no longer supported"
+        )
+    from .presets import MASTER_FILES, ROOT, load_preset, master_path
 
-        value = data["preset"]
-        candidate = local_path(path.parent, value)
-        if not candidate.is_dir() and isinstance(value, str) and Path(value).name == value:
-            candidate = ROOT / value
-        preset = load_preset(candidate)
-        if "flow" not in data and "workflows" not in data:
-            data["flow"] = "scene_preset"
-        if data.get("flow", "scene_preset") != "scene_preset":
-            raise ValueError("preset requires flow: scene_preset")
-    if preset:
-        prompt_settings = data.setdefault("prompts", {})
-        if isinstance(prompt_settings, dict):
-            for key in MASTER_FILES:
-                prompt_settings.setdefault(key, str(master_path(preset.directory, key)))
+    value = data["preset"]
+    candidate = local_path(path.parent, value)
+    if not candidate.is_dir() and isinstance(value, str) and Path(value).name == value:
+        candidate = ROOT / value
+    preset = load_preset(candidate)
+    if "flow" not in data and "workflows" not in data:
+        data["flow"] = "scene_preset"
+    if data.get("flow", "scene_preset") != "scene_preset":
+        raise ValueError("preset requires flow: scene_preset")
+    prompt_settings = data.setdefault("prompts", {})
+    if isinstance(prompt_settings, dict):
+        for key in MASTER_FILES:
+            prompt_settings.setdefault(key, str(master_path(preset.directory, key)))
     data = expand_config(data, path.parent)
     expected = {
         "preset",
@@ -232,14 +227,6 @@ def load_config(path: Path) -> Config:
     generation = section(data, "generation", GenerationConfig)
     output = section(data, "output", OutputConfig)
     generation.type = canonical_name(generation.type)
-    reference_roles = get_flow(generation.type).reference_roles
-    if preset and generation.type != "scene_preset":
-        raise ValueError("preset requires generation.type: scene_preset")
-    if generation.type == "scene_preset" and preset is None:
-        raise ValueError("scene_preset requires a preset folder")
-    dragon = not reference_roles
-    if "outpainting" not in data.get("generation", {}):
-        generation.outpainting = not dragon  # Preserve older session behavior.
     if type(generation.outpainting) is not bool:
         raise ValueError("generation.outpainting must be true or false")
     endpoints = [("llm", llm), ("comfy", comfy)]
@@ -286,8 +273,6 @@ def load_config(path: Path) -> Config:
     integer(output.jpeg_quality, "output.jpeg_quality", 1, 100)
     integer(output.jpeg_subsampling, "output.jpeg_subsampling", 0, 2)
     integer(output.feathering, "output.feathering", 0, 8192)
-    if not isinstance(output.outpainting_prompt, str):
-        raise ValueError("output.outpainting_prompt must be a string")
     try:
         color = ImageColor.getrgb(output.jpeg_background)
         if len(color) != 3:
@@ -298,57 +283,24 @@ def load_config(path: Path) -> Config:
     output.directory = local_path(base, output.directory)
     paths = {"flux": None}
     characters = data.get("characters", {})
-    if preset is not None:
-        if not isinstance(characters, dict) or set(characters) - {"directory"}:
-            raise ValueError("Preset characters configuration accepts only directory")
-        if preset.reference_roles and "directory" not in characters:
-            raise ValueError("Referenced characters require characters.directory")
-        if "directory" in characters:
-            paths["character_directory"] = local_path(base, characters["directory"])
-    paths.update(protagonist="", creature="")
-    if dragon:
-        paths.update(flux=None)
-    if not dragon and isinstance(characters, dict) and "directory" in characters:
-        if set(characters) != {"directory", *reference_roles}:
-            raise ValueError("characters must contain directory and: " + ", ".join(reference_roles))
+    if not isinstance(characters, dict) or set(characters) - {"directory"}:
+        raise ValueError("Preset characters configuration accepts only directory")
+    if preset.reference_roles and "directory" not in characters:
+        raise ValueError("Referenced characters require characters.directory")
+    if "directory" in characters:
         paths["character_directory"] = local_path(base, characters["directory"])
-        for role in reference_roles:
-            value = characters[role]
-            if not isinstance(value, str) or len(value) != 1 or not "A" <= value <= "Z":
-                raise ValueError(f"characters.{role} must be one character ID from A-Z")
-            paths[role] = value
-        if len(reference_roles) == 2 and paths["protagonist"] == paths["creature"]:
-            raise ValueError("Protagonist and creature must use different character IDs")
-    for group, keys in (
-        ("characters", reference_roles),
-        ("prompts", ("planning", "refinement", "guide")),
-    ):
-        if group == "characters" and (dragon or "character_directory" in paths):
-            continue
-        raw = data.get(group)
-        if group == "prompts" and isinstance(raw, dict):
-            raw = dict(raw)
-            negative_path = raw.pop("negative", None)
-            if negative_path is not None:
-                paths["negative"] = legacy_asset(base, negative_path)
-            outpainting_path = raw.pop("outpainting", None)
-            if outpainting_path is not None:
-                paths["outpainting"] = legacy_asset(base, outpainting_path)
-            activity_path = raw.pop("activities", None)
-            if activity_path is not None:
-                paths["activities"] = legacy_asset(base, activity_path)
-        if not isinstance(raw, dict) or set(raw) != set(keys):
-            raise ValueError(f"{group} must contain exactly: {', '.join(keys)}")
-        paths.update(
-            {
-                key: (
-                    legacy_asset(base, raw[key])
-                    if group == "prompts"
-                    else local_path(base, raw[key])
-                )
-                for key in keys
-            }
+    raw = data.get("prompts")
+    required = {"planning", "refinement", "guide"}
+    optional = {"negative", "outpainting"}
+    if not isinstance(raw, dict) or not required <= raw.keys() or set(raw) - required - optional:
+        raise ValueError(
+            "prompts requires planning, refinement, guide; optional negative and outpainting"
         )
+    for key, value in raw.items():
+        if value is not None:
+            paths[key] = asset_path(base, value)
+        elif key in required:
+            raise ValueError(f"prompts.{key} must be a filename")
     workflows = data.get("workflows")
     if (
         not isinstance(workflows, dict)
@@ -359,15 +311,13 @@ def load_config(path: Path) -> Config:
     if generation.outpainting and "flux" not in workflows:
         raise ValueError("Outpainting requires workflows.flux")
     for key, roles in (
-        ("qwen", {"protagonist", "creature", "encoder", "latent", "sampler", "output"}),
+        ("qwen", {"encoder", "latent", "sampler", "output"}),
         ("flux", {"image", "prompt", "pad", "sampler", "conditioning", "output"}),
     ):
         if key == "flux" and key not in workflows:
             continue
-        if key == "qwen":
-            roles = (roles - {"protagonist", "creature"}) | set(reference_roles)
         item = section(workflows, key, WorkflowConfig)
-        item.path = legacy_asset(base, item.path)
+        item.path = asset_path(base, item.path)
         if not isinstance(item.nodes, dict) or set(item.nodes) != roles:
             raise ValueError(f"workflows.{key}.nodes must contain: {', '.join(sorted(roles))}")
         item.nodes = {role: str(value) for role, value in item.nodes.items()}

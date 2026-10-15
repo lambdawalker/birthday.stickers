@@ -7,12 +7,10 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from .activities import load_activities
 from .artifacts import STAGES, ensure_layout
 from .config import Config
 from .control import RunControl
 from .images import decode_image, plan_padding
-from .llm import compose_refinement
 from .references import reference_pools
 from .retry import file_retry, retry_scope
 from .workflows import build_flux, load_workflow
@@ -30,9 +28,6 @@ def write_json(path: Path, value: dict) -> None:
 
 @file_retry
 def validate_local(config: Config) -> dict:
-    activities = (
-        load_activities(config.activities) if config.activities and not config.preset else None
-    )
     pools = reference_pools(config)
     for path in (
         *(p for pool in pools for p in pool),
@@ -51,21 +46,16 @@ def validate_local(config: Config) -> dict:
     refinement = config.refinement.read_text(encoding="utf-8").strip()
     if not planning or not guide:
         raise ValueError("Planning prompt and Qwen guide must not be empty")
-    if config.preset:
-        from .master_prompts import plan_request, refine_request
+    from .master_prompts import plan_request, refine_request
 
-        plan_request(planning, "validation brief", [], 1, config.generation.count, "validation")
-        refine_request(refinement, guide, "validation scene", [])
-    else:
-        compose_refinement(refinement, guide, "validation scene")
+    plan_request(planning, "validation brief", [], 1, config.generation.count, "validation")
+    refine_request(refinement, guide, "validation scene", [])
     qwen = load_workflow(config.qwen.path)
     graph = config.flow.build_graph(
         config,
         qwen,
         "validation",
-        tuple(f"ref{i}.jpg" for i in range(len(config.reference_roles)))
-        if config.preset
-        else ("protagonist.png", "creature.png"),
+        tuple(f"ref{i}.jpg" for i in range(len(config.reference_roles))),
         0,
         "validation",
     )
@@ -94,14 +84,13 @@ def validate_local(config: Config) -> dict:
                 else None,
             )
         )
-    outpainting_prompt = config.output.outpainting_prompt
+    outpainting_prompt = ""
     if config.generation.outpainting and config.outpainting is not None:
         outpainting_prompt = config.outpainting.read_text(encoding="utf-8").strip()
         if not outpainting_prompt:
             raise ValueError(f"Outpainting prompt must not be empty: {config.outpainting}")
     return {
         "outpainting_prompt": outpainting_prompt,
-        "activities": activities,
         "reference_pools": pools,
         "planning": planning,
         "guide": guide,
@@ -166,33 +155,6 @@ def write_prompts(
     temporary = path.with_suffix(".md.tmp")
     temporary.write_text(text, encoding="utf-8")
     os.replace(temporary, path)
-
-
-def planning_prompt(
-    template: str,
-    iteration: int,
-    count: int,
-    name: str,
-    previous_scenes: list[str],
-    activity: dict | None = None,
-) -> str:
-    values = {
-        "iteration": str(iteration),
-        "count": str(count),
-        "sticker_id": name,
-        "previous_scenes": "\n".join(previous_scenes[-10:]) or "None yet.",
-    }
-    rendered = re.sub(
-        r"\{\{(iteration|count|sticker_id|previous_scenes)\}\}",
-        lambda match: values[match[1]],
-        template,
-    )
-    if activity:
-        rendered += "\n\nSelected scene brief (follow this activity; adapt details coherently):\n"
-        rendered += "\n".join(
-            f"{key}: {value}" for key, value in activity.items() if key not in ("id", "cycle")
-        )
-    return rendered
 
 
 def scene_records(root: Path) -> list[tuple[Path, dict]]:

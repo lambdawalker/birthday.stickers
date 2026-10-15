@@ -76,7 +76,7 @@ class ArtifactTests(unittest.TestCase):
             self.assertFalse(result_path(root, "images", "stiker-0000").exists())
             self.assertEqual((root / "final/stiker-0000.jpg").read_bytes(), content)
 
-    def test_enable_is_noop_for_legacy_duo_with_implicit_outpainting(self):
+    def test_enable_is_noop_when_outpainting_defaults_to_enabled(self):
         import yaml
 
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

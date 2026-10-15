@@ -138,7 +138,6 @@ class SessionStore:
                 ("planning", config.planning),
                 ("refinement", config.refinement),
                 ("guide", config.guide),
-                ("activities", config.activities),
                 ("outpainting", config.outpainting),
                 ("negative", config.negative),
             ):
@@ -156,26 +155,12 @@ class SessionStore:
                     **asdict(workflow),
                     "path": str(destination.relative_to(directory)),
                 }
-            characters = {}
-            if config.character_directory is not None:
-                characters = {
-                    "directory": str(config.character_directory),
-                    **(
-                        {role: getattr(config, role) for role in config.flow.reference_roles}
-                        if not config.preset
-                        else {}
-                    ),
-                }
-            elif config.flow.uses_references and not config.preset:
-                characters = {
-                    role: str(getattr(config, role)) for role in config.flow.reference_roles
-                }
+            characters = (
+                {"directory": str(config.character_directory)}
+                if config.character_directory is not None
+                else {}
+            )
             output = {**asdict(config.output), "directory": "."}
-            legacy_outpainting = output.pop("outpainting_prompt", "")
-            if "outpainting" not in prompts and legacy_outpainting:
-                destination = snapshots / "outpainting.md"
-                write_text(destination, legacy_outpainting, encoding="utf-8")
-                prompts["outpainting"] = str(destination.relative_to(directory))
             data = {
                 "llm": asdict(config.llm),
                 "comfy": asdict(config.comfy),
@@ -188,22 +173,21 @@ class SessionStore:
                 "prompts": prompts,
                 "workflows": workflows,
             }
-            if config.preset:
-                from .presets import FILES, MASTER_FILES
+            from .presets import FILES, MASTER_FILES
 
-                preset_directory = snapshots / "preset"
-                preset_directory.mkdir()
-                for filename in FILES:
-                    copyfile(config.preset.directory / filename, preset_directory / filename)
-                for filename in MASTER_FILES.values():
-                    source = config.preset.directory / filename
-                    if source.is_file():
-                        copyfile(source, preset_directory / filename)
-                data["preset"] = "inputs/preset"
+            preset_directory = snapshots / "preset"
+            preset_directory.mkdir()
+            for filename in FILES:
+                copyfile(config.preset.directory / filename, preset_directory / filename)
+            for filename in MASTER_FILES.values():
+                source = config.preset.directory / filename
+                if source.is_file():
+                    copyfile(source, preset_directory / filename)
+            data["preset"] = "inputs/preset"
             write_text(directory / "config.yaml", yaml.safe_dump(data), encoding="utf-8")
             manifest = {
                 "version": SESSION_VERSION,
-                "preset_name": config.preset.directory.name if config.preset else None,
+                "preset_name": config.preset.directory.name,
                 "service_urls": service_urls(config),
                 "generation_type": config.generation.type,
                 "outpainting": config.generation.outpainting,
@@ -277,9 +261,7 @@ class SessionStore:
             copyfile(settings.flux.path, workflow)
             data["workflows"]["flux"] = {**asdict(settings.flux), "path": str(workflow)}
             prompt_text = (
-                read_text(settings.outpainting, encoding="utf-8")
-                if settings.outpainting
-                else settings.output.outpainting_prompt
+                read_text(settings.outpainting, encoding="utf-8") if settings.outpainting else ""
             )
             prompt = directory / "inputs" / "added-outpainting.md"
             write_text(prompt, prompt_text, encoding="utf-8")
