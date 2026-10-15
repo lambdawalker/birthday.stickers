@@ -45,6 +45,7 @@ class GenerationConfig:
     count: int = 10
     width: int = 1024
     height: int = 1024
+    cfg: float | None = None
     seed: int | None = None
 
 
@@ -236,6 +237,8 @@ def load_config(path: Path) -> Config:
         integer(server.get_retries, name + ".get_retries", 0, 20)
     if generation.gpu_mode not in ("sequential", "parallel", "concurrent"):
         raise ValueError("generation.gpu_mode must be sequential, parallel, or concurrent")
+    if generation.cfg is not None:
+        number(generation.cfg, "generation.cfg", 0, True)
     integer(generation.count, "generation.count", 1)
     if generation.seed is not None:
         integer(generation.seed, "generation.seed", 0)

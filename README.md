@@ -662,3 +662,14 @@ uv run scripts/center_dragon.py "path/to/image.jpg" --padding 0.15 --size 1024 1
 ```
 
 See [standalone image tools](scripts/README.md) for tuning and limitations.
+
+For **Girl + dragon**, the session picker shows the live number of reference
+versions per character. Use **Refresh** after adding reference images. The new-session
+panel accepts Qwen CFG and generation width/height (multiples of 32). With
+outpainting enabled, these dimensions must fit within the configured final size.
+These values are saved with the session; selecting an existing session shows its
+saved resolution and CFG. The image-generation panel displays the selected
+reference filenames for the current sticker.
+
+`generation.cfg` optionally overrides the multi-character Qwen sampler's CFG.
+Omit it or use `null` to retain the workflow/override value.

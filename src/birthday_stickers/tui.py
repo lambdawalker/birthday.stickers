@@ -2,6 +2,7 @@
 
 import copy
 import logging
+import math
 
 from rich.text import Text
 from textual import on, work
@@ -24,7 +25,9 @@ from textual.widgets import (
 from .config import Config, load_config
 from .control import RunControl
 from .flows import get_flow
+from .references import discover_characters
 from .sessions import SessionStore, service_urls
+from .workflows import load_workflow
 
 
 class SessionUpdate(Message):
@@ -70,6 +73,7 @@ class StickerApp(App):
     .muted { color: #acb4ca; margin-bottom: 0; }
     .card { border: round #565277; padding: 0 1; height: auto; margin-bottom: 1; }
     .fields { height: auto; }
+    #reference-settings { height: auto; margin: 0; border: none; padding: 0; }
     .field { width: 1fr; height: auto; margin-right: 2; }
     Input { background: #1b2233; border: tall #565277; }
     Input:focus { border: tall #b7a1e8; }
@@ -154,6 +158,20 @@ class StickerApp(App):
                     with Vertical(classes="field"):
                         yield Label("Number of stickers")
                         yield Input(str(self.config.generation.count), type="integer", id="count")
+                with Vertical(id="reference-settings", classes="card"):
+                    yield Static("", id="reference-counts")
+                    with Horizontal(classes="fields"):
+                        for key, title in (
+                            ("cfg", "CFG"),
+                            ("width", "Width (px)"),
+                            ("height", "Height (px)"),
+                        ):
+                            with Vertical(classes="field"):
+                                yield Label(title)
+                                yield Input(
+                                    id=f"generation-{key}",
+                                    type="number" if key == "cfg" else "integer",
+                                )
                 with Horizontal(classes="buttons session-actions"):
                     yield Button("New session", variant="primary", id="new")
                     yield Label("Outpainting", id="outpaint-label")
@@ -167,6 +185,7 @@ class StickerApp(App):
             yield Label("SAVED SESSIONS", classes="title")
             yield DataTable(id="sessions", cursor_type="row")
             yield Static("", id="empty", classes="muted")
+            yield Static("", id="saved-generation-settings", classes="muted")
             with Horizontal(classes="buttons session-actions"):
                 yield Label("Outpainting")
                 yield Switch(False, id="session-outpainting", disabled=True)
@@ -198,6 +217,8 @@ class StickerApp(App):
                         yield Label(title, classes="title")
                         yield Static("Loading endpoint…", id=f"{lane}-url", classes="worker-url")
                         yield Static("Waiting to start", id=f"{lane}-stage", classes="worker-stage")
+                        if lane == "images":
+                            yield Static("", id="selected-references")
                         yield ProgressBar(total=100, show_eta=False, id=f"{lane}-progress")
                         yield Static("", id=f"{lane}-count", classes="worker-count")
                         yield RichLog(
@@ -210,6 +231,7 @@ class StickerApp(App):
             "Session", "Type", "Outpaint", "Progress", "Status", "Last step"
         )
         self.refresh_sessions()
+        self.update_reference_settings()
         self.update_outpaint_summary()
         self.query_one("#dashboard").set_class(self.size.height < 32, "compact")
         logger = logging.getLogger("birthday_stickers")
@@ -269,6 +291,17 @@ class StickerApp(App):
         try:
             saved = load_config(self.store.directory(name) / "config.yaml")
             self.query_one("#session-outpainting", Switch).value = saved.generation.outpainting
+            cfg = saved.generation.cfg
+            if cfg is None and saved.flow.uses_references:
+                sampler = str(saved.qwen.nodes["sampler"])
+                cfg = saved.qwen.overrides.get(sampler, {}).get(
+                    "cfg", load_workflow(saved.qwen.path)[sampler]["inputs"]["cfg"]
+                )
+            self.query_one("#saved-generation-settings", Static).update(
+                f"Selected session · Qwen {saved.generation.width} × {saved.generation.height}"
+                + (f" · CFG {cfg:g}" if cfg is not None else "")
+                + " · saved settings"
+            )
         except (OSError, ValueError) as error:
             self.notify(str(error), severity="error")
 
@@ -313,6 +346,7 @@ class StickerApp(App):
         except (OSError, ValueError) as error:
             self.query_one("#type-error", Static).update(Text(f"Unable to load this type: {error}"))
             return
+        self.update_reference_settings()
         self.query_one("#outpainting", Switch).value = selected.generation.outpainting
         self.update_outpaint_summary()
         self.query_one("#new-type", Label).update(f"NEW SESSION · {generation_type}")
@@ -320,6 +354,51 @@ class StickerApp(App):
         self.query_one("#type-error", Static).update("")
         self.show_home()
         self.query_one("#new", Button).focus()
+
+    def update_reference_settings(self) -> None:
+        self.query_one("#reference-settings").display = self.config.flow.uses_references
+        if not self.config.flow.uses_references:
+            return
+        try:
+            if self.config.character_directory:
+                groups = discover_characters(self.config.character_directory)
+                text = "Character versions · " + " · ".join(
+                    f"{label}: {len(paths)}" for label, paths in sorted(groups.items())
+                )
+            else:
+                text = "Character versions · 1 explicit reference per role"
+            self.query_one("#reference-counts", Static).update(Text(text))
+            cfg = self.config.generation.cfg
+            if cfg is None:
+                sampler = str(self.config.qwen.nodes["sampler"])
+                cfg = self.config.qwen.overrides.get(sampler, {}).get(
+                    "cfg", load_workflow(self.config.qwen.path)[sampler]["inputs"]["cfg"]
+                )
+            self.query_one("#generation-cfg", Input).value = f"{cfg:g}"
+            for key in ("width", "height"):
+                self.query_one(f"#generation-{key}", Input).value = str(
+                    getattr(self.config.generation, key)
+                )
+        except (OSError, ValueError, KeyError) as error:
+            self.query_one("#reference-counts", Static).update(Text(str(error)))
+
+    def apply_generation_settings(self) -> None:
+        if not self.config.flow.uses_references:
+            return
+        cfg = float(self.query_one("#generation-cfg", Input).value)
+        width = int(self.query_one("#generation-width", Input).value)
+        height = int(self.query_one("#generation-height", Input).value)
+        if not math.isfinite(cfg) or cfg < 0:
+            raise ValueError("CFG must be a finite nonnegative number.")
+        if any(value < 32 or value > 16384 or value % 32 for value in (width, height)):
+            raise ValueError("Width and height must be multiples of 32 between 32 and 16384.")
+        if self.query_one("#outpainting", Switch).value and (
+            width > self.config.output.width or height > self.config.output.height
+        ):
+            raise ValueError("Generation resolution cannot exceed the outpainting target.")
+        self.config.generation.cfg = cfg
+        self.config.generation.width = width
+        self.config.generation.height = height
 
     def update_outpaint_summary(self) -> None:
         enabled = self.query_one("#outpainting", Switch).value
@@ -362,6 +441,7 @@ class StickerApp(App):
         self.return_home = False
         self.control = RunControl()
         self.show_dashboard()
+        self.query_one("#selected-references", Static).update("")
         self.query_one("#session-title", Static).update(name or self.store.next_name())
         self.query_one("#stage", Static).update("Preparing session…")
         self.query_one("#totals", Static).update("")
@@ -394,6 +474,11 @@ class StickerApp(App):
     def on_session_update(self, event: SessionUpdate) -> None:
         self.active = event.value
         item = self.active
+        self.query_one("#selected-references", Static).update(
+            Text("References: " + " · ".join(item.get("images_references", [])))
+            if item.get("images_references")
+            else ""
+        )
         for lane in ("prompts", "images", "outpainting"):
             url = item.get("service_urls", {}).get(lane, "Loading endpoint…")
             if lane == "outpainting" and not item.get("outpainting", True):
@@ -499,6 +584,13 @@ class StickerApp(App):
             except ValueError:
                 self.notify("Enter a positive number of stickers.", severity="error")
                 return
+            try:
+                self.apply_generation_settings()
+            except ValueError as error:
+                self.notify(
+                    str(error) or "Enter valid CFG and resolution values.", severity="error"
+                )
+                return
             self.config.generation.outpainting = self.query_one("#outpainting", Switch).value
             self.active = None
             self.begin(count=count)
@@ -507,6 +599,7 @@ class StickerApp(App):
             if table.row_count:
                 self.resume_selected(str(table.get_row_at(table.cursor_row)[0]))
         elif action == "refresh":
+            self.update_reference_settings()
             self.refresh_sessions()
         elif action == "pause" and self.busy:
             self.control.request("paused")

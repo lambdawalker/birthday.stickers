@@ -300,6 +300,15 @@ class SessionStore:
             def worker_update(lane, done, sticker, stage):
                 key = f"{lane}_completed"
                 extra = {}
+                if lane == "images":
+                    metadata_path = directory / "metadata" / f"{sticker}.json"
+                    try:
+                        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                        extra["images_references"] = [
+                            Path(ref["path"]).name for ref in metadata.get("references", [])
+                        ]
+                    except (OSError, ValueError):
+                        extra["images_references"] = []
                 if lane == ("outpainting" if config.generation.outpainting else "images"):
                     extra["completed"] = done
                 if stage.startswith("gpu_mode_"):

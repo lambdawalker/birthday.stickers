@@ -122,6 +122,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                             "prompts_sticker": "stiker-0004",
                             "images_stage": "rendering_qwen",
                             "images_sticker": "stiker-0001",
+                            "images_references": ["A23.jpg", "B16.jpg"],
                         }
                     )
                 )
@@ -132,6 +133,12 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                     ("outpainting", "http://outpaint:8188"),
                 ):
                     self.assertEqual(app.query_one(f"#{lane}-url", Static).tooltip, url)
+                self.assertIn(
+                    "A23.jpg", str(app.query_one("#selected-references", Static).render())
+                )
+                self.assertIn(
+                    "B16.jpg", str(app.query_one("#selected-references", Static).render())
+                )
                 self.assertEqual(app.query_one("#prompts-progress", ProgressBar).progress, 4)
                 self.assertEqual(app.query_one("#images-progress", ProgressBar).progress, 3)
                 self.assertEqual(app.query_one("#outpainting-progress", ProgressBar).progress, 1)
@@ -240,3 +247,33 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                     await pilot.click("#open")
                     begin.assert_called_once_with(second["name"])
                 self.assertTrue(store.read(second["name"])["outpainting"])
+
+    async def test_reference_settings_and_selected_versions(self):
+        from birthday_stickers.flows.multi_character_reference import build_graph
+        from birthday_stickers.workflows import load_workflow
+
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            app = StickerApp(config, SessionStore(Path(temp) / "sessions"))
+            async with app.run_test(size=(120, 50)) as pilot:
+                await pilot.click("#choose-duo")
+                self.assertTrue(app.query_one("#reference-settings").display)
+                app.query_one("#generation-cfg", Input).value = "2.5"
+                app.query_one("#outpainting", Switch).value = False
+                app.query_one("#generation-width", Input).value = "640"
+                app.query_one("#generation-height", Input).value = "768"
+                app.apply_generation_settings()
+                self.assertEqual(app.config.generation.cfg, 2.5)
+                graph = build_graph(
+                    app.config,
+                    load_workflow(config.qwen.path),
+                    "scene",
+                    ("A23.jpg", "B16.jpg"),
+                    1,
+                    "test",
+                )
+                self.assertEqual(graph[str(config.qwen.nodes["sampler"])]["inputs"]["cfg"], 2.5)
+                self.assertEqual(graph[str(config.qwen.nodes["latent"])]["inputs"]["width"], 640)
+                app.query_one("#generation-width", Input).value = "641"
+                with self.assertRaises(ValueError):
+                    app.apply_generation_settings()

@@ -6,10 +6,13 @@ USES_REFERENCES = True
 
 
 def build_graph(config, template, prompt, references, seed, prefix):
+    overrides = {key: dict(value) for key, value in config.qwen.overrides.items()}
+    if config.generation.cfg is not None:
+        overrides.setdefault(str(config.qwen.nodes["sampler"]), {})["cfg"] = config.generation.cfg
     return build_qwen(
         template,
         config.qwen.nodes,
-        config.qwen.overrides,
+        overrides,
         prompt,
         *references,
         config.generation.width,
