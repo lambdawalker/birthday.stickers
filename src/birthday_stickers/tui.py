@@ -25,6 +25,7 @@ from textual.widgets import (
 from .config import Config, load_config
 from .control import RunControl
 from .flows import get_flow
+from .presets import discover_presets, with_preset
 from .references import discover_characters
 from .retry import retry_scope
 from .sessions import SessionStore, service_urls
@@ -121,35 +122,24 @@ class StickerApp(App):
         self.return_home = False
         self.quitting = False
         self.handler = UILogHandler(self)
+        self.preset_choices = discover_presets(config.path)
+        if config.preset:
+            self.preset_choices[config.preset.directory.name] = config.preset.directory
+        self.preset_buttons = {
+            f"choose-preset-{index}": path
+            for index, path in enumerate(self.preset_choices.values())
+        }
 
     def compose(self) -> ComposeResult:
         yield Header()
         with VerticalScroll(id="type-picker"):
             yield Static("What would you like to create?", classes="title")
-            yield Static(
-                "Choose a generation type to start or resume a collection.", classes="muted"
-            )
-            with Vertical(classes="card"):
-                yield Label("GIRL + DRAGON", classes="title")
-                yield Static(
-                    "Two character references · Qwen Edit · optional outpainting", classes="muted"
-                )
-                yield Button("Girl + dragon", variant="primary", id="choose-duo")
-            with Vertical(classes="card"):
-                yield Label("BABY DRAGON ONLY", classes="title")
-                yield Static(
-                    "300 solo activities · text-to-image · optional outpainting", classes="muted"
-                )
-                yield Button("Baby dragon only", variant="success", id="choose-dragon")
-            with Vertical(classes="card"):
-                yield Label("GIRL REFERENCE + DRAGON TEXT", classes="title")
-                yield Static(
-                    "One girl reference · dragon described in text · optional outpainting",
-                    classes="muted",
-                )
-                yield Button(
-                    "Girl reference + dragon text", variant="primary", id="choose-reference-dragon"
-                )
+            yield Static("Choose a scene preset to start or resume a collection.", classes="muted")
+            for button_id, path in self.preset_buttons.items():
+                with Vertical(classes="card"):
+                    yield Label(path.name.replace("_", " ").title(), classes="title")
+                    yield Static(str(path), classes="muted")
+                    yield Button("Select preset", variant="primary", id=button_id)
             yield Static("", id="type-error")
         with VerticalScroll(id="home"):
             yield Static("A new adventure, or right where you left off.", classes="title")
@@ -187,7 +177,7 @@ class StickerApp(App):
                     yield Label("Outpainting", id="outpaint-label")
                     yield Switch(self.config.generation.outpainting, id="outpainting")
                 yield Static("", id="outpaint-size")
-                yield Button("Change type", id="change-type")
+                yield Button("Change preset", id="change-type")
                 yield Static(
                     "Prompts/settings are saved; new scenes use live character references.",
                     classes="muted",
@@ -268,7 +258,7 @@ class StickerApp(App):
                 status = "Running / interrupted"
             table.add_row(
                 item["name"],
-                item.get("generation_type", "multi_character_reference"),
+                item.get("preset_name") or item.get("generation_type", "multi_character_reference"),
                 "On"
                 if item.get(
                     "outpainting",
@@ -331,49 +321,55 @@ class StickerApp(App):
             return
         self.begin(name)
 
-    def choose_type(self, generation_type: str) -> None:
+    def choose_preset(self, directory) -> None:
         if self.busy:
             return
         try:
-            if generation_type == self.launch_config.generation.type:
-                selected = copy.deepcopy(self.launch_config)
-            else:
-                stem = {
-                    "single_character_text": "config.dragon",
-                    "protagonist_reference_creature_text": "config.reference-dragon",
-                }.get(generation_type, "config")
-                directory = self.launch_config.path.parent
-                local = directory / f"{stem}.local.yaml"
-                path = local if local.is_file() else directory / f"{stem}.yaml"
-                selected = load_config(path)
-                if selected.generation.type != generation_type:
-                    raise ValueError(f"{path} must use generation.type: {generation_type}")
-                # Connection settings and the session collection belong to the launcher.
-                selected.llm = copy.deepcopy(self.launch_config.llm)
-                selected.comfy = copy.deepcopy(self.launch_config.comfy)
-                selected.comfy_outpainting = copy.deepcopy(self.launch_config.comfy_outpainting)
-                selected.generation.gpu_mode = self.launch_config.generation.gpu_mode
-                selected.output.directory = self.launch_config.output.directory
-                selected.generation.count = self.launch_config.generation.count
-            self.config = selected
+            self.config = with_preset(self.launch_config, directory)
         except (OSError, ValueError) as error:
-            self.query_one("#type-error", Static).update(Text(f"Unable to load this type: {error}"))
+            self.query_one("#type-error", Static).update(Text(str(error)))
             return
         self.update_reference_settings()
-        self.query_one("#outpainting", Switch).value = selected.generation.outpainting
+        self.query_one("#outpainting", Switch).value = self.config.generation.outpainting
         self.update_outpaint_summary()
-        self.query_one("#new-type", Label).update(f"NEW SESSION · {generation_type}")
-        self.query_one("#count", Input).value = str(selected.generation.count)
+        self.query_one("#new-type", Label).update(
+            "NEW SESSION · " + self.config.preset.directory.name
+        )
+        self.query_one("#count", Input).value = str(self.config.generation.count)
         self.query_one("#type-error", Static).update("")
         self.show_home()
         self.query_one("#new", Button).focus()
 
     def update_reference_settings(self) -> None:
-        self.query_one("#reference-settings").display = self.config.flow.uses_references
-        if not self.config.flow.uses_references:
+        self.query_one("#reference-settings").display = (
+            bool(self.config.preset) or self.config.flow.uses_references
+        )
+        if not self.config.preset and not self.config.flow.uses_references:
             return
         try:
-            if self.config.character_directory:
+            if self.config.preset:
+                import re
+
+                directory = self.config.character_directory
+                files = list(directory.iterdir()) if directory and directory.is_dir() else []
+                counts = []
+                for character in self.config.preset.characters:
+                    prefix = character.get("imagePrefix")
+                    if prefix:
+                        pattern = re.compile(
+                            re.escape(prefix) + r"[0-9]+\.(?i:jpg|jpeg|png|webp|bmp|tiff|tif)"
+                        )
+                        matches = [p for p in files if p.is_file() and pattern.fullmatch(p.name)]
+                        count = sum(p.suffix.lower() == ".jpg" for p in matches)
+                        originals = len(matches) - count
+                        counts.append(
+                            f"{character['name']} ({character['id']}): {count} JPG"
+                            + (f" + {originals} source files" if originals else "")
+                        )
+                    else:
+                        counts.append(f"{character['name']} ({character['id']}): text")
+                text = "Character sources · " + " · ".join(counts)
+            elif self.config.character_directory:
                 groups = discover_characters(self.config.character_directory)
                 text = "Character versions · " + " · ".join(
                     f"{label}: {len(paths)}" for label, paths in sorted(groups.items())
@@ -396,7 +392,7 @@ class StickerApp(App):
             self.query_one("#reference-counts", Static).update(Text(str(error)))
 
     def apply_generation_settings(self) -> None:
-        if not self.config.flow.uses_references:
+        if not self.config.preset and not self.config.flow.uses_references:
             return
         cfg = float(self.query_one("#generation-cfg", Input).value)
         width = int(self.query_one("#generation-width", Input).value)
@@ -504,7 +500,14 @@ class StickerApp(App):
             widget.update(Text(url))
             widget.tooltip = url
         self.query_one("#session-title", Static).update(
-            Text(item["name"] + " · " + item.get("generation_type", "multi_character_reference"))
+            Text(
+                item["name"]
+                + " · "
+                + (
+                    item.get("preset_name")
+                    or item.get("generation_type", "multi_character_reference")
+                )
+            )
         )
         status = item["status"].upper()
         if self.busy and self.control.requested.is_set():
@@ -585,18 +588,12 @@ class StickerApp(App):
     @on(Button.Pressed)
     def pressed(self, event: Button.Pressed) -> None:
         action = event.button.id
-        if action in ("choose-duo", "choose-dragon", "choose-reference-dragon"):
-            self.choose_type(
-                {
-                    "choose-duo": "multi_character_reference",
-                    "choose-dragon": "single_character_text",
-                    "choose-reference-dragon": "protagonist_reference_creature_text",
-                }[action]
-            )
+        if action in self.preset_buttons:
+            self.choose_preset(self.preset_buttons[action])
         elif action == "change-type" and not self.busy:
             self.query_one("#home").display = False
             self.query_one("#type-picker").display = True
-            self.query_one("#choose-duo", Button).focus()
+            self.query_one("#" + next(iter(self.preset_buttons)), Button).focus()
         elif action == "new":
             try:
                 count = int(self.query_one("#count", Input).value)

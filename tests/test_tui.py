@@ -5,17 +5,30 @@ from pathlib import Path
 from unittest.mock import patch
 
 import test_pipeline as fixtures
+from PIL import Image
 from textual.widgets import DataTable, Input, ProgressBar, RichLog, Static, Switch
 
 from birthday_stickers.control import RunHalted
+from birthday_stickers.presets import ROOT as PRESETS
+from birthday_stickers.presets import with_preset
 from birthday_stickers.sessions import SessionStore
 from birthday_stickers.tui import LogLine, SessionUpdate, StickerApp
+
+
+def configuration(temp, service):
+    config = fixtures.PipelineTests().configuration(temp, service)
+    folder = Path(temp) / "characters"
+    folder.mkdir()
+    for name in ("A0.jpg", "B0.jpg"):
+        Image.new("RGB", (32, 32)).save(folder / name)
+    config.character_directory = folder
+    return with_preset(config, PRESETS / "girl_dragon_references")
 
 
 class TUITests(unittest.IsolatedAsyncioTestCase):
     async def test_new_pause_resume_stop_and_reopen(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             store = SessionStore(Path(temp) / "sessions")
             app = StickerApp(config, store)
             started = threading.Event()
@@ -31,7 +44,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
             with patch("birthday_stickers.sessions.run", fake_run):
                 async with app.run_test(size=(110, 40)) as pilot:
                     self.assertTrue(app.query_one("#new-name", Input).value.endswith("-001"))
-                    await pilot.click("#choose-duo")
+                    await pilot.click("#choose-preset-1")
                     await pilot.click("#outpainting")
                     await pilot.click("#new")
                     for _ in range(60):
@@ -69,7 +82,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
 
     async def test_ctrl_q_requests_stop_before_exiting_worker(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             store = SessionStore(Path(temp) / "sessions")
             app = StickerApp(config, store)
             started = threading.Event()
@@ -81,7 +94,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
 
             with patch("birthday_stickers.sessions.run", fake_run):
                 async with app.run_test(size=(110, 40)) as pilot:
-                    await pilot.click("#choose-duo")
+                    await pilot.click("#choose-preset-1")
                     await pilot.click("#new")
                     for _ in range(60):
                         if started.is_set():
@@ -99,7 +112,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
 
     async def test_worker_bars_and_logs_are_independent(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             store = SessionStore(Path(temp) / "sessions")
             item = store.create(config, count=5)
             app = StickerApp(config, store)
@@ -156,10 +169,10 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
 
     async def test_invalid_count_and_start_error_are_visible(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             app = StickerApp(config, SessionStore(Path(temp) / "sessions"))
             async with app.run_test(size=(110, 40)) as pilot:
-                await pilot.click("#choose-duo")
+                await pilot.click("#choose-preset-1")
                 app.query_one("#count", Input).value = "0"
                 await pilot.click("#new")
                 self.assertFalse(app.busy)
@@ -179,49 +192,54 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
             from birthday_stickers.config import load_config
 
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             dragon = load_config(fixtures.ROOT / "config.dragon.yaml")
             app = StickerApp(config, SessionStore(Path(temp) / "sessions"))
             async with app.run_test(size=(80, 24)) as pilot:
                 self.assertTrue(app.query_one("#type-picker").display)
                 self.assertFalse(app.query_one("#home").display)
                 with patch("birthday_stickers.tui.load_config", return_value=dragon):
-                    await pilot.click("#choose-dragon")
-                self.assertEqual(app.config.generation.type, "single_character_text")
-                self.assertFalse(app.query_one("#outpainting", Switch).value)
-                await pilot.click("#outpainting")
+                    await pilot.click("#choose-preset-0")
+                self.assertEqual(app.config.preset.directory.name, "baby_dragon_text")
                 self.assertTrue(app.query_one("#outpainting", Switch).value)
+                await pilot.click("#outpainting")
+                self.assertFalse(app.query_one("#outpainting", Switch).value)
                 self.assertEqual(app.config.llm.base_url, config.llm.base_url)
                 self.assertEqual(app.config.comfy.base_url, config.comfy.base_url)
                 self.assertEqual(app.config.output.directory, config.output.directory)
                 self.assertTrue(app.query_one("#home").display)
+                app.query_one("#change-type").scroll_visible(animate=False)
+                await pilot.pause()
                 await pilot.click("#change-type")
                 self.assertTrue(app.query_one("#type-picker").display)
-                await pilot.click("#choose-duo")
-                self.assertEqual(app.config.generation.type, "multi_character_reference")
-                self.assertEqual(app.config.protagonist, config.protagonist)
+                await pilot.click("#choose-preset-1")
+                self.assertEqual(app.config.preset.directory.name, "girl_dragon_references")
+                self.assertEqual(app.config.character_directory, config.character_directory)
 
     async def test_missing_profile_keeps_picker_open_with_error(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             app = StickerApp(config)
             async with app.run_test(size=(80, 24)) as pilot:
-                await pilot.click("#choose-dragon")
+                with patch(
+                    "birthday_stickers.tui.with_preset", side_effect=ValueError("Invalid preset")
+                ):
+                    await pilot.click("#choose-preset-0")
                 self.assertTrue(app.query_one("#type-picker").display)
-                self.assertIn("Unable to load", str(app.query_one("#type-error", Static).render()))
-                await pilot.click("#choose-duo")
+                self.assertIn("Invalid preset", str(app.query_one("#type-error", Static).render()))
+                await pilot.click("#choose-preset-1")
                 self.assertTrue(app.query_one("#home").display)
 
     async def test_saved_session_toggle_tracks_selection_and_applies_on_resume(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             store = SessionStore(Path(temp) / "sessions")
             first = store.create(config)
             config.generation.outpainting = False
             second = store.create(config)
             app = StickerApp(config, store)
             async with app.run_test(size=(110, 45)) as pilot:
-                await pilot.click("#choose-duo")
+                await pilot.click("#choose-preset-1")
                 await pilot.pause()
                 table = app.query_one("#sessions", DataTable)
                 switch = app.query_one("#session-outpainting", Switch)
@@ -249,14 +267,14 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(store.read(second["name"])["outpainting"])
 
     async def test_reference_settings_and_selected_versions(self):
-        from birthday_stickers.flows.multi_character_reference import build_graph
+        from birthday_stickers.flows.scene_preset import build_graph
         from birthday_stickers.workflows import load_workflow
 
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             app = StickerApp(config, SessionStore(Path(temp) / "sessions"))
             async with app.run_test(size=(120, 50)) as pilot:
-                await pilot.click("#choose-duo")
+                await pilot.click("#choose-preset-1")
                 self.assertTrue(app.query_one("#reference-settings").display)
                 app.query_one("#generation-cfg", Input).value = "2.5"
                 app.query_one("#outpainting", Switch).value = False
@@ -282,12 +300,12 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
         from birthday_stickers.config import load_config
 
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = fixtures.PipelineTests().configuration(temp, service)
+            config = configuration(temp, service)
             profile = load_config(fixtures.ROOT / "config.reference-dragon.yaml")
             app = StickerApp(config, SessionStore(Path(temp) / "sessions"))
             async with app.run_test(size=(110, 40)) as pilot:
                 with patch("birthday_stickers.tui.load_config", return_value=profile):
-                    await pilot.click("#choose-reference-dragon")
-                self.assertEqual(app.config.flow.reference_roles, ("protagonist",))
+                    await pilot.click("#choose-preset-2")
+                self.assertEqual(app.config.flow.reference_roles, ("girl",))
                 self.assertTrue(app.query_one("#reference-settings").display)
                 self.assertEqual(app.config.comfy.base_url, config.comfy.base_url)

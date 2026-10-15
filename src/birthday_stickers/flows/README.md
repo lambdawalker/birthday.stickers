@@ -1,6 +1,12 @@
 # Workflow bindings
 
-These files are the user's original ComfyUI API exports, copied unchanged:
+New presets use `scene_preset/qwen.json` and one shared graph builder. It creates
+`character_reference_1` through `character_reference_N` nodes dynamically and binds
+them to `images.image_1` through `images.image_N` on encoder `459:474`. Text-only
+characters consume no slots. The client enforces Qwen's documented ten-reference
+limit. All presets share canvas/CFG/seed controls and common Flux outpainting.
+
+The following legacy files retain the user's original ComfyUI API exports:
 
 - `multi_character_reference/qwen.json` from `Qwen 2.1 Edit.json`
 - `common/flux-outpaint.json` from `Flux outpaint.json`
@@ -11,7 +17,8 @@ under `output/metadata`. Change model filenames/sampler inputs with YAML overrid
 
 | Stage | Node | Runtime binding |
 |---|---|---|
-| Qwen | `514`, `516` | Uploaded protagonist and creature, in that order |
+| Qwen (presets) | `character_reference_N` | Referenced characters in YAML order |
+| Qwen (legacy duo) | `514`, `516` | Uploaded protagonist and creature, in that order |
 | Qwen | `459:474` | Refined prompt directly; image sockets 1 and 2 remain explicit |
 | Qwen | `459:456`, `459:458` | Configured empty latent size, batch 1, sampler seed |
 | Qwen | `461` | Core `SaveImage`, using the original decoded image connection |

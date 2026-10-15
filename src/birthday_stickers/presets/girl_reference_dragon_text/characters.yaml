@@ -1,0 +1,10 @@
+characters:
+- id: girl
+  name: baby girl
+  imagePrefix: A
+  description: Preserve her identity, toddler proportions, hairstyle and Viking outfit.
+- id: dragon
+  name: baby dragon
+  description: Friendly black baby dragon with charcoal highlights, rounded face,
+    large green eyes, two upright pointed ears, no horns, four short legs, two batlike
+    wings and a long tapering tail.

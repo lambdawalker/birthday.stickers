@@ -216,7 +216,17 @@ class PipelineTests(unittest.TestCase):
     def configuration(self, temp, services, count=1):
         directory = Path(temp)
         data = expand_config(
-            yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8")), ROOT
+            {
+                **{
+                    k: v
+                    for k, v in yaml.safe_load(
+                        (ROOT / "config.yaml").read_text(encoding="utf-8")
+                    ).items()
+                    if k != "preset"
+                },
+                "flow": "multi_character_reference",
+            },
+            ROOT,
         )
         data["prompts"].pop("activities", None)
         data["prompts"].pop("outpainting", None)

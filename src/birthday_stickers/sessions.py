@@ -152,9 +152,13 @@ class SessionStore:
             if config.character_directory is not None:
                 characters = {
                     "directory": str(config.character_directory),
-                    **{role: getattr(config, role) for role in config.flow.reference_roles},
+                    **(
+                        {role: getattr(config, role) for role in config.flow.reference_roles}
+                        if not config.preset
+                        else {}
+                    ),
                 }
-            elif config.flow.uses_references:
+            elif config.flow.uses_references and not config.preset:
                 characters = {
                     role: str(getattr(config, role)) for role in config.flow.reference_roles
                 }
@@ -176,9 +180,18 @@ class SessionStore:
                 "prompts": prompts,
                 "workflows": workflows,
             }
+            if config.preset:
+                from .presets import FILES
+
+                preset_directory = snapshots / "preset"
+                preset_directory.mkdir()
+                for filename in FILES:
+                    copyfile(config.preset.directory / filename, preset_directory / filename)
+                data["preset"] = "inputs/preset"
             write_text(directory / "config.yaml", yaml.safe_dump(data), encoding="utf-8")
             manifest = {
                 "version": 1,
+                "preset_name": config.preset.directory.name if config.preset else None,
                 "service_urls": service_urls(config),
                 "generation_type": config.generation.type,
                 "outpainting": config.generation.outpainting,

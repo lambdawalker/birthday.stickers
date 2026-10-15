@@ -23,18 +23,25 @@ SUPPORTED_EXTENSIONS = {
     ".pgm",
     ".pbm",
 }
-PATTERN = re.compile(r"([A-Z])([0-9]+)\.[^.]+$")
+PATTERN = re.compile(r"([A-Za-z][A-Za-z0-9_-]*?)([0-9]+)\.[^.]+$")
 _lock = RLock()
 
 
 @file_retry
-def convert_characters(directory: Path):
+def convert_characters(directory: Path, prefixes=None):
     """Retain originals; a durable conversion record prevents duplicate imports."""
     records = directory / ".jpg-conversions"
     records.mkdir(exist_ok=True)
     with _lock, file_lock(records / "conversion.lock"):
         for source in sorted(directory.iterdir()):
-            match = PATTERN.fullmatch(source.name)
+            pattern = PATTERN
+            if prefixes:
+                pattern = re.compile(
+                    "("
+                    + "|".join(re.escape(p) for p in sorted(prefixes, key=len, reverse=True))
+                    + r")([0-9]+)\.[^.]+$"
+                )
+            match = pattern.fullmatch(source.name)
             if (
                 not source.is_file()
                 or not match
@@ -61,7 +68,7 @@ def convert_characters(directory: Path):
                         (
                             int(m[2])
                             for p in directory.iterdir()
-                            if (m := PATTERN.fullmatch(p.name)) and m[1] == label
+                            if (m := pattern.fullmatch(p.name)) and m[1] == label
                         ),
                         default=-1,
                     )

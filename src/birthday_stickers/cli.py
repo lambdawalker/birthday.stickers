@@ -17,6 +17,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--config", type=Path, default=Path("config.yaml"), help="YAML configuration"
     )
+    parser.add_argument("--preset", type=Path, help="Scene preset folder")
+    parser.add_argument(
+        "--preview-prompt",
+        action="store_true",
+        help="Print a locally rendered scene brief without contacting services",
+    )
+    parser.add_argument(
+        "--preview-seed", type=int, default=0, help="Seed for deterministic prompt preview"
+    )
     parser.add_argument("--count", type=int, help="Override generation.count for this invocation")
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument(
@@ -43,6 +52,27 @@ def main(argv: list[str] | None = None) -> int:
         )
     try:
         config = load_config(args.config)
+        if args.preset:
+            from .presets import with_preset
+
+            config = with_preset(config, args.preset)
+        if args.preview_prompt:
+            if not config.preset:
+                raise ValueError("Prompt preview requires a scene preset")
+            import random
+
+            from .presets import render_scene
+            from .references import reference_pools
+
+            rng = random.Random(args.preview_seed)
+            refs = [
+                {"role": role, "path": str(rng.choice(pool))}
+                for role, pool in zip(config.reference_roles, reference_pools(config), strict=True)
+            ]
+            activity = rng.choice(config.preset.activities)
+            venue = rng.choice(config.preset.compatible(activity))
+            print(render_scene(config.preset, activity, venue, args.preview_seed, refs)["prompt"])
+            return 0
         if args.count is not None:
             integer(args.count, "--count", 1)
             config.generation.count = args.count

@@ -1,7 +1,9 @@
 """Three workers with durable prompt/image handoff and optional GPU overlap."""
 
 import hashlib
+import json
 import logging
+import re
 import secrets
 import time
 import uuid
@@ -67,7 +69,11 @@ class Pipeline:
         pools = reference_pools(self.config)
         selected = [
             (role, secrets.choice(pool))
-            for role, pool in zip(("protagonist", "creature"), pools, strict=True)
+            for role, pool in zip(
+                self.config.reference_roles if self.config.preset else ("protagonist", "creature"),
+                pools,
+                strict=True,
+            )
             if pool
         ]
         seed = (
@@ -94,6 +100,16 @@ class Pipeline:
                 for role, path in selected
             ],
         )
+        if self.config.preset:
+            from .presets import select_scene
+
+            metadata["scene_selection"] = select_scene(
+                self.config.preset,
+                self.config.output.directory / "metadata",
+                metadata["references"],
+            )
+            metadata["activity"] = metadata["scene_selection"]["activity"]
+            metadata["planning_prompt"] = metadata["scene_selection"]["prompt"]
         if self.local["activities"]:
             metadata["activity"] = select_activity(
                 self.local["activities"], self.config.output.directory / "metadata"
@@ -198,9 +214,18 @@ class Scene:
         llm = LLMClient(self.config.llm, references, self.config.generation.type)
         activity = self.meta.get("activity")
         if "raw_scene" not in self.meta:
+            if self.config.preset and "planning_request" not in self.meta:
+                self.meta["planning_request"] = (
+                    self.meta["planning_prompt"]
+                    + "\n\nRecent scenes (vary details):\n"
+                    + "\n".join(previous_scenes[-10:])
+                )
+                self.save()
             with self.step("planning", "Plan scene"):
                 self.meta["raw_scene"] = llm.complete(
-                    planning_prompt(
+                    self.meta["planning_request"]
+                    if self.config.preset
+                    else planning_prompt(
                         local["planning"],
                         iteration,
                         self.config.generation.count,
@@ -210,19 +235,44 @@ class Scene:
                     )
                 )
         raw = self.meta["raw_scene"]
-        write_prompts(self.prompt_path, self.name, raw, self.meta.get("refined_scene"), activity)
+        write_prompts(
+            self.prompt_path,
+            self.name,
+            raw,
+            self.meta.get("refined_scene"),
+            activity,
+            self.meta.get("planning_request"),
+        )
         if "refined_scene" not in self.meta:
             with self.step("refining", "Refine Qwen prompt"):
                 refined = llm.complete(
-                    compose_refinement(local["refinement"], local["guide"], raw), refined=True
+                    compose_refinement(local["refinement"], local["guide"], raw)
+                    + (
+                        "\n\nCharacter-source assignments:\n"
+                        + json.dumps(self.meta["scene_selection"]["characters"], ensure_ascii=False)
+                        if self.config.preset
+                        else ""
+                    ),
+                    refined=True,
                 )
-                write_prompts(self.prompt_path, self.name, raw, refined, activity)
+                write_prompts(
+                    self.prompt_path,
+                    self.name,
+                    raw,
+                    refined,
+                    activity,
+                    self.meta.get("planning_request"),
+                )
                 required = [
                     f"<image{i}>" for i in range(1, len(self.config.flow.reference_roles) + 1)
                 ]
                 if any(tag not in refined for tag in required):
                     raise ValueError(
                         "Refined prompt must name reference roles: " + ", ".join(required)
+                    )
+                if self.config.preset and set(re.findall(r"<image\d+>", refined)) != set(required):
+                    raise ValueError(
+                        "Refinement image tags do not match assigned character references"
                     )
                 if len(required) == 1 and "<image2>" in refined:
                     raise ValueError(

@@ -21,7 +21,7 @@ from birthday_stickers.sessions import SessionStore
 class GenerationTypeTests(unittest.TestCase):
     def test_dragon_session_pause_resume_only_one_render_no_references(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = load_config(fixtures.ROOT / "config.dragon.yaml")
+            config = load_config(fixtures.ROOT / "tests/fixtures/config.dragon.yaml")
             config.llm.base_url = service.url + "/v1"
             config.comfy.base_url = service.url
             config.comfy.poll_interval = 0.01
@@ -86,7 +86,7 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertEqual(set(discover_characters(folder)), {"A", "B", "C"})
 
     def test_dragon_catalog_and_graph(self):
-        config = load_config(fixtures.ROOT / "config.dragon.yaml")
+        config = load_config(fixtures.ROOT / "tests/fixtures/config.dragon.yaml")
         rows = load_activities(config.activities)
         self.assertEqual(len(rows), 300)
         self.assertEqual(len({r["activity"] for r in rows}), 300)
@@ -110,7 +110,7 @@ class GenerationTypeTests(unittest.TestCase):
 
     def test_dragon_outpaint_uses_raw_prompt_and_resumes_flux_job(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
-            config = load_config(fixtures.ROOT / "config.dragon.yaml")
+            config = load_config(fixtures.ROOT / "tests/fixtures/config.dragon.yaml")
             config.llm.base_url = service.url + "/v1"
             config.comfy.base_url = service.url
             config.comfy.poll_interval = 0.002
@@ -172,7 +172,9 @@ class GenerationTypeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             for filename, enabled in (("config.yaml", True), ("config.dragon.yaml", False)):
                 data = expand_config(
-                    yaml.safe_load((fixtures.ROOT / filename).read_text(encoding="utf-8")),
+                    yaml.safe_load(
+                        (fixtures.ROOT / "tests/fixtures" / filename).read_text(encoding="utf-8")
+                    ),
                     fixtures.ROOT,
                 )
                 data["generation"].pop("outpainting")

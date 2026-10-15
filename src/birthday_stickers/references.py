@@ -1,4 +1,4 @@
-"""Discover reference variants by uppercase character ID and numeric suffix."""
+"""Discover live reference variants by configured prefix and numeric suffix."""
 
 import re
 from pathlib import Path
@@ -22,7 +22,31 @@ def discover_characters(directory: Path) -> dict[str, list[Path]]:
     return groups
 
 
-def reference_pools(config: Config) -> tuple[list[Path], list[Path]]:
+def preset_reference_pools(config, convert=True):
+    characters = [c for c in config.preset.characters if c.get("imagePrefix")]
+    if not characters:
+        return ()
+    directory = config.character_directory
+    if directory is None or not directory.is_dir():
+        raise ValueError(f"Character reference directory is missing: {directory}")
+    if convert:
+        convert_characters(directory, [c["imagePrefix"] for c in characters])
+    pools = []
+    for character in characters:
+        pattern = re.compile(re.escape(character["imagePrefix"]) + r"[0-9]+\.(?i:jpg)")
+        paths = sorted(p for p in directory.iterdir() if p.is_file() and pattern.fullmatch(p.name))
+        if not paths:
+            raise ValueError(
+                f"No references for {character['id']}; "
+                f"expected {character['imagePrefix']}[number].jpg"
+            )
+        pools.append(paths)
+    return tuple(pools)
+
+
+def reference_pools(config: Config):
+    if config.preset is not None:
+        return preset_reference_pools(config)
     if not config.flow.uses_references:
         return [], []
     if config.character_directory is None:

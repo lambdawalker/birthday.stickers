@@ -1,6 +1,7 @@
 # Flow assets and defaults live in src/birthday_stickers/flows/.
 # Personal addresses/settings belong in a *.local.yaml file.
-flow: protagonist_reference_creature_text
+flow: scene_preset
+preset: girl_reference_dragon_text
 llm:
   base_url: http://127.0.0.1:1234/v1
   model: google/gemma-4-e2b
@@ -29,7 +30,6 @@ comfy_outpainting: null
 
 characters:
   directory: assets/characters
-  protagonist: A
 generation:
   gpu_mode: sequential  # sequential (whole batch), concurrent (alternate), parallel (different IPs)
   outpainting: true

@@ -1,0 +1,45 @@
+# Flow assets and defaults live in src/birthday_stickers/flows/.
+# Personal addresses/settings belong in a *.local.yaml file.
+flow: single_character_text
+llm:
+  base_url: http://127.0.0.1:1234/v1
+  model: google/gemma-4-e2b
+  api_key_env: null
+  timeout: 300
+  temperature: 0.9
+  refinement_temperature: 0.3
+  max_tokens: 16384
+  token_limit_field: max_tokens
+  send_reference_images: false
+  extra_body: {}
+comfy:
+  base_url: http://192.168.1.186:8188/
+  api_key_env: null
+  request_timeout: 60
+  job_timeout: 9999999
+  poll_interval: 2
+  get_retries: 3
+  retry_delay: 1
+# Optional second ComfyUI instance. null reuses comfy above.
+# To use another machine, replace null with a mapping, e.g.:
+# comfy_outpainting:
+#   base_url: http://192.168.1.187:8188
+# Unspecified timeout/auth/retry settings inherit from comfy.
+comfy_outpainting: null
+
+generation:
+  gpu_mode: sequential  # sequential (whole batch), concurrent (alternate), parallel (different IPs)
+  count: 10
+  width: 1024
+  height: 1024
+  seed: null
+  outpainting: false
+output:
+  directory: ../../output
+  width: 1312
+  height: 1312
+  jpeg_quality: 95
+  jpeg_subsampling: 0
+  jpeg_background: '#ffffff'
+  feathering: 24
+  preserve_center: true

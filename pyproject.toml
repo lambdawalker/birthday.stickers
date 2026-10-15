@@ -9,6 +9,7 @@ description = "Plan scenes with an OpenAI-compatible LLM, render with Qwen, and 
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "jinja2>=3.1.6,<4",
     "Pillow>=11,<13",
     "PyYAML>=6.0.2,<7",
     "textual>=1,<7",
