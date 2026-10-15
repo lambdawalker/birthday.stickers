@@ -254,7 +254,12 @@ def select_scene(preset, metadata_directory, references=()):
     used = set()
     ids = {a["id"] for a in preset.activities}
     paths = sorted(
-        metadata_directory.glob("stiker-*.json"), key=lambda p: int(p.stem.split("-")[-1])
+        (
+            p
+            for p in metadata_directory.glob("stiker-*.json")
+            if re.fullmatch(r"stiker-[0-9]+\.json", p.name)
+        ),
+        key=lambda p: int(p.stem.split("-")[-1]),
     )
     for path in paths:
         saved = json.loads(read_text(path, encoding="utf-8"))
