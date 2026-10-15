@@ -1,6 +1,6 @@
 # Birthday Stickers
 
-Generate a batch of illustrated scenes with two consistent character references.
+Generate illustrated scenes from configurable characters, activities, venues and props.
 An OpenAI-compatible LLM plans each scene and refines it with a local Qwen guide;
 ComfyUI renders it with Qwen 2.1 and extends it with Flux Fill to your final size.
 
@@ -11,10 +11,10 @@ Three workers form a pipeline: the LLM prepares prompts for upcoming scenes whil
 ComfyUI renders earlier ones. For each of N scenes (paths below are relative to
 that session folder):
 
-1. Read `src/birthday_stickers/flows/multi_character_reference/planning.md` and ask LLM A for a raw scene.
+1. Assemble the selected scene preset locally and ask LLM A for a raw scene.
 2. Assemble the raw scene, local Qwen guide, and refinement template locally; ask
    the same LLM for the refined Qwen editing instruction.
-3. Upload the protagonist to Qwen input 1 and the fantastic creature to input 2.
+3. Upload referenced characters to consecutive Qwen inputs in character-list order.
 4. Run the Qwen workflow and save `image_generation/results/stiker-0000.jpg`.
 5. Upload that JPEG, compute centered padding, and run Flux with the **raw** scene.
 6. Save `outpainting/results/stiker-0000.jpg` at the exact configured width and height.
@@ -33,8 +33,8 @@ Copy-Item config.yaml config.local.yaml
 ```
 
 Add character references under `assets/characters/`, named `A000.jpg`, `A001.jpg`,
-`B000.jpg`, `B001.jpg`, etc. The prefix is an uppercase character ID from A–Z;
-the suffix is a numeric reference number. These images are not yet included in the repo.
+`B000.jpg`, `B001.jpg`, etc. The shipped duo uses prefixes A and B;
+custom presets can use longer prefixes such as `greyBabyDragon`. The suffix is numeric. These images are not yet included in the repo.
 
 Edit `config.local.yaml`, especially:
 
@@ -162,7 +162,7 @@ single quotes, for example `'D:\Art\protagonist.png'`.
 | `llm.base_url`, `llm.model` | IP A, port, OpenAI API prefix, and loaded model ID |
 | `comfy.base_url` | IP B and ComfyUI port |
 | `characters.directory` | Folder containing all character reference variants |
-| `characters.protagonist`, `characters.creature` | Character IDs (default A and B), first and second socket |
+| `preset` | Packaged preset name or folder path; defines the characters and scene templates |
 | `generation.count` | Default total stickers for a new session; editable in the interface |
 | `output.directory` | Parent folder containing the `sessions/` directory |
 | `generation.width`, `generation.height` | Qwen output canvas; multiples of 32 |
@@ -177,37 +177,19 @@ single quotes, for example `'D:\Art\protagonist.png'`.
 | `workflows.*.overrides` | Override existing node inputs such as checkpoints, steps, or guidance |
 
 The checked-in defaults preserve the supplied samplers: Qwen 21 steps / CFG 1.4;
-Flux 20 steps / CFG 1, with Flux guidance 30. They are workflow settings, not a
+Flux 50 steps / CFG 1, with Flux guidance 30. They are workflow settings, not a
 claim of optimal model parameters. See [workflow details](src/birthday_stickers/flows/README.md) for
 all node bindings and reference-resolution tuning.
 
-Character references are discovered automatically from the configured directory:
+Character references are discovered from `characters.directory`, using each
+entry's `imagePrefix` in the preset's `characters.yaml`. Selected files stay fixed
+through planning, refinement and rendering; paths and hashes are saved in metadata.
+See [scene presets](#scene-presets) for the full schema and examples. Legacy role
+labels and explicit file paths continue to work for old flow configurations.
 
-```yaml
-characters:
-  directory: assets/characters
-  protagonist: A
-  creature: B
-```
-
-For each scene, the program independently chooses one matching file per character
-at random. For example, it can use `A003.jpg` with `B012.jpg`, then `A000.jpg` with
-`B002.jpg`. Repeats are allowed. Any uppercase ID A–Z can be assigned to either
-role; the protagonist always goes to Qwen socket 1, and the creature to socket 2.
-Reference numbers may have any number of digits; both `.jpg` and `.JPG` are accepted.
-Other filenames and subdirectories are ignored. Missing or invalid references
-are reported before generation starts.
-
-The selected pair stays fixed throughout that scene's planning, refinement, and
-Qwen rendering, including optional LLM vision input. Metadata records the actual
-selected paths and hashes. References already uploaded during the batch are reused
-when selected again. Reference selection is random independently of the configured
-diffusion seed. Existing configurations specifying explicit `protagonist` and
-`creature` file paths without `directory` continue to use those fixed files.
-
-An LLM with image input support can inspect both references during planning and
+An LLM with image input support can inspect the selected references during planning and
 refinement. With the default `send_reference_images: false`, it receives role
-descriptions only; Qwen still receives both actual full-size reference files.
+descriptions only; Qwen still receives all selected full-size reference files.
 Vision requests use JPEG previews up to 1536 px on the long side. Use a context
 window large enough for the full guide, template, and response (32K is a useful
 starting configuration, especially with vision).
@@ -232,22 +214,16 @@ configured tokens as Bearer headers. It never stores their values in output meta
 
 ## Prompts and the Qwen guide
 
-Edit [the scene brief](src/birthday_stickers/flows/multi_character_reference/planning.md) to set theme, medium, activities,
-subjects, or any requested lettering. Its optional placeholders are
-`{{iteration}}`, `{{count}}`, `{{sticker_id}}`, and `{{previous_scenes}}`. The last
-placeholder includes up to ten earlier planned scenes from the session to
-encourage variety; it is not a guarantee against duplicate compositions.
+Edit the selected preset's six files to change style, characters, activities,
+venues and composition. The assembled brief is saved before the LLM request, with
+up to ten recent scenes appended to encourage variety.
 
-The [refinement template](src/birthday_stickers/flows/multi_character_reference/refinement.md) must contain `{{guide}}` and
-`{{scene}}`. Both are substituted locally in one pass. The raw description is
-sent unchanged to Flux's positive prompt node; it is never replaced by Qwen's
-reference-tagged refinement.
-
-The [supplied guide](src/birthday_stickers/flows/multi_character_reference/guide.md) is included with
-a project-specific supplement and corrections distinguishing official T2I and
-editing contracts. Both characters are **identity references for a new scene**;
-the first image is not automatically a base canvas. The pipeline refines once,
-bypassing the exported Qwen workflow's internal prompt enhancer.
+The shared [refinement template](src/birthday_stickers/flows/scene_preset/refinement.md)
+and [Qwen guide](src/birthday_stickers/flows/scene_preset/guide.md) preserve the
+selected character-source assignments and scene details. Refinement uses the raw
+response plus the guide, followed by explicit reference-tag assignments. The raw
+scene remains the input to Flux; it is never replaced by the reference-tagged
+Qwen refinement. The graph's internal prompt enhancer is bypassed.
 
 ## Dimensions and output files
 
@@ -307,8 +283,8 @@ and missing model dropdown entries before you spend time on generation.
 
 - Raw prompts are saved before refinement; both prompts are saved before rendering.
 - Prompt IDs are recorded immediately after each accepted submission.
-- Transient GET failures retry with bounded exponential delays. POSTs never retry
-  automatically because the server may already have accepted them.
+- Transient I/O retries indefinitely with delays from 1 to 15 seconds. Ambiguous
+  Comfy submissions recover by request ID instead of creating duplicate jobs.
 - Polling uses `/history/{prompt_id}` and retrieves only the configured output node.
   It reports execution errors and keeps waiting for queued/running jobs until completion
   or an explicit Pause/Stop.
@@ -337,116 +313,192 @@ submission, history polling, output downloads, and disk artifacts. They do not
 load AI models or verify visual quality. CI runs the suite on Windows and Linux.
 Live generation still needs your character images and reachable model servers.
 
-## Diverse Viking scenes
+## Scene presets
 
-The default planning prompt features a baby girl and baby dragon in a cozy Viking
-storybook world. Backgrounds use blush pink, lavender, powder blue, pale butter
-yellow, and peach, with soft gradients and sparse white sparkles. Character colors
-and the girl's Viking outfit remain faithful to the chosen references. The planner
-includes this art direction in the raw scene, which also guides Flux outpainting;
-the refinement prompt explicitly preserves it for Qwen.
+All new generation types use `flow: scene_preset`. Select a preset on the first
+screen, or set `preset` in your launch YAML. The three previous setups have been
+translated into packaged folders under `src/birthday_stickers/presets/`:
 
-Each flow defaults to its own activity catalog, for example `src/birthday_stickers/flows/multi_character_reference/activities.json`: 300 editable
-activities in 12 categories, each with compatible settings. For each scene the
-program samples an unused activity, avoids the preceding category when possible,
-and selects a setting, mood, framing, and pastel palette. The LLM supplies the
-specific poses and delightful details. The sampler is independent of diffusion
-seeds. Set `prompts.activities: null` to use only your planning prompt.
+| Preset | Characters |
+| --- | --- |
+| `girl_dragon_references` | Girl from A references, dragon from B references |
+| `baby_dragon_text` | One baby dragon described in text |
+| `girl_reference_dragon_text` | Girl from A references, baby dragon described in text |
 
-Selection history lives in the per-sticker JSON files under each session's `metadata/`.
-It persists when resuming that session. New sessions start a fresh activity cycle. Every activity is used
-before a new cycle starts; failed attempts also consume their chosen activity.
-The selected brief is saved before the LLM request and appears in the prompt
-Markdown alongside the raw and refined descriptions. Keep metadata to retain
-history; use a new output directory to start a fresh collection. Run only one
-process per output directory when using activity sampling.
+Each retains a 300-activity catalog and Viking art direction. Every preset uses
+the same three pipelines, session controls, CFG/resolution fields, negative
+prompt, and optional outpainting. Switching presets keeps the launcher's service
+URLs, output settings, workflow overrides and outpainting setting. Existing
+sessions resume their saved settings regardless of the chosen new-session preset.
+Legacy flows and snapshots remain supported; they are not rewritten on resume.
 
-Catalog IDs must be unique and stable. Each record needs `id`, `category`,
-`activity`, and a nonempty `settings` list. Editing the catalog recalculates history
-against the currently available IDs; adding activities makes them available in the
-current cycle. Reference images remain local and are not embedded in the catalog.
+Copy one packaged preset into `presets/my_story/` beside your launch YAML to
+customize it. The interface discovers folders there automatically; a local folder
+with the same name overrides its packaged counterpart. A preset folder contains:
 
+| File | Purpose |
+| --- | --- |
+| `characters.yaml` | Stable character IDs, names, optional descriptions/reference prefixes |
+| `activities.yaml` | Named activities and their local props |
+| `venues.yaml` | Named venues and their local foreground/background props |
+| `props.yaml` | Global props for styling and general direction |
+| `image_style.md` | Medium, palette and visual style; first in the planning prompt |
+| `general_direction.md` | Environment, placement, activity and composition template |
 
-### Generation types
-
-- `multi_character_reference` (default `config.yaml`): baby girl + baby dragon identity references,
-  Qwen Edit with optional Flux outpainting.
-- `single_character_text` (`config.dragon.yaml`): one baby dragon, 300 dedicated activities,
-  local LLM planning/refinement, and the supplied Qwen Image 2.1 text-to-image flow.
-  No references are needed; Flux is needed only with outpainting enabled.
-  The attached Qwen flow has no image sockets;
-  edit `src/birthday_stickers/flows/single_character_text/planning.md` to customize the dragon's appearance.
-
-The interactive app opens with a generation-type picker. Choose **Girl + dragon**
-or **Baby dragon only**, then create a session or resume a saved one.
-Use **Change type** on the session screen to return to the picker.
-
-Start the app normally (including your personal server settings):
-
-```sh
-uv run birthday-stickers --config config.local.yaml
+```yaml
+# Launch YAML
+flow: scene_preset
+preset: presets/my_story  # relative to this YAML; packaged names also work
+characters:
+  directory: assets/characters
 ```
 
-The selected type loads its configuration from the launcher YAML's directory:
-`config.local.yaml` / `config.yaml` for the duo, and
-`config.dragon.local.yaml` / `config.dragon.yaml` for the solo dragon (local files
-take priority). The type matching the launcher uses that exact launch configuration.
-Switching types retains the launcher's LLM/Comfy connection settings, count, and
-output directory. Prompts, workflows, canvas size and JPEG settings come from the
-selected type. Keep both configuration files together. Existing sessions always
-resume with their own saved settings, regardless of the selected new-session type.
+`characters.yaml`:
 
-For headless runs, choose the configuration explicitly:
-
-```sh
-uv run birthday-stickers --config config.dragon.yaml --headless
-uv run birthday-stickers --config config.yaml --headless
+```yaml
+characters:
+  - id: dragon
+    name: baby dragon
+    description: Grey dragon with small wings and a rounded belly.
+    imagePrefix: greyBabyDragon
+  - id: girl
+    name: princess
+    description: Baby girl in a cozy Viking outfit.
+    imagePrefix: A
 ```
 
-Both types share the session picker, pause/stop/resume, three pipeline
-workers, per-step timings, Markdown prompts, and `stiker-0000.jpg` naming.
-The session records its type; resuming uses its saved configuration. Both configs
-use the same output directory, so either launcher lists all incomplete sessions.
-For both types, `generation.width/height` set the Qwen canvas. With outpainting
-off, those are also the final JPEG dimensions. With outpainting on,
-`output.width/height` set the final size and must be at least the canvas size.
-The workflow's internal text generator, resolution selector and seed node are
-pruned in favor of the local prompt, configured canvas and durable scene seed.
+At least one of `description` or `imagePrefix` is required. Description only means
+text-to-image for that character; prefix only means reference identity; both means
+reference identity plus supplementary instructions. IDs start with a letter and
+contain letters, digits or underscores. Use `characters.dragon.name` in templates,
+so reordering the list does not break references. Names and descriptions are plain
+text, not recursively evaluated templates.
 
-### Live character references
+Reference filenames match the exact, case-sensitive prefix plus any number of
+digits, with case-insensitive `.jpg`: `greyBabyDragon0.jpg`, `greyBabyDragon1234.JPG`,
+`A23.jpg`. Supported non-JPG sources are converted automatically, preserving
+originals and resolving collisions. One version is independently chosen at random
+per referenced character for each new scene. Prefixes that match the same filename
+(e.g. `A` and `A1`) are rejected. Referenced entries get consecutive Qwen image
+slots in YAML order; text-only entries do not consume slots.
 
-New sessions no longer copy character images. They retain the absolute source
-folder (or explicit legacy image paths). Before each new duo scene, the program
-rescans `[A-Z][0-9]+.jpg`, including `A0.jpg`, `A100.jpg`, `B1000.jpg` and
-`C123456.jpg`; there is no digit limit. Set the two role labels in YAML, e.g.
-`protagonist: A` and `creature: C`. New files become eligible immediately for
-unplanned scenes, including after a resume. Already-planned scenes keep their
-selected paths and hashes: do not delete or overwrite those files until their
-images finish. You can change references freely between sessions.
+[Qwen Image 2.1](https://github.com/QwenLM/Qwen-Image-2.1) documents up to **10
+reference images**. That is the enforced reference limit, not a documented maximum
+number of text-described characters. More subjects can still reduce visual
+consistency. The graph adds only the required image nodes and skips all reference
+uploads for a text-only preset. Your ComfyUI installation must support the Qwen
+2.1 encoder and its dynamic image inputs.
 
-Older sessions retain their original snapshot paths for safe resumption; their
-existing backups are not deleted or automatically migrated. New sessions do not
-create these backups. Prompt/activity/workflow snapshots are still retained.
+`activities.yaml`:
 
+```yaml
+activities:
+  - id: baking
+    name: Baking
+    description: >-
+      {{ characters.dragon.name }} stirs with {{ props.spoons | random }}
+      while {{ characters.girl.name }} holds {{ props.pots | random }}.
+    requiredCharacters: [dragon, girl]
+    venueTags: [kitchen]
+    props:
+      spoons: [a big wooden spoon, a small wooden spoon]
+      pots: [a copper pot, a new clay pot]
+```
+
+`venues.yaml`:
+
+```yaml
+venues:
+  - id: longhouse_kitchen
+    name: Longhouse kitchen
+    description: A cozy Viking longhouse kitchen with carved timber walls.
+    tags: [kitchen, indoor]
+    props:
+      foreground: [a woven rug, a wooden bowl]
+      background: [a shelf of clay pots, a small window]
+```
+
+`props.yaml`:
+
+```yaml
+props:
+  skyProp: [small cloud, pale crescent moon]
+  palettes: [blush pink and lavender, powder blue and pale butter yellow]
+```
+
+`image_style.md`:
+
+```jinja
+A soft 2D storybook illustration in {{ props.palettes | random }}.
+Complete, edge-to-edge scenery with no frame or border.
+```
+
+`general_direction.md`:
+
+```jinja
+{{ activity.description }}
+Set the scene in {{ venue.description }}.
+Place {{ venue.props.foreground | random }} in the foreground.
+Place {{ venue.props.background | random }} in the background.
+A {{ props.skyProp | random }} is in the right corner, visible through a window.
+Keep both characters centered with complete bodies and clear shared interaction.
+```
+
+The assembled prompt order is **image style → character blocks → general
+direction**. Activity and venue descriptions are rendered first so the final
+direction can include them. Inside each activity/venue description, `props` refers
+to that entry's own props. In style/direction, `props` refers to `props.yaml`.
+`globalProps` always accesses global props; `venue.props` accesses the chosen
+venue's props; `activity.props` accesses the chosen activity's props in the final
+templates. Each `| random` invocation makes a choice. To reuse the same choice
+within one template, bind it once: `{% set spoon = props.spoons | random %}`.
+Prop values are literal data, not recursively rendered templates.
+
+Activities and venues need a name and description. An explicit stable `id` is
+recommended; otherwise one is derived from the name. Activities with missing
+`requiredCharacters` are excluded. `venueTags` matches any listed venue tag; omit
+it to allow all venues. Activities are sampled without replacement until all
+eligible entries have been used, then a new cycle begins. Venue and prop choices
+are random, independently of diffusion seeds. Templates use sandboxed Jinja with
+strict undefined-variable errors. Invalid IDs, missing variables, empty random
+lists, and activities with no compatible venues fail before LLM/Comfy work.
+
+The rendered brief, selections, seed, reference paths and hashes are saved before
+calling the LLM. A retry/resume reuses those choices. The Markdown scene artifact
+contains the assembled request plus the raw and refined responses. Sessions copy
+all six small preset files; they keep references in their live source directory.
+New reference files become available to unplanned scenes, including after resume.
+Already-planned scenes keep their selected reference files and hashes.
+
+Preview a locally assembled planning prompt without contacting model servers:
+
+```sh
+uv run birthday-stickers --config config.dragon.yaml --preview-prompt --preview-seed 42
+uv run birthday-stickers --config config.local.yaml --preset presets/my_story --preview-prompt
+```
+
+A preview using references requires matching local files. The same preview seed
+and unchanged inputs reproduce the choices. `--dry-run` additionally validates
+image files, graph bindings and dimensions; `--check` also checks the services.
 
 ### Optional outpainting
 
 The **Outpainting** switch beside **New session** controls new sessions.
-**Change type** is below those controls. A separate **Outpainting** switch beside
+**Change preset** is below those controls. A separate **Outpainting** switch beside
 **Resume selected** follows the highlighted saved-session row, including completed
 sessions. Change it and press **Resume selected** to apply the setting
 and resume. Switching rows discards an unapplied toggle change.
 `generation.outpainting: true/false` sets the initial switch value and controls
 headless runs. The duo default is on; the solo dragon default is off.
 
-With outpainting on, either Qwen flow saves an intermediate JPEG, then uses the
+With outpainting on, any scene preset saves an intermediate JPEG, then uses the
 original raw scene prompt with Flux. Padding centers the source in the configured
 final canvas. With it off, Qwen saves to `image_generation/results/` and Flux is
 not validated, uploaded to, or run. Existing sessions without this setting retain
 the old behavior: duo on, solo dragon off.
 
-Both flows inherit `workflows.flux` from `flows/common/flow.yaml`. For an older
-flat configuration, migrate to `flow: single_character_text` and remove its
+All presets inherit `workflows.flux` from `flows/common/flow.yaml`. For an older
+flat configuration, migrate to `flow: scene_preset` with a `preset` folder and remove its
 `prompts`/`workflows` sections to use these defaults. Keep custom model overrides
 and choose larger `output.width/height` before enabling the switch.
 The switch is saved in the session snapshot, along with the chosen dimensions.
@@ -479,23 +531,14 @@ never clear a saved job ID to rerender a job that may still be running.
 
 ### Flow module and prompt lookup
 
-All generation-specific assets live in the Python package `src/birthday_stickers/flows/`:
-
-| Folder | Contents |
-|---|---|
-| `multi_character_reference/` | Qwen Edit builder, LLM instructions, `flow.yaml`, `planning.md`, `refinement.md`, `guide.md`, `activities.json`, `qwen.json` |
-| `single_character_text/` | Text-to-image builder, LLM instructions, `flow.yaml`, its own prompts/guide/activity catalog and `qwen.json` |
-| `common/` | Shared `outpainting.md`, Flux workflow and `flow.yaml` bindings/settings |
-
-Select a flow in the launch YAML:
-
-```yaml
-flow: multi_character_reference
-# or: single_character_text
-```
+The shared Qwen builder and refinement assets live in
+`src/birthday_stickers/flows/scene_preset/`. Scene content lives in
+`src/birthday_stickers/presets/`; common outpainting/negative prompts and Flux
+bindings live in `flows/common/`. The three legacy flow folders are retained for
+existing configurations and session snapshots.
 
 Prompt filenames are searched **in the selected flow folder first, then in
-`flows/common/`**. For example, adding `single_character_text/outpainting.md`
+`flows/common/`**. For example, adding `scene_preset/outpainting.md`
 overrides the shared version only for that flow. A missing file in both locations
 produces an error naming both searched directories. The same resolver is used for
 default workflow assets. Activity catalogs are resolved like prompt files.
@@ -513,8 +556,8 @@ workflows:
 ```
 
 Absolute paths and paths containing directories resolve relative to the YAML
-(as before); bare prompt filenames use flow/common lookup. `prompts.activities:
-null` disables activity selection, and `prompts.outpainting: null` disables the
+(as before); bare prompt filenames use flow/common lookup. For legacy flows, `prompts.activities:
+null` disables activity selection; presets always select from their own catalog, and `prompts.outpainting: null` disables the
 extra outpainting instructions. Leave a section out to use the flow defaults.
 The repository's launch YAMLs contain connection, character, canvas and output
 settings; prompt text and workflow bindings live with the flows.
@@ -602,7 +645,7 @@ remains in metadata; new per-stage logs begin on the next run.
 ### Negative prompts
 
 `flows/common/negative.md` supplies `border, 3d, incomplete image, framed.` to
-both Qwen flows. A flow-local `negative.md` overrides the common file. You can
+the shared Qwen flow and legacy flows. A flow-local `negative.md` overrides the common file. You can
 also set `prompts.negative: ./my-prompts/negative.md`, or use `null` to retain only
 the exported workflow's negative prompt. Configured text is appended to existing
 Qwen negatives, preserving exclusions such as the solo flow's `realistic`.
@@ -700,23 +743,8 @@ flattened on white. If `A789.jpg` exists, a new number above the largest existin
 number for A is used, without overwriting it. Original files are retained. Conversion
 receipts prevent duplicates on subsequent runs; changing a source creates a new
 version, and deleting its converted JPG recreates it while the source remains.
-Only uppercase character labels followed by digits are imported. The standalone
+Preset imports use the configured prefix followed by digits; legacy flows retain A–Z labels. The standalone
 `convert_to_jpg.py` also handles name collisions without overwriting existing JPGs.
-
-### Girl reference + dragon text
-
-Choose **Girl reference + dragon text** on the first screen, or launch with
-`--config config.reference-dragon.yaml`. This flow uses
-`protagonist_reference_creature_text`: one randomly selected protagonist reference
-in Qwen's first socket, plus a baby dragon described entirely in text. No B images
-are needed or uploaded. It keeps the same three pipelines, CFG/resolution controls,
-session resume, negative prompts, and optional outpainting as Girl + dragon.
-
-Its planning/refinement prompts, 300 shared-activity ideas, guide, and single-reference
-Qwen workflow live in `src/birthday_stickers/flows/protagonist_reference_creature_text/`.
-Edit its planning prompt to change the dragon's appearance. The profile requires
-only `characters.directory` and `characters.protagonist` (or an explicit protagonist
-file path). Use `config.reference-dragon.local.yaml` for personal settings.
 
 ### Packaged JPG converter
 

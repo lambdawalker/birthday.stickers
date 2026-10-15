@@ -14,7 +14,7 @@ class NegativePromptTests(unittest.TestCase):
     def test_both_qwen_flows_receive_shared_negative_and_preserve_existing_text(self):
         root = Path(__file__).resolve().parents[1]
         for filename in ("config.yaml", "config.dragon.yaml"):
-            config = load_config(root / filename)
+            config = load_config(root / "tests/fixtures" / filename)
             graph = config.flow.build_graph(
                 config, load_workflow(config.qwen.path), "A scene", ("a.jpg", "b.jpg"), 1, "test"
             )

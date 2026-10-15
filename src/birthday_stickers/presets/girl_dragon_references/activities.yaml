@@ -1,0 +1,3958 @@
+activities:
+- id: dragon_rides-01
+  name: Dragon Rides 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    swims through a calm lagoon.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-491bc60b8b1d
+  props: {}
+- id: dragon_rides-02
+  name: Dragon Rides 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    flies above a fjord.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-03
+  name: Dragon Rides 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    runs through wildflowers.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-04
+  name: Dragon Rides 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    wades across a shallow stream.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-491bc60b8b1d
+  props: {}
+- id: dragon_rides-05
+  name: Dragon Rides 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    glides beneath a rainbow.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-06
+  name: Dragon Rides 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    trots around a village.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-07
+  name: Dragon Rides 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    bounds over soft moss.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-08
+  name: Dragon Rides 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    floats among lily pads.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-491bc60b8b1d
+  props: {}
+- id: dragon_rides-09
+  name: Dragon Rides 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    flies past a waterfall.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-10
+  name: Dragon Rides 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    walks along a sandy shore.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-11
+  name: Dragon Rides 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    climbs a gentle grassy hill.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-12
+  name: Dragon Rides 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    soars beside drifting petals.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-13
+  name: Dragon Rides 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    splashes through puddles.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-14
+  name: Dragon Rides 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    paddles around a tiny island.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-491bc60b8b1d
+  props: {}
+- id: dragon_rides-15
+  name: Dragon Rides 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    passes under a flower arch.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-16
+  name: Dragon Rides 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    glides above a longship.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-17
+  name: Dragon Rides 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    walks through a birch grove.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-18
+  name: Dragon Rides 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    follows a winding garden path.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-19
+  name: Dragon Rides 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    floats under a wooden bridge.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-491bc60b8b1d
+  props: {}
+- id: dragon_rides-20
+  name: Dragon Rides 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    flies toward a pastel sunrise.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-21
+  name: Dragon Rides 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    circles a cloud shaped like a heart.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-22
+  name: Dragon Rides 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    trots beside a stone wall.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: dragon_rides-23
+  name: Dragon Rides 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    follows glowing butterflies.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-24
+  name: Dragon Rides 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    glides over snowy treetops.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6759baec2153
+  props: {}
+- id: dragon_rides-25
+  name: Dragon Rides 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together while the dragon
+    returns to a cozy village.'
+  tags:
+  - dragon_rides
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1a7d9ddb70a1
+  props: {}
+- id: games-01
+  name: Games 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a wooden board game together.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-02
+  name: Games 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play hide-and-seek behind
+    a barrel.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-03
+  name: Games 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} roll a soft ball between them.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-04
+  name: Games 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a tower of wooden blocks.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-05
+  name: Games 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a matching game with
+    painted wooden tiles.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-06
+  name: Games 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play ring toss with braided
+    rope rings.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-07
+  name: Games 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a miniature wooden bowling
+    game.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-08
+  name: Games 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} balance a beanbag on the dragon''s
+    head.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-09
+  name: Games 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play peekaboo with a wool
+    blanket.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-10
+  name: Games 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} race toy longships down a
+    shallow channel.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-11
+  name: Games 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a floor puzzle with oversized
+    pieces.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-12
+  name: Games 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} hop between round stepping
+    cushions.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-13
+  name: Games 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a pretend treasure-trading
+    game.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-14
+  name: Games 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pull a ribbon through a wooden
+    maze.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-15
+  name: Games 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a shell guessing game.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-16
+  name: Games 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} stack smooth pebble towers.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-17
+  name: Games 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a cooperative marble-free
+    wooden labyrinth.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-18
+  name: Games 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make funny faces at each other.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-19
+  name: Games 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a gentle game of tug
+    with a cloth ribbon.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-20
+  name: Games 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} bounce a feather between their
+    noses.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-21
+  name: Games 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sort wooden animal figures
+    into pairs.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-22
+  name: Games 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a fishing game with wooden
+    fish.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-23
+  name: Games 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} take turns spinning a wooden
+    top.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-24
+  name: Games 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a pretend market with
+    baskets.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: games-25
+  name: Games 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a domino trail from
+    wooden tiles.'
+  tags:
+  - games
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1dac9ca297e2
+  - venue-9c1fdc6bb9b8
+  - venue-e07b3014cd46
+  props: {}
+- id: baking-01
+  name: Baking 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} mix batter for a birthday
+    cake.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-02
+  name: Baking 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate a cake with berries.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-03
+  name: Baking 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} cut star shapes from cookie
+    dough.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-04
+  name: Baking 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} knead a small loaf of bread.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-05
+  name: Baking 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} roll dough with a wooden rolling
+    pin.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-06
+  name: Baking 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} brush flour from each other''s
+    noses.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-07
+  name: Baking 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} press dragon footprints into
+    cookies.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-08
+  name: Baking 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} braid bread dough together.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-09
+  name: Baking 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} fill tiny berry tart shells.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-10
+  name: Baking 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} spread frosting on cupcakes.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-11
+  name: Baking 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} stack pancakes into a little
+    tower.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-12
+  name: Baking 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate gingerbread longships.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-13
+  name: Baking 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} whisk cream in a wooden bowl.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-14
+  name: Baking 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} arrange apple slices on a
+    tart.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-15
+  name: Baking 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} stamp knotwork patterns into
+    biscuits.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-16
+  name: Baking 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sprinkle seeds onto bread
+    rolls.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-17
+  name: Baking 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a cake shaped like a
+    tiny longship.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-18
+  name: Baking 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} stir honey into a cake mixture.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-19
+  name: Baking 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} fold pastry around berries.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-20
+  name: Baking 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} dust finished pastries with
+    powdered sugar.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-21
+  name: Baking 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} place cooled cookies into
+    a woven basket.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-22
+  name: Baking 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make cinnamon spiral buns.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-23
+  name: Baking 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate a cake with edible
+    flowers.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-24
+  name: Baking 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} shape dough into little dragon
+    buns.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: baking-25
+  name: Baking 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} present their finished birthday
+    cake together.'
+  tags:
+  - baking
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-33036e3eb9d2
+  - venue-4eee08b25a69
+  props: {}
+- id: snacks-01
+  name: Snacks 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share a plate of cookies.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-02
+  name: Snacks 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share a bowl of strawberries.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-03
+  name: Snacks 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sip warm berry tea from tiny
+    cups.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-04
+  name: Snacks 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} spread berry jam on toast.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-05
+  name: Snacks 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share slices of birthday cake.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-06
+  name: Snacks 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} peel an orange together.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-07
+  name: Snacks 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share a bowl of porridge with
+    berries.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-08
+  name: Snacks 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} arrange a picnic on a woven
+    blanket.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-09
+  name: Snacks 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make funny faces with fruit
+    slices on a plate.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-10
+  name: Snacks 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share apple wedges with honey.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-11
+  name: Snacks 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} assemble tiny open-faced sandwiches.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-12
+  name: Snacks 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pour berry juice into wooden
+    cups.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-13
+  name: Snacks 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share a stack of pancakes.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-14
+  name: Snacks 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} taste a spoonful of berry
+    pudding.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-15
+  name: Snacks 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} feed each other small pieces
+    of soft bread.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-16
+  name: Snacks 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} arrange a rainbow fruit platter.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-17
+  name: Snacks 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share a bowl of creamy soup.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-18
+  name: Snacks 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pack a picnic basket together.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-19
+  name: Snacks 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share a pear cut into little
+    pieces.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-20
+  name: Snacks 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} serve a pretend feast to wooden
+    toys.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-21
+  name: Snacks 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share yogurt topped with blueberries.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-22
+  name: Snacks 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make berry mustaches while
+    drinking smoothies.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-23
+  name: Snacks 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} set a small table with wooden
+    plates.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-24
+  name: Snacks 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share soft oat biscuits.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: snacks-25
+  name: Snacks 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} raise tiny cups in a birthday
+    toast.'
+  tags:
+  - snacks
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-a579b48c6863
+  - venue-293df5e0bf38
+  - venue-913c58a19099
+  props: {}
+- id: quiet_moments-01
+  name: Quiet Moments 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sleep curled up beside each
+    other.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-02
+  name: Quiet Moments 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} read a picture book together.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-03
+  name: Quiet Moments 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} snuggle under a knitted blanket.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-04
+  name: Quiet Moments 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch stars through a round
+    window.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-05
+  name: Quiet Moments 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} listen to a wind chime together.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-06
+  name: Quiet Moments 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} rest their heads on the same
+    cushion.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-07
+  name: Quiet Moments 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} look through a wordless picture
+    album.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-08
+  name: Quiet Moments 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch rain streak down a window.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-09
+  name: Quiet Moments 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share a gentle nose-to-nose
+    greeting.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-10
+  name: Quiet Moments 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch clouds from a patchwork
+    quilt.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-11
+  name: Quiet Moments 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} rock together in a wide wooden
+    cradle seat.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-12
+  name: Quiet Moments 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} listen to seashells held to
+    their ears.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-13
+  name: Quiet Moments 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch a lantern glow beside
+    their bed.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-14
+  name: Quiet Moments 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} stretch after a nap.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-15
+  name: Quiet Moments 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} fold a blanket together.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-16
+  name: Quiet Moments 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} tuck a toy dragon into a tiny
+    bed.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-17
+  name: Quiet Moments 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} share a sleepy yawn.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-18
+  name: Quiet Moments 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch snowflakes through a
+    window.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-19
+  name: Quiet Moments 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} rest beside a basket of books.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-20
+  name: Quiet Moments 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} touch foreheads in a quiet
+    cuddle.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-21
+  name: Quiet Moments 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch petals drift past a
+    window.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-22
+  name: Quiet Moments 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} lie on their backs and gaze
+    at the sky.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-23
+  name: Quiet Moments 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make shadow shapes in soft
+    lantern light.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-24
+  name: Quiet Moments 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} read beneath a blanket tent.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: quiet_moments-25
+  name: Quiet Moments 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} settle into a nest of soft
+    cushions.'
+  tags:
+  - quiet_moments
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-daceae2eb917
+  - venue-eb83f7a20cf8
+  - venue-9f898428bbdc
+  props: {}
+- id: crafts-01
+  name: Crafts 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} paint a small wooden shield
+    with flowers.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-02
+  name: Crafts 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} weave ribbons on a simple
+    loom.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-03
+  name: Crafts 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a paper longship.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-04
+  name: Crafts 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} string large wooden beads
+    onto a cord.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-05
+  name: Crafts 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate a wooden treasure
+    box.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-06
+  name: Crafts 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} paint smooth pebbles with
+    stars.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-07
+  name: Crafts 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} braid colorful wool strands.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-08
+  name: Crafts 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a crown from paper leaves.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-09
+  name: Crafts 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} stamp knotwork shapes onto
+    cloth.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-10
+  name: Crafts 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a dragon-shaped felt
+    puppet.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-11
+  name: Crafts 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate a tiny wooden wagon.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-12
+  name: Crafts 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} fold paper birds together.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-13
+  name: Crafts 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a garland of felt flowers.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-14
+  name: Crafts 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} paint a toy longship sail.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-15
+  name: Crafts 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} press flowers into a picture
+    frame.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-16
+  name: Crafts 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a mosaic from oversized
+    wooden shapes.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-17
+  name: Crafts 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate a lantern with translucent
+    paper.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-18
+  name: Crafts 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} weave a little grass mat.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-19
+  name: Crafts 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sculpt a tiny dragon from
+    soft clay.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-20
+  name: Crafts 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} paint a wooden spoon with
+    berry patterns.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-21
+  name: Crafts 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a mobile of felt clouds.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-22
+  name: Crafts 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} assemble a wreath from ribbons
+    and twigs.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-23
+  name: Crafts 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a friendship bracelet
+    with chunky beads.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-24
+  name: Crafts 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate a miniature longhouse
+    model.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: crafts-25
+  name: Crafts 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sew pretend stitches through
+    a lacing card.'
+  tags:
+  - crafts
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-8c3cad6a5817
+  - venue-1e51e23ffbce
+  props: {}
+- id: nature-01
+  name: Nature 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch butterflies land on
+    flowers.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-02
+  name: Nature 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} collect fallen autumn leaves.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-03
+  name: Nature 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} inspect a ladybug on a leaf.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-04
+  name: Nature 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} smell a patch of lavender.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-05
+  name: Nature 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch fireflies at dusk.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-06
+  name: Nature 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} look at a snail moving across
+    moss.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-07
+  name: Nature 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} collect interesting smooth
+    stones.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-08
+  name: Nature 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch a caterpillar on a twig.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-09
+  name: Nature 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} follow a trail of fallen petals.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-10
+  name: Nature 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} admire dew drops on a spiderweb.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-11
+  name: Nature 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} compare two differently shaped
+    leaves.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-12
+  name: Nature 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} listen to birds from a wooden
+    bench.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-13
+  name: Nature 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch a dragonfly hover over
+    reeds.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-14
+  name: Nature 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} catch drifting maple seeds
+    in their palms and paws.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-15
+  name: Nature 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} look for animal shapes in
+    tree roots.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-16
+  name: Nature 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch a fern unfurl.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-17
+  name: Nature 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} collect fallen pinecones in
+    a basket.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-18
+  name: Nature 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} admire mushrooms without picking
+    them.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-19
+  name: Nature 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch a rainbow after rain.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-20
+  name: Nature 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} look at reflections in a clear
+    puddle.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-21
+  name: Nature 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} collect acorns beneath an
+    oak.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-22
+  name: Nature 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch dandelion seeds float
+    away.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-23
+  name: Nature 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} peek at a nest from a respectful
+    distance.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-24
+  name: Nature 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch a leaf drift down a
+    stream.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: nature-25
+  name: Nature 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} admire frost patterns on branches.'
+  tags:
+  - nature
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-06768b6007f8
+  - venue-7203986fea8d
+  - venue-f35838d35830
+  props: {}
+- id: gardening-01
+  name: Gardening 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} plant sunflower seeds together.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-02
+  name: Gardening 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} water a row of flowers.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-03
+  name: Gardening 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} fill a small planter with
+    soil.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-04
+  name: Gardening 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pick ripe strawberries into
+    a basket.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-05
+  name: Gardening 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} harvest carrots from soft
+    earth.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-06
+  name: Gardening 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} tie ribbons around garden
+    stakes.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-07
+  name: Gardening 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} plant a tiny birch sapling.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-08
+  name: Gardening 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} spread straw around berry
+    plants.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-09
+  name: Gardening 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} gather herbs in a woven basket.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-10
+  name: Gardening 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} arrange flowers in a wooden
+    vase.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-11
+  name: Gardening 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a miniature moss garden.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-12
+  name: Gardening 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} carry a watering can together.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-13
+  name: Gardening 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sort seeds into small wooden
+    bowls.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-14
+  name: Gardening 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} plant bulbs in a round pot.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-15
+  name: Gardening 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pick peas from low vines.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-16
+  name: Gardening 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a flower bed shaped like
+    a dragon.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-17
+  name: Gardening 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} rake fallen leaves into a
+    small pile.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-18
+  name: Gardening 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a tiny twig fence around
+    seedlings.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-19
+  name: Gardening 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} gently clean mud off harvested
+    vegetables.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-20
+  name: Gardening 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} hang a small flower basket.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-21
+  name: Gardening 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pick blueberries from a low
+    bush.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-22
+  name: Gardening 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} lay smooth stones along a
+    garden path.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-23
+  name: Gardening 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} measure a growing sunflower
+    with a ribbon.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-24
+  name: Gardening 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch a seed sprout in a clear
+    jar.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: gardening-25
+  name: Gardening 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} place a painted wooden dragon
+    beside a flowerpot.'
+  tags:
+  - gardening
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-6caebd3b2bbb
+  - venue-2f040245fdca
+  - venue-de7a66cebde3
+  props: {}
+- id: music_and_celebration-01
+  name: Music And Celebration 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} dance together under ribbon
+    garlands.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-02
+  name: Music And Celebration 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} beat a gentle rhythm on a
+    small drum.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-03
+  name: Music And Celebration 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} shake wooden rattles in time.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-04
+  name: Music And Celebration 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a toy lyre together.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-05
+  name: Music And Celebration 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ring tiny handbells together.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-06
+  name: Music And Celebration 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} blow soap bubbles during a
+    birthday celebration.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-07
+  name: Music And Celebration 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} hang a birthday flower garland.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-08
+  name: Music And Celebration 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} unwrap a small cloth-wrapped
+    gift.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-09
+  name: Music And Celebration 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} clap along to their own rhythm.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-10
+  name: Music And Celebration 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} twirl with matching ribbons.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-11
+  name: Music And Celebration 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} march together in a two-person
+    parade.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-12
+  name: Music And Celebration 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} practice a cheerful bow after
+    a performance.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-13
+  name: Music And Celebration 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} wave little cloth pennants.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-14
+  name: Music And Celebration 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} place flowers around a birthday
+    cake.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-15
+  name: Music And Celebration 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play a wooden xylophone together.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-16
+  name: Music And Celebration 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a rhythm with wooden
+    spoons.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-17
+  name: Music And Celebration 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} wear flower wreaths at a midsummer
+    picnic.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-18
+  name: Music And Celebration 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate a festival basket.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-19
+  name: Music And Celebration 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} carry a miniature birthday
+    banner without lettering.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-20
+  name: Music And Celebration 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pop floating soap bubbles
+    with gentle touches.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-21
+  name: Music And Celebration 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} exchange handmade birthday
+    gifts.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-22
+  name: Music And Celebration 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} dance around a small flower
+    pole.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-23
+  name: Music And Celebration 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play peekaboo behind festival
+    ribbons.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-24
+  name: Music And Celebration 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} release floating petals into
+    a shallow bowl.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: music_and_celebration-25
+  name: Music And Celebration 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pose proudly beside their
+    homemade decorations.'
+  tags:
+  - music_and_celebration
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-3d72c4a28428
+  - venue-53ee818952a4
+  - venue-83a10e6bc7d4
+  props: {}
+- id: learning_and_pretend-01
+  name: Learning And Pretend 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} count large wooden stars together.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-02
+  name: Learning And Pretend 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sort colorful shapes into
+    wooden trays.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-03
+  name: Learning And Pretend 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} trace a spiral in a sand tray.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-04
+  name: Learning And Pretend 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} study a picture map of imaginary
+    islands.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-05
+  name: Learning And Pretend 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pretend to steer a longship
+    using a toy wheel.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-06
+  name: Learning And Pretend 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play shopkeeper with wooden
+    fruit.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-07
+  name: Learning And Pretend 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pretend to be explorers with
+    a rolled map.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-08
+  name: Learning And Pretend 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} measure the dragon''s tail
+    with a soft ribbon.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-09
+  name: Learning And Pretend 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} compare the size of their
+    footprints.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-10
+  name: Learning And Pretend 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} look through a toy telescope
+    together.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-11
+  name: Learning And Pretend 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sort feathers by size.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-12
+  name: Learning And Pretend 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a model bridge from
+    wooden blocks.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-13
+  name: Learning And Pretend 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} practice balancing large shapes
+    on a scale.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-14
+  name: Learning And Pretend 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} match toy animals to pictures.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-15
+  name: Learning And Pretend 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pretend to deliver parcels
+    in a little wagon.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-16
+  name: Learning And Pretend 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} play healer by wrapping a
+    toy''s paw in cloth.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-17
+  name: Learning And Pretend 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pretend to cook soup in a
+    toy cauldron.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-18
+  name: Learning And Pretend 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} look at colorful stones through
+    a magnifying glass.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-19
+  name: Learning And Pretend 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sort shells by shape.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-20
+  name: Learning And Pretend 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a tiny village from
+    blocks.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-21
+  name: Learning And Pretend 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pretend to be lighthouse keepers
+    with a lantern.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-22
+  name: Learning And Pretend 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} practice tying a large simple
+    ribbon bow.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-23
+  name: Learning And Pretend 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} arrange wooden shapes into
+    a dragon picture.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-24
+  name: Learning And Pretend 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pretend to run a tiny library
+    of picture books.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: learning_and_pretend-25
+  name: Learning And Pretend 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} compare their shadows on a
+    sunlit wall.'
+  tags:
+  - learning_and_pretend
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-543636d60a45
+  - venue-7451f83a6662
+  - venue-c0c411667d67
+  props: {}
+- id: water_and_snow-01
+  name: Water And Snow 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} splash together in shallow
+    water.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-02
+  name: Water And Snow 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} float a tiny wooden longship.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-03
+  name: Water And Snow 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a sandcastle shaped
+    like a longhouse.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-04
+  name: Water And Snow 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} draw spirals in damp sand.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-05
+  name: Water And Snow 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} collect shells along the shoreline.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-06
+  name: Water And Snow 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a moat around a sandcastle.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-07
+  name: Water And Snow 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch ripples spread from
+    a dropped pebble.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-08
+  name: Water And Snow 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} sit on a wooden dock with
+    feet and paws above the water.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-09
+  name: Water And Snow 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} float flower petals in a shallow
+    pool.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-10
+  name: Water And Snow 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} scoop water into a little
+    wooden bucket.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-11
+  name: Water And Snow 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a snow dragon together.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-12
+  name: Water And Snow 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make snow angels side by side.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-13
+  name: Water And Snow 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} catch snowflakes on their
+    noses.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-14
+  name: Water And Snow 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pull a toy-filled sled across
+    level snow.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-15
+  name: Water And Snow 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} decorate a snow lantern with
+    leaves.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-16
+  name: Water And Snow 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} press handprints and pawprints
+    into snow.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-17
+  name: Water And Snow 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a tiny snow longhouse.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-18
+  name: Water And Snow 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} roll a snowball together.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-19
+  name: Water And Snow 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} brush snow off a garden bench.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-20
+  name: Water And Snow 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch icicles sparkle from
+    a safe distance.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-21
+  name: Water And Snow 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} make a trail of footprints
+    through fresh snow.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-22
+  name: Water And Snow 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} build a snow bridge for a
+    toy longship.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-09689a341051
+  props: {}
+- id: water_and_snow-23
+  name: Water And Snow 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pat a sand dragon into shape.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-24
+  name: Water And Snow 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} wash smooth pebbles in a shallow
+    basin.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: water_and_snow-25
+  name: Water And Snow 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch sea foam curl around
+    a shore rock.'
+  tags:
+  - water_and_snow
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-7446a259e32a
+  props: {}
+- id: gentle_adventures-01
+  name: Gentle Adventures 01
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} run side by side through a
+    meadow.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-02
+  name: Gentle Adventures 02
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} follow a picture treasure
+    map.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-03
+  name: Gentle Adventures 03
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} carry a tiny treasure chest
+    together.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-04
+  name: Gentle Adventures 04
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} cross a low wooden footbridge.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-05
+  name: Gentle Adventures 05
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} peek through a flower-covered
+    doorway.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-06
+  name: Gentle Adventures 06
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} explore a miniature longship
+    on dry land.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-07
+  name: Gentle Adventures 07
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} push a toy wagon along a village
+    path.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-08
+  name: Gentle Adventures 08
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} climb a gentle slope to a
+    lookout.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-09
+  name: Gentle Adventures 09
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} follow a line of glowing pebbles.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-10
+  name: Gentle Adventures 10
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} discover a cozy hollow tree
+    doorway.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-11
+  name: Gentle Adventures 11
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} walk beneath an arch of birch
+    branches.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-12
+  name: Gentle Adventures 12
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} carry a picnic basket toward
+    a waterfall.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-13
+  name: Gentle Adventures 13
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} peek around a carved wooden
+    dragon post.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-14
+  name: Gentle Adventures 14
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} find a shiny stone beside
+    a stream.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-15
+  name: Gentle Adventures 15
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} walk through a tunnel of flowering
+    vines.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-16
+  name: Gentle Adventures 16
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} ride together in a stationary
+    pretend longship.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-17
+  name: Gentle Adventures 17
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} pull a wagon full of soft
+    toys.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-18
+  name: Gentle Adventures 18
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} explore a shallow open grotto
+    filled with flowers.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-19
+  name: Gentle Adventures 19
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} watch pastel clouds from a
+    grassy hill.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-20
+  name: Gentle Adventures 20
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} find a little wooden chest
+    filled with ribbons.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-21
+  name: Gentle Adventures 21
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} walk across broad stepping
+    stones in a garden.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-22
+  name: Gentle Adventures 22
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} look through a round opening
+    in a stone wall.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-23
+  name: Gentle Adventures 23
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} follow a trail of tiny wooden
+    stars.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-24
+  name: Gentle Adventures 24
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} open a cottage gate together.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}
+- id: gentle_adventures-25
+  name: Gentle Adventures 25
+  description: '{{ characters.girl.name }} and {{ characters.dragon.name }} return home carrying their
+    collected flowers.'
+  tags:
+  - gentle_adventures
+  requiredCharacters:
+  - girl
+  - dragon
+  venueTags:
+  - venue-1e7e37bb4c25
+  - venue-151b26102921
+  - venue-cff85d8c743f
+  props: {}

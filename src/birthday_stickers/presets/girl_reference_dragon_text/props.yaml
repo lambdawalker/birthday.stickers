@@ -1,0 +1,16 @@
+props:
+  palettes:
+  - blush pink, lavender and powder blue
+  - powder blue, pale butter yellow and peach
+  - lavender, blush pink and pale butter yellow
+  - peach, blush pink and powder blue
+  skyProp:
+  - soft white cloud
+  - faint pastel rainbow
+  - warm patch of sunlight
+  moods:
+  - playful
+  - curious
+  - cozy
+  - quietly triumphant
+  - affectionate

@@ -30,11 +30,12 @@ def write_json(path: Path, value: dict) -> None:
 
 @file_retry
 def validate_local(config: Config) -> dict:
-    activities = load_activities(config.activities) if config.activities else None
+    activities = (
+        load_activities(config.activities) if config.activities and not config.preset else None
+    )
     pools = reference_pools(config)
     for path in (
-        *pools[0],
-        *pools[1],
+        *(p for pool in pools for p in pool),
         config.planning,
         config.refinement,
         config.guide,
@@ -43,7 +44,7 @@ def validate_local(config: Config) -> dict:
     ):
         if not path.is_file():
             raise ValueError(f"Required file is missing: {path}")
-    for path in (*pools[0], *pools[1]):
+    for path in (p for pool in pools for p in pool):
         decode_image(path)
     planning = config.planning.read_text(encoding="utf-8").strip()
     guide = config.guide.read_text(encoding="utf-8").strip()
@@ -53,7 +54,14 @@ def validate_local(config: Config) -> dict:
     compose_refinement(refinement, guide, "validation scene")
     qwen = load_workflow(config.qwen.path)
     graph = config.flow.build_graph(
-        config, qwen, "validation", ("protagonist.png", "creature.png"), 0, "validation"
+        config,
+        qwen,
+        "validation",
+        tuple(f"ref{i}.jpg" for i in range(len(config.reference_roles)))
+        if config.preset
+        else ("protagonist.png", "creature.png"),
+        0,
+        "validation",
     )
     graphs = [graph]
     flux = None
@@ -125,10 +133,18 @@ def reserve_sticker(root: Path) -> tuple[int, str, Path]:
 
 @file_retry
 def write_prompts(
-    path: Path, name: str, raw: str, refined: str | None = None, activity: dict | None = None
+    path: Path,
+    name: str,
+    raw: str,
+    refined: str | None = None,
+    activity: dict | None = None,
+    brief: str | None = None,
 ) -> None:
     # Text fences keep literal reference tags visible in Markdown renderers.
-    longest = max((len(match[0]) for match in re.finditer(r"`+", raw + (refined or ""))), default=0)
+    longest = max(
+        (len(match[0]) for match in re.finditer(r"`+", raw + (refined or "") + (brief or ""))),
+        default=0,
+    )
     fence = "`" * max(3, longest + 1)
     text = f"# {name}\n\n## Raw scene\n\n{fence}text\n{raw}\n{fence}\n"
     if activity:
@@ -139,6 +155,8 @@ def write_prompts(
         )
     if refined is not None:
         text += f"\n## Refined scene\n\n{fence}text\n{refined}\n{fence}\n"
+    if brief:
+        text += f"\n## Assembled planning request\n\n{fence}text\n{brief}\n{fence}\n"
     temporary = path.with_suffix(".md.tmp")
     temporary.write_text(text, encoding="utf-8")
     os.replace(temporary, path)

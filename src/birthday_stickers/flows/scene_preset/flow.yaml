@@ -1,0 +1,15 @@
+prompts:
+  planning: planning.md
+  guide: guide.md
+  refinement: refinement.md
+  activities: null
+  outpainting: outpainting.md
+workflows:
+  qwen:
+    path: qwen.json
+    nodes:
+      encoder: 459:474
+      latent: 459:456
+      sampler: 459:458
+      output: '461'
+    overrides: {}

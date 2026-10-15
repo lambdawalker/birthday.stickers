@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 import yaml
 from PIL import ImageColor
 
-from .flows import canonical_name, expand_config, get_flow, legacy_asset
+from .flows import Flow, canonical_name, expand_config, get_flow, legacy_asset
 from .retry import file_retry
 
 
@@ -90,12 +90,20 @@ class Config:
     negative: Path | None = None
     comfy_outpainting: ComfyConfig | None = None
 
+    preset: object | None = None
+
+    @property
+    def reference_roles(self):
+        return self.flow.reference_roles
+
     @property
     def outpainting_comfy(self) -> ComfyConfig:
         return self.comfy_outpainting or self.comfy
 
     @property
     def flow(self):
+        if self.preset is not None:
+            return Flow("scene_preset", self.preset.reference_roles)
         return get_flow(self.generation.type)
 
     @property
@@ -175,8 +183,22 @@ def load_config(path: Path) -> Config:
         raise ValueError(f"Invalid YAML in {path}: {error}") from error
     if not isinstance(data, dict):
         raise ValueError("Config must be a YAML mapping")
+    preset = None
+    if data.get("preset"):
+        from .presets import ROOT, load_preset
+
+        value = data["preset"]
+        candidate = local_path(path.parent, value)
+        if not candidate.is_dir() and isinstance(value, str) and Path(value).name == value:
+            candidate = ROOT / value
+        preset = load_preset(candidate)
+        if "flow" not in data and "workflows" not in data:
+            data["flow"] = "scene_preset"
+        if data.get("flow", "scene_preset") != "scene_preset":
+            raise ValueError("preset requires flow: scene_preset")
     data = expand_config(data, path.parent)
     expected = {
+        "preset",
         "llm",
         "comfy",
         "generation",
@@ -206,6 +228,10 @@ def load_config(path: Path) -> Config:
     output = section(data, "output", OutputConfig)
     generation.type = canonical_name(generation.type)
     reference_roles = get_flow(generation.type).reference_roles
+    if preset and generation.type != "scene_preset":
+        raise ValueError("preset requires generation.type: scene_preset")
+    if generation.type == "scene_preset" and preset is None:
+        raise ValueError("scene_preset requires a preset folder")
     dragon = not reference_roles
     if "outpainting" not in data.get("generation", {}):
         generation.outpainting = not dragon  # Preserve older session behavior.
@@ -266,7 +292,14 @@ def load_config(path: Path) -> Config:
     base = path.parent
     output.directory = local_path(base, output.directory)
     paths = {"flux": None}
-    characters = data.get("characters")
+    characters = data.get("characters", {})
+    if preset is not None:
+        if not isinstance(characters, dict) or set(characters) - {"directory"}:
+            raise ValueError("Preset characters configuration accepts only directory")
+        if preset.reference_roles and "directory" not in characters:
+            raise ValueError("Referenced characters require characters.directory")
+        if "directory" in characters:
+            paths["character_directory"] = local_path(base, characters["directory"])
     paths.update(protagonist="", creature="")
     if dragon:
         paths.update(flux=None)
@@ -337,5 +370,12 @@ def load_config(path: Path) -> Config:
             raise ValueError(f"workflows.{key}.overrides must be a mapping")
         paths[key] = item
     return Config(
-        path, llm, comfy, generation, output, comfy_outpainting=comfy_outpainting, **paths
+        path,
+        llm,
+        comfy,
+        generation,
+        output,
+        comfy_outpainting=comfy_outpainting,
+        preset=preset,
+        **paths,
     )

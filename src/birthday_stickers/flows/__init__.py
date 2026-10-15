@@ -9,6 +9,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent
 ALIASES = {"viking_duo": "multi_character_reference", "baby_dragon": "single_character_text"}
 NAMES = (
+    "scene_preset",
     "multi_character_reference",
     "single_character_text",
     "protagonist_reference_creature_text",
@@ -75,13 +76,16 @@ def legacy_asset(base: Path, value) -> Path:
 @dataclass(frozen=True)
 class Flow:
     name: str
+    roles: tuple[str, ...] | None = None
 
     @property
     def uses_references(self) -> bool:
-        return self.module.USES_REFERENCES
+        return bool(self.roles) if self.roles is not None else self.module.USES_REFERENCES
 
     @property
     def reference_roles(self) -> tuple[str, ...]:
+        if self.roles is not None:
+            return self.roles
         return getattr(
             self.module,
             "REFERENCE_ROLES",

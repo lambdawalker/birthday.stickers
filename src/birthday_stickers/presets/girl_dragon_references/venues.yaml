@@ -1,0 +1,463 @@
+venues:
+- id: venue-491bc60b8b1d
+  name: a calm pastel lagoon beside a Viking village
+  description: a calm pastel lagoon beside a Viking village
+  tags:
+  - venue-491bc60b8b1d
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-6759baec2153
+  name: the dreamy sky above a flower-covered fjord
+  description: the dreamy sky above a flower-covered fjord
+  tags:
+  - venue-6759baec2153
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-1a7d9ddb70a1
+  name: a gentle flower-lined trail beside a Viking village
+  description: a gentle flower-lined trail beside a Viking village
+  tags:
+  - venue-1a7d9ddb70a1
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-1dac9ca297e2
+  name: a cozy carved-wood longhouse
+  description: a cozy carved-wood longhouse
+  tags:
+  - venue-1dac9ca297e2
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-9c1fdc6bb9b8
+  name: a Viking village courtyard
+  description: a Viking village courtyard
+  tags:
+  - venue-9c1fdc6bb9b8
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-e07b3014cd46
+  name: a sheltered garden
+  description: a sheltered garden
+  tags:
+  - venue-e07b3014cd46
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-33036e3eb9d2
+  name: a warm Viking longhouse kitchen
+  description: a warm Viking longhouse kitchen
+  tags:
+  - venue-33036e3eb9d2
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-4eee08b25a69
+  name: a sheltered village bakery
+  description: a sheltered village bakery
+  tags:
+  - venue-4eee08b25a69
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-a579b48c6863
+  name: a flower-filled fjord picnic spot
+  description: a flower-filled fjord picnic spot
+  tags:
+  - venue-a579b48c6863
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-293df5e0bf38
+  name: a longhouse dining nook
+  description: a longhouse dining nook
+  tags:
+  - venue-293df5e0bf38
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-913c58a19099
+  name: a village orchard
+  description: a village orchard
+  tags:
+  - venue-913c58a19099
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-daceae2eb917
+  name: a cozy longhouse bedroom
+  description: a cozy longhouse bedroom
+  tags:
+  - venue-daceae2eb917
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-eb83f7a20cf8
+  name: a sheltered flower meadow
+  description: a sheltered flower meadow
+  tags:
+  - venue-eb83f7a20cf8
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-9f898428bbdc
+  name: a warm reading nook
+  description: a warm reading nook
+  tags:
+  - venue-9f898428bbdc
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-8c3cad6a5817
+  name: a Viking longhouse craft table
+  description: a Viking longhouse craft table
+  tags:
+  - venue-8c3cad6a5817
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-1e51e23ffbce
+  name: a village workshop courtyard
+  description: a village workshop courtyard
+  tags:
+  - venue-1e51e23ffbce
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-06768b6007f8
+  name: a birch grove beside a Viking village
+  description: a birch grove beside a Viking village
+  tags:
+  - venue-06768b6007f8
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-7203986fea8d
+  name: a fjord meadow
+  description: a fjord meadow
+  tags:
+  - venue-7203986fea8d
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-f35838d35830
+  name: a sheltered woodland garden
+  description: a sheltered woodland garden
+  tags:
+  - venue-f35838d35830
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-6caebd3b2bbb
+  name: a Viking cottage garden
+  description: a Viking cottage garden
+  tags:
+  - venue-6caebd3b2bbb
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-2f040245fdca
+  name: a village greenhouse made of wood
+  description: a village greenhouse made of wood
+  tags:
+  - venue-2f040245fdca
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-de7a66cebde3
+  name: a sheltered flower courtyard
+  description: a sheltered flower courtyard
+  tags:
+  - venue-de7a66cebde3
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-3d72c4a28428
+  name: a Viking village festival courtyard
+  description: a Viking village festival courtyard
+  tags:
+  - venue-3d72c4a28428
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-53ee818952a4
+  name: a decorated longhouse hall
+  description: a decorated longhouse hall
+  tags:
+  - venue-53ee818952a4
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-83a10e6bc7d4
+  name: a flower-lined village green
+  description: a flower-lined village green
+  tags:
+  - venue-83a10e6bc7d4
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-543636d60a45
+  name: a longhouse playroom
+  description: a longhouse playroom
+  tags:
+  - venue-543636d60a45
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-7451f83a6662
+  name: a Viking village learning nook
+  description: a Viking village learning nook
+  tags:
+  - venue-7451f83a6662
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-c0c411667d67
+  name: a sheltered courtyard
+  description: a sheltered courtyard
+  tags:
+  - venue-c0c411667d67
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-7446a259e32a
+  name: a calm shallow fjord shore beside a Viking village
+  description: a calm shallow fjord shore beside a Viking village
+  tags:
+  - venue-7446a259e32a
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-09689a341051
+  name: a snowy Viking cottage garden
+  description: a snowy Viking cottage garden
+  tags:
+  - venue-09689a341051
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-1e7e37bb4c25
+  name: a flower-lined Viking village
+  description: a flower-lined Viking village
+  tags:
+  - venue-1e7e37bb4c25
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-151b26102921
+  name: a wooded fjord path
+  description: a wooded fjord path
+  tags:
+  - venue-151b26102921
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-cff85d8c743f
+  name: a magical meadow
+  description: a magical meadow
+  tags:
+  - venue-cff85d8c743f
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details

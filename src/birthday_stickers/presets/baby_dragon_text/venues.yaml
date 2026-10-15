@@ -1,0 +1,43 @@
+venues:
+- id: venue-788e37f0d78b
+  name: a cozy Viking village beside a pastel fjord
+  description: a cozy Viking village beside a pastel fjord
+  tags:
+  - venue-788e37f0d78b
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-0a79bd85ab2f
+  name: a sheltered garden beside a timber longhouse
+  description: a sheltered garden beside a timber longhouse
+  tags:
+  - venue-0a79bd85ab2f
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details
+- id: venue-a757f0f5f134
+  name: a peaceful Nordic storybook landscape
+  description: a peaceful Nordic storybook landscape
+  tags:
+  - venue-a757f0f5f134
+  props:
+    foreground:
+    - a few meadow flowers
+    - a small carved wooden ornament
+    - a few smooth stones
+    background:
+    - distant birch trees
+    - soft pastel scenery fading into the distance
+    - subtle Nordic decorative details

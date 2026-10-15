@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class ConfigTests(unittest.TestCase):
     def load_modified(self, mutate):
         data = expand_config(
-            yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8")), ROOT
+            yaml.safe_load((ROOT / "tests/fixtures/config.yaml").read_text(encoding="utf-8")), ROOT
         )
         mutate(data)
         with tempfile.TemporaryDirectory() as temp:
@@ -23,7 +23,7 @@ class ConfigTests(unittest.TestCase):
             return load_config(path)
 
     def test_paths_are_relative_to_yaml(self):
-        config = load_config(ROOT / "config.yaml")
+        config = load_config(ROOT / "tests/fixtures/config.yaml")
         self.assertEqual(config.character_directory, ROOT / "assets/characters")
         self.assertEqual(config.protagonist, "A")
         self.assertEqual(config.creature, "B")
@@ -51,7 +51,7 @@ class ConfigTests(unittest.TestCase):
                 self.load_modified(mutate)
 
     def test_loading_does_not_mutate_yaml_content(self):
-        path = ROOT / "config.yaml"
+        path = ROOT / "tests/fixtures/config.yaml"
         original = copy.deepcopy(yaml.safe_load(path.read_text(encoding="utf-8")))
         load_config(path)
         self.assertEqual(yaml.safe_load(path.read_text(encoding="utf-8")), original)
