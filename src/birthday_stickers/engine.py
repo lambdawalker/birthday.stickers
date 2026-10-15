@@ -3,8 +3,8 @@
 import hashlib
 import logging
 import secrets
-import shutil
 import time
+import uuid
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import asdict
@@ -18,6 +18,7 @@ from .artifacts import ensure_layout, result_path, stage_log
 from .comfy import ComfyClient
 from .config import Config, auth_headers
 from .control import RunControl, RunHalted
+from .http import RejectedSubmission
 from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
 from .llm import LLMClient, compose_refinement
 from .pipeline import (
@@ -30,6 +31,7 @@ from .pipeline import (
     write_prompts,
 )
 from .references import reference_pools
+from .retry import copyfile, read_bytes, read_text, retry_scope
 from .scheduling import gpu_policy
 from .workflows import build_flux
 
@@ -87,7 +89,7 @@ class Pipeline:
                 {
                     "role": role,
                     "path": str(path),
-                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                    "sha256": hashlib.sha256(read_bytes(path)).hexdigest(),
                 }
                 for role, path in selected
             ],
@@ -183,7 +185,7 @@ class Scene:
     def references(self):
         paths = tuple(Path(ref["path"]) for ref in self.meta["references"])
         for path, ref in zip(paths, self.meta["references"], strict=True):
-            if hashlib.sha256(path.read_bytes()).hexdigest() != ref["sha256"]:
+            if hashlib.sha256(read_bytes(path)).hexdigest() != ref["sha256"]:
                 raise ValueError(f"Selected reference changed since this scene started: {path}")
         return paths
 
@@ -245,7 +247,7 @@ class Scene:
     def submit(self, kind, graph):
         key = f"{kind}_prompt_id"
         pending = f"{kind}_submission_pending"
-        if self.meta.get(pending):
+        if self.meta.get(pending) and not self.meta.get(f"{kind}_request_id"):
             raise ValueError(
                 f"{kind} submission outcome is unknown. Inspect ComfyUI history and add {key} "
                 f"to this scene's metadata, or remove {pending} only after confirming "
@@ -253,9 +255,21 @@ class Scene:
             )
         write_json(self.root / "metadata" / f"{self.name}.{kind}.json", graph)
         self.pipeline.check()
+        client = self.client(kind)
+        recover = self.meta.get(pending, False)
+        self.meta.setdefault(f"{kind}_request_id", uuid.uuid4().hex)
         self.meta[pending] = True
         self.save()
-        self.meta[key] = self.client(kind).submit(graph)
+        try:
+            self.meta[key] = client.submit(graph, self.meta[f"{kind}_request_id"], recover=recover)
+        except BaseException as error:
+            if isinstance(error, RejectedSubmission) or getattr(
+                error, "submission_not_sent", False
+            ):
+                self.meta.pop(pending, None)
+                self.meta.pop(f"{kind}_request_id", None)
+                self.save()
+            raise
         self.meta.pop(pending)
         self.save()
 
@@ -285,7 +299,7 @@ class Scene:
                 with self.step("upload_references", "Upload character references"):
                     for role, path in zip(("protagonist", "creature"), references, strict=True):
                         self.pipeline.check()
-                        key = (path, hashlib.sha256(path.read_bytes()).hexdigest())
+                        key = (path, hashlib.sha256(read_bytes(path)).hexdigest())
                         if key not in self.pipeline.uploaded:
                             self.pipeline.uploaded[key] = comfy.upload(path, role)
             with self.step("rendering_qwen", "Qwen render and download"):
@@ -344,7 +358,7 @@ class Scene:
         self.meta["padding"] = asdict(padding)
         if source.size == padding.target:
             with self.step("save_final", "Save final JPEG (outpainting not needed)"):
-                shutil.copyfile(self.intermediate, self.final)
+                copyfile(self.intermediate, self.final)
                 self.meta["outpaint_skipped"] = "Source already matches target size"
         else:
             if "flux_prompt_id" not in self.meta:
@@ -363,7 +377,7 @@ class Scene:
                         config.output.feathering,
                         self.meta["flux_seed"],
                         self.name + "-flux",
-                        negative=config.negative.read_text(encoding="utf-8").strip()
+                        negative=read_text(config.negative, encoding="utf-8").strip()
                         if config.negative
                         else None,
                     )
@@ -448,6 +462,19 @@ def execute(
         for path, meta in records:
             if meta.get("outpainting_saved") or meta.get("flux_drained"):
                 continue
+            if (
+                meta.get("flux_submission_pending")
+                and not meta.get("flux_prompt_id")
+                and meta.get("flux_request_id")
+            ):
+                client = ComfyClient(config.outpainting_comfy, "outpainting")
+                if meta.get(
+                    "flux_server", client.config.base_url.rstrip("/")
+                ) != client.config.base_url.rstrip("/"):
+                    raise ValueError("Restore the original outpainting endpoint to recover its job")
+                meta["flux_prompt_id"] = client.recover_submission(meta["flux_request_id"])
+                meta.pop("flux_submission_pending", None)
+                write_json(path, meta)
             if meta.get("flux_submission_pending") and not meta.get("flux_prompt_id"):
                 raise ValueError(
                     "An earlier outpainting submission has an unknown outcome. "
@@ -588,7 +615,11 @@ def execute(
         try:
             launch.wait()
             pipeline.check()
-            function()
+            with retry_scope(
+                pipeline.check,
+                {produce: "prompts", consume: "images", extend: "outpainting"}[function],
+            ):
+                function()
         except BaseException as error:
             errors.put(error)
             pipeline.abort.set()

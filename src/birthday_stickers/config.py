@@ -10,6 +10,7 @@ import yaml
 from PIL import ImageColor
 
 from .flows import canonical_name, expand_config, get_flow, legacy_asset
+from .retry import file_retry
 
 
 @dataclass
@@ -165,6 +166,7 @@ def auth_headers(environment_name: str | None) -> dict[str, str]:
     return {"Authorization": f"Bearer {value}"}
 
 
+@file_retry
 def load_config(path: Path) -> Config:
     path = path.expanduser().resolve()
     try:

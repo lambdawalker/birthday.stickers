@@ -15,6 +15,7 @@ import yaml
 from .config import Config, integer, load_config
 from .control import RunControl, RunHalted
 from .pipeline import prepare_records, run, validate_local, write_json
+from .retry import copyfile, read_text, replace, retry_scope, write_text
 
 
 def service_urls(config: Config) -> dict[str, str]:
@@ -86,7 +87,7 @@ class SessionStore:
         return directory
 
     def read(self, name: str) -> dict:
-        data = json.loads((self.directory(name) / "session.json").read_text(encoding="utf-8"))
+        data = json.loads(read_text(self.directory(name) / "session.json", encoding="utf-8"))
         if not isinstance(data, dict) or data.get("version") != 1 or data.get("name") != name:
             raise ValueError(f"Invalid session manifest: {name}")
         integer(data.get("count"), "session count", 1)
@@ -135,14 +136,14 @@ class SessionStore:
             ):
                 if path is not None:
                     destination = snapshots / f"{key}{path.suffix}"
-                    shutil.copyfile(path, destination)
+                    copyfile(path, destination)
                     prompts[key] = str(destination.relative_to(directory))
             workflows = {}
             for key, workflow in (("qwen", config.qwen), ("flux", config.flux)):
                 if workflow is None or (key == "flux" and not config.generation.outpainting):
                     continue
                 destination = snapshots / f"{key}.json"
-                shutil.copyfile(workflow.path, destination)
+                copyfile(workflow.path, destination)
                 workflows[key] = {
                     **asdict(workflow),
                     "path": str(destination.relative_to(directory)),
@@ -162,7 +163,7 @@ class SessionStore:
             legacy_outpainting = output.pop("outpainting_prompt", "")
             if "outpainting" not in prompts and legacy_outpainting:
                 destination = snapshots / "outpainting.md"
-                destination.write_text(legacy_outpainting, encoding="utf-8")
+                write_text(destination, legacy_outpainting, encoding="utf-8")
                 prompts["outpainting"] = str(destination.relative_to(directory))
             data = {
                 "llm": asdict(config.llm),
@@ -176,7 +177,7 @@ class SessionStore:
                 "prompts": prompts,
                 "workflows": workflows,
             }
-            (directory / "config.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+            write_text(directory / "config.yaml", yaml.safe_dump(data), encoding="utf-8")
             manifest = {
                 "version": 1,
                 "service_urls": service_urls(config),
@@ -206,9 +207,9 @@ class SessionStore:
         data["generation"]["outpainting"] = enabled
         temporary = directory / "outpainting-setting.yaml"
         try:
-            temporary.write_text(yaml.safe_dump(data), encoding="utf-8")
+            write_text(temporary, yaml.safe_dump(data), encoding="utf-8")
             load_config(temporary)
-            temporary.replace(directory / "config.yaml")
+            replace(temporary, directory / "config.yaml")
         finally:
             temporary.unlink(missing_ok=True)
         manifest = self.read(name)
@@ -229,7 +230,7 @@ class SessionStore:
             path = directory / "config.yaml"
             if not load_config(path).generation.outpainting:
                 return
-            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            data = yaml.safe_load(read_text(path, encoding="utf-8"))
             self._save_outpainting_mode(name, data, False)
 
     def enable_outpainting(self, name: str, settings: Config) -> None:
@@ -237,7 +238,7 @@ class SessionStore:
         directory = self.directory(name)
         with session_lock(directory):
             path = directory / "config.yaml"
-            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            data = yaml.safe_load(read_text(path, encoding="utf-8"))
             if load_config(path).generation.outpainting:
                 return
             if data.get("workflows", {}).get("flux"):
@@ -247,19 +248,19 @@ class SessionStore:
                 raise ValueError("The selected configuration needs an outpainting workflow")
             # Use separate filenames so a failed validation cannot change active inputs.
             workflow = directory / "inputs" / "added-outpainting.json"
-            shutil.copyfile(settings.flux.path, workflow)
+            copyfile(settings.flux.path, workflow)
             data["workflows"]["flux"] = {**asdict(settings.flux), "path": str(workflow)}
             prompt_text = (
-                settings.outpainting.read_text(encoding="utf-8")
+                read_text(settings.outpainting, encoding="utf-8")
                 if settings.outpainting
                 else settings.output.outpainting_prompt
             )
             prompt = directory / "inputs" / "added-outpainting.md"
-            prompt.write_text(prompt_text, encoding="utf-8")
+            write_text(prompt, prompt_text, encoding="utf-8")
             data["prompts"]["outpainting"] = str(prompt) if prompt_text.strip() else None
             if settings.negative and not data["prompts"].get("negative"):
                 negative = directory / "inputs" / "added-negative.md"
-                shutil.copyfile(settings.negative, negative)
+                copyfile(settings.negative, negative)
                 data["prompts"]["negative"] = str(negative)
             data["generation"]["outpainting"] = True
             data["generation"]["gpu_mode"] = settings.generation.gpu_mode
@@ -268,9 +269,9 @@ class SessionStore:
                 data["output"][key] = getattr(settings.output, key)
             temporary = directory / "enable-outpainting.yaml"
             try:
-                temporary.write_text(yaml.safe_dump(data), encoding="utf-8")
+                write_text(temporary, yaml.safe_dump(data), encoding="utf-8")
                 validate_local(load_config(temporary))
-                temporary.replace(path)
+                replace(temporary, path)
             finally:
                 temporary.unlink(missing_ok=True)
             manifest = self.read(name)
@@ -286,7 +287,7 @@ class SessionStore:
         notify: Callable[[dict], None] = lambda _: None,
     ) -> dict:
         directory = self.directory(name)
-        with session_lock(directory):
+        with retry_scope(control.check), session_lock(directory):
             manifest = self.read(name)
 
             update_lock = RLock()
@@ -303,7 +304,7 @@ class SessionStore:
                 if lane == "images":
                     metadata_path = directory / "metadata" / f"{sticker}.json"
                     try:
-                        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                        metadata = json.loads(read_text(metadata_path, encoding="utf-8"))
                         extra["images_references"] = [
                             Path(ref["path"]).name for ref in metadata.get("references", [])
                         ]

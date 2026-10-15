@@ -310,7 +310,8 @@ and missing model dropdown entries before you spend time on generation.
 - Transient GET failures retry with bounded exponential delays. POSTs never retry
   automatically because the server may already have accepted them.
 - Polling uses `/history/{prompt_id}` and retrieves only the configured output node.
-  It reports execution errors and has a configurable timeout that includes queue time.
+  It reports execution errors and keeps waiting for queued/running jobs until completion
+  or an explicit Pause/Stop.
 - Timeouts or Ctrl+C leave server jobs alone. Check ComfyUI's queue/history and the
   saved prompt ID before manually submitting again. No global interrupt is sent.
 - A failure stops the session and displays the error in the dashboard. Headless
@@ -673,3 +674,31 @@ reference filenames for the current sticker.
 
 `generation.cfg` optionally overrides the multi-character Qwen sampler's CFG.
 Omit it or use `null` to retain the workflow/override value.
+
+
+### Recovery from disconnections and locked files
+
+Transient network errors and file-sharing/permission locks retry indefinitely with
+waits of **1, 2, 3, …, 15 seconds**, then 15 seconds for each later retry. A successful
+operation resets the delay. Retry messages appear in the worker logs. Pause/Stop
+interrupts retry waits; an HTTP request already in flight is bounded by its request
+timeout. Invalid configuration, HTTP authentication/validation errors, missing
+required files, and corrupt images still report errors instead of looping forever.
+
+LLM calls, uploads, history reads, and downloads reconnect automatically. ComfyUI
+submissions carry a saved request identifier. If a response is lost, the application
+looks for that identifier in the queue and history instead of submitting a second
+render. Recovery continues across session restarts. If ComfyUI has discarded that
+history, recovery keeps waiting; stop and inspect the server before clearing the
+saved pending submission. Older pending submissions without identifiers still need
+manual resolution. The legacy `get_retries`, `retry_delay`, and `job_timeout` settings
+remain accepted for old configurations, but no longer cap retries or job waiting.
+
+Before reference selection, supported non-JPG character files such as `A789.png`
+are converted to high-quality JPG with EXIF orientation respected and transparency
+flattened on white. If `A789.jpg` exists, a new number above the largest existing
+number for A is used, without overwriting it. Original files are retained. Conversion
+receipts prevent duplicates on subsequent runs; changing a source creates a new
+version, and deleting its converted JPG recreates it while the source remains.
+Only uppercase character labels followed by digits are imported. The standalone
+`convert_to_jpg.py` also handles name collisions without overwriting existing JPGs.

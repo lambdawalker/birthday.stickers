@@ -6,10 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from .images import PaddingPlan
+from .retry import file_retry
 
 Graph = dict[str, dict[str, Any]]
 
 
+@file_retry
 def load_workflow(path: Path) -> Graph:
     graph = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(graph, dict) or not graph or "nodes" in graph:

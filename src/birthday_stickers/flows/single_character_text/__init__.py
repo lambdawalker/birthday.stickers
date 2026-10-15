@@ -1,10 +1,12 @@
 """One text-described character, without identity-reference images."""
 
+from ...retry import file_retry
 from ...workflows import build_text_qwen
 
 USES_REFERENCES = False
 
 
+@file_retry
 def build_graph(config, template, prompt, references, seed, prefix):
     return build_text_qwen(
         template,

@@ -7,6 +7,7 @@ and safe atomic writing to prevent data loss.
 
 import argparse
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -92,6 +93,23 @@ def convert_image_to_jpg(
         print(f"[-] Skipping (already .jpg): {file_path.name}")
         return True
 
+    if dest_path.exists() and dest_path.resolve() != file_path.resolve():
+        match = re.fullmatch(r"([A-Z])([0-9]+)", file_path.stem)
+        if match:
+            label, number = match.groups()
+            used = [
+                int(m[1])
+                for p in file_path.parent.iterdir()
+                if (m := re.fullmatch(re.escape(label) + r"([0-9]+)\.[^.]+", p.name))
+            ]
+            index = max(used, default=int(number)) + 1
+            dest_path = file_path.with_name(f"{label}{index:0{len(number)}d}.jpg")
+        else:
+            index = 1
+            while dest_path.exists():
+                dest_path = file_path.with_name(f"{file_path.stem}-{index}.jpg")
+                index += 1
+
     if dry_run:
         print(
             f"[DRY-RUN] Would convert: {file_path.name} -> {dest_path.name} "
@@ -125,9 +143,12 @@ def convert_image_to_jpg(
         if not temp_path.exists() or temp_path.stat().st_size == 0:
             raise RuntimeError("Generated file was empty or not created.")
 
-        # If dest_path exists and is different from original (e.g. name conflict), replace it
-        if temp_path != dest_path:
+        # Publish without replacing an existing destination, even in a creation race.
+        if dest_path.resolve() == file_path.resolve():
             temp_path.replace(dest_path)
+        else:
+            os.link(temp_path, dest_path)
+            temp_path.unlink()
 
         # Delete original file only after destination is safely written
         if delete_original and file_path.resolve() != dest_path.resolve():

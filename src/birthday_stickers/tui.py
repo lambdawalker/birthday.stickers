@@ -26,6 +26,7 @@ from .config import Config, load_config
 from .control import RunControl
 from .flows import get_flow
 from .references import discover_characters
+from .retry import retry_scope
 from .sessions import SessionStore, service_urls
 from .workflows import load_workflow
 
@@ -455,6 +456,10 @@ class StickerApp(App):
 
     @work(thread=True, exit_on_error=False)
     def execute_session(self, name: str | None, count: int | None) -> None:
+        with retry_scope(self.control.check):
+            self.execute_session_with_retries(name, count)
+
+    def execute_session_with_retries(self, name, count):
         try:
             if name is None:
                 item = self.store.create(self.config, count)

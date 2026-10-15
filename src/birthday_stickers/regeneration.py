@@ -56,7 +56,7 @@ def reconcile_outputs(config, path: Path, meta: dict, save) -> None:
             )
         for stage in stages:
             meta[f"{stage}_seed"] = next_seed(meta.get(f"{stage}_seed", 0))
-            for suffix in ("prompt_id", "submission_pending", "server"):
+            for suffix in ("prompt_id", "submission_pending", "server", "request_id"):
                 meta.pop(f"{stage}_{suffix}", None)
         meta.pop("flux_drained", None)
         meta.pop("outpaint_skipped", None)
