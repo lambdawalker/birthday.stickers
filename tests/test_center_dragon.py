@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts/center_dragon.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "src/birthday_stickers/center_dragon.py"
 API = runpy.run_path(str(SCRIPT))
 
 

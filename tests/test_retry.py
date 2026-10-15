@@ -127,14 +127,13 @@ class RetryTests(unittest.TestCase):
             self.assertTrue(caught.exception.submission_not_sent)
 
     def test_standalone_converter_preserves_existing_character_jpg(self):
-        import runpy
+        from birthday_stickers.convert_to_jpg import convert_image_to_jpg
 
-        converter = runpy.run_path(str(Path(__file__).resolve().parents[1] / "convert_to_jpg.py"))
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             Image.new("RGB", (16, 16), "red").save(root / "A789.jpg")
             before = (root / "A789.jpg").read_bytes()
             Image.new("RGB", (16, 16), "blue").save(root / "A789.png")
-            self.assertTrue(converter["convert_image_to_jpg"](root / "A789.png"))
+            self.assertTrue(convert_image_to_jpg(root / "A789.png"))
             self.assertEqual((root / "A789.jpg").read_bytes(), before)
             self.assertTrue((root / "A790.jpg").exists())

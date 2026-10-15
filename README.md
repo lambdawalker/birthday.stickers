@@ -738,15 +738,15 @@ logs, or metadata is not a regeneration control; retain those files.
 
 ### Standalone dragon-centering tool
 
-`scripts/center_dragon.py` detects the main black subject, saves a bounding-box
+`birthday-center-dragon` detects the main black subject, saves a bounding-box
 preview and mask, and crops around its center. It runs independently from the
 pipeline, using Pillow only:
 
 ```powershell
-uv run scripts/center_dragon.py "path/to/image.jpg" --padding 0.15 --size 1024 1024
+uv run birthday-center-dragon "path/to/image.jpg" --padding 0.15 --size 1024 1024
 ```
 
-See [standalone image tools](scripts/README.md) for tuning and limitations.
+See [standalone image tools](docs/center_dragon.md) for tuning and limitations.
 
 For **Girl + dragon**, the session picker shows the live number of reference
 versions per character. Use **Refresh** after adding reference images. The new-session
@@ -785,7 +785,7 @@ number for A is used, without overwriting it. Original files are retained. Conve
 receipts prevent duplicates on subsequent runs; changing a source creates a new
 version, and deleting its converted JPG recreates it while the source remains.
 Preset imports use the configured prefix followed by digits. The standalone
-`convert_to_jpg.py` also handles name collisions without overwriting existing JPGs.
+`birthday-convert-to-jpg` also handles name collisions without overwriting existing JPGs.
 
 ### Packaged JPG converter
 
@@ -797,6 +797,79 @@ uv run python -m birthday_stickers.convert_to_jpg "C:\pictures"
 uv run birthday-convert-to-jpg "C:\pictures" --keep-originals
 ```
 
-The old `uv run python convert_to_jpg.py ...` command remains a compatibility launcher.
+Root-level script launchers have been removed; use the installed commands above.
 As before, the standalone converter deletes originals after successful conversion
 unless `--keep-originals` is supplied; automatic character conversion retains them.
+
+
+## Gallery export and review
+
+In the terminal session screen, **Generate gallery** copies images from all sessions
+into `gallery/` beside the launch configuration. Originals stay in their sessions.
+Each pipeline has its own flat folder: `gallery/image_generation/` and
+`gallery/outpainting/`. Files are named by the SHA-256 of their bytes, so repeated
+exports and duplicate images across sessions do not create duplicate gallery files.
+`gallery/gallery.sqlite3` is the persistent manifest: it records each image, every
+source path, reviewers, decisions, and Undo history. Back up the entire gallery folder.
+
+If the original session folders were deleted and you already have a flat collection:
+
+```powershell
+uv run birthday-gallery-fix "D:\pictures\flat-collection"
+```
+
+This standalone import needs no generation config or session metadata. It copies
+supported images directly from that folder, skips existing hashes, retains originals,
+and reports corrupt files without abandoning the rest. Use `--gallery PATH` to change
+the destination, or `--pipeline outpainting` for that pipeline. Run it again whenever
+new images arrive. Different byte encodings of the same picture are distinct hashes.
+
+Start the review website separately (it can run while images are being generated):
+
+```powershell
+uv run birthday-review --gallery ./gallery --host 0.0.0.0 --port 8080
+```
+
+Open `http://<computer-ip>:8080/user/maria`, replacing the name for each reviewer.
+On Windows, allow the server through the firewall on your private network if prompted.
+The website defaults directly to image generation. Pipeline-aware storage and URLs
+already support `?pipeline=outpainting`; a visible selector can be added later.
+
+- Right / Accept: accept and advance.
+- Left / Reject: reject and advance, clearing favorite and T-shirt marks.
+- Up / star: toggle favorite, accept, and advance.
+- Down / T-shirt: toggle T-shirt candidate, accept, and advance.
+- Undo: restore the previous decision, including both marks.
+
+The star and T-shirt controls sit at the bottom center. Arrow keys work on desktop;
+`z` undoes the last action. Category links show accepted, rejected, favorite, and
+T-shirt galleries. **Review sessions** lists each person's counts and links to their
+selections. Each person's decisions are independent. Reopening the same named link
+resumes the remaining queue; repeated exports do not reset progress. A failed save
+stays available for retry, including after a reload; retried requests are idempotent.
+
+Names in links identify reviewers without passwords. Anyone with a person's link
+can continue or change that person's review. This server is intended for a trusted
+network. Rejection never deletes an image.
+
+## Packaged utilities and Wi-Fi watchdog
+
+All Python utilities now live under `src/birthday_stickers/`:
+
+```powershell
+uv run birthday-convert-to-jpg "D:\pictures" --keep-originals
+uv run birthday-center-dragon "D:\pictures\dragon.jpg"
+uv run birthday-keep-wifi
+```
+
+On Windows, the generation CLI starts `keep_wifi_connected` in a separate child
+process for the lifetime of the terminal app or headless generation run. It uses
+the current saved Wi-Fi profile, checks every 10 seconds, and logs to
+`gallery/logs/wifi.log`. In background mode it chooses the first connected adapter
+without prompting. Connect to your desired Wi-Fi before starting. The child stops
+when the generation program exits. Use `--no-wifi` to disable it; other operating
+systems skip it automatically. Standalone `birthday-keep-wifi` still allows adapter
+selection. Preview, validation, and the review server do not start the watchdog.
+
+The destructive flattening utility and its command have been removed. Use
+**Generate gallery** or `birthday-gallery-fix` instead.

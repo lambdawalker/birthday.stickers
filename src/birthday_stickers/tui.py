@@ -189,6 +189,7 @@ class StickerApp(App):
                 yield Switch(False, id="session-outpainting", disabled=True)
                 yield Button("Resume selected", variant="success", id="open")
                 yield Button("Refresh", id="refresh")
+                yield Button("Generate gallery", id="generate-gallery")
         with VerticalScroll(id="dashboard"):
             with Vertical(classes="card"):
                 yield Static("", id="session-title")
@@ -564,6 +565,31 @@ class StickerApp(App):
     def selected(self, event: DataTable.RowSelected) -> None:
         self.sync_session_toggle(str(event.row_key.value))
 
+    @work(thread=True, exclusive=True, group="gallery")
+    def generate_gallery(self) -> None:
+        from .gallery import Gallery
+
+        def enable(value):
+            self.query_one("#generate-gallery", Button).disabled = not value
+
+        self.call_from_thread(enable, False)
+        try:
+            root = self.config.path.parent / "gallery"
+            result = Gallery(root).export_sessions(self.store.root)
+            added = sum(row["added"] for row in result.values())
+            skipped = sum(row["skipped"] for row in result.values())
+            errors = [error for row in result.values() for error in row["errors"]]
+            message = f"Gallery: {added} added, {skipped} already present. {root}"
+            if errors:
+                message += "\n" + "\n".join(errors)
+            self.call_from_thread(
+                self.notify, message, severity="warning" if errors else "information", timeout=10
+            )
+        except (OSError, ValueError) as error:
+            self.call_from_thread(self.notify, str(error), severity="error")
+        finally:
+            self.call_from_thread(enable, True)
+
     @on(Button.Pressed)
     def pressed(self, event: Button.Pressed) -> None:
         action = event.button.id
@@ -595,6 +621,8 @@ class StickerApp(App):
             table = self.query_one("#sessions", DataTable)
             if table.row_count:
                 self.resume_selected(str(table.get_row_at(table.cursor_row)[0]))
+        elif action == "generate-gallery":
+            self.generate_gallery()
         elif action == "refresh":
             self.update_reference_settings()
             self.refresh_sessions()

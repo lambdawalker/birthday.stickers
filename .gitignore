@@ -75,3 +75,6 @@ runs/
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+# Exported gallery and persistent review data
+gallery/

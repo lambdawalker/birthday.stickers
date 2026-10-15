@@ -8,6 +8,7 @@ from .comfy import ComfyClient
 from .config import auth_headers, integer, load_config
 from .http import HTTPClient
 from .pipeline import validate_local
+from .wifi_watchdog import wifi_watchdog
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -41,6 +42,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Add outpainting to the resumed session, keeping generated originals",
     )
+    parser.add_argument("--no-wifi", action="store_true", help="Disable the Windows Wi-Fi watchdog")
     args = parser.parse_args(argv)
     if args.enable_outpainting and not (args.headless and args.resume):
         parser.error("--enable-outpainting requires --headless --resume SESSION")
@@ -118,7 +120,8 @@ def main(argv: list[str] | None = None) -> int:
             name = args.resume or store.create(config)["name"]
             if args.enable_outpainting:
                 store.enable_outpainting(name, config)
-            result = store.execute(name, RunControl())
+            with wifi_watchdog(config.path.parent / "gallery/logs", not args.no_wifi):
+                result = store.execute(name, RunControl())
             print(f"Session {name}: {result['status']}. Files: {store.directory(name)}")
             if result["status"] == "failed":
                 logging.error("%s", result.get("error", "Generation failed"))
@@ -126,7 +129,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             from .tui import StickerApp
 
-            StickerApp(config).run()
+            with wifi_watchdog(config.path.parent / "gallery/logs", not args.no_wifi):
+                StickerApp(config).run()
         return 0
     except KeyboardInterrupt:
         print("Interrupted. Saved artifacts remain; submitted ComfyUI jobs may still be running.")

@@ -1,7 +1,3 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["Pillow>=11,<13"]
-# ///
 """Standalone dark-subject detector and centered cropper; no project imports or services."""
 
 import argparse

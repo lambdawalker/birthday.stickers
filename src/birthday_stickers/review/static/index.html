@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>Little adventures · Image review</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">Little adventures<span>THE GALLERY</span></a
+      ><a id="sessions-link" href="/sessions">Review sessions ↗</a>
+    </header>
+    <main>
+      <section class="intro">
+        <div>
+          <p class="eyebrow" id="eyebrow">A COLLECTION OF LITTLE WONDERS</p>
+          <h1 id="title">Choose your favorites.</h1>
+        </div>
+        <span id="progress"></span>
+      </section>
+      <nav id="categories" aria-label="Review categories"></nav>
+      <p id="error" role="alert"></p>
+      <button id="retry" hidden>Retry saved action</button>
+      <section id="review">
+        <div class="stage" id="stage">
+          <img id="hero" alt="Illustration to review" draggable="false" />
+          <div id="empty" hidden>
+            <h2>You're all caught up.</h2>
+            <p>Your choices are saved. Come back when new images arrive.</p>
+            <button id="reload">Check for new images</button>
+          </div>
+          <div id="gesture" aria-hidden="true"></div>
+        </div>
+        <div class="toolbar">
+          <button id="reject" data-action="reject" aria-label="Reject image">
+            ✕<span>Reject</span></button
+          ><button
+            id="favorite"
+            data-action="favorite"
+            aria-label="Mark favorite"
+          >
+            ☆<span>Favorite</span></button
+          ><button
+            id="tshirt"
+            data-action="tshirt"
+            aria-label="Mark T-shirt candidate"
+          >
+            <svg viewBox="0 0 32 32" aria-hidden="true">
+              <path
+                d="M11 4 4 8 1 15l6 3 2-4v14h14V14l2 4 6-3-3-7-7-4c0 5-10 5-10 0Z"
+              /></svg
+            ><span>T-shirt</span></button
+          ><button id="accept" data-action="accept" aria-label="Accept image">
+            ✓<span>Accept</span>
+          </button>
+        </div>
+        <div class="under">
+          <button id="undo">↶ Undo</button
+          ><span>← reject · accept →<br />↑ favorite · T-shirt ↓</span
+          ><button id="next" hidden>Next →</button>
+        </div>
+      </section>
+      <section id="grid" hidden></section>
+      <section id="sessions" hidden></section>
+    </main>
+    <footer>Every little adventure deserves a second look.</footer>
+  </body>
+</html>
