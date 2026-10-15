@@ -151,7 +151,7 @@ def planning_prompt(
         "iteration": str(iteration),
         "count": str(count),
         "sticker_id": name,
-        "previous_scenes": "\n".join(previous_scenes[-10:]) or "None yet.",
+        "previous_scenes": "\n".join(previous_scenes[-3:]) or "None yet.",
     }
     rendered = re.sub(
         r"\{\{(iteration|count|sticker_id|previous_scenes)\}\}",
