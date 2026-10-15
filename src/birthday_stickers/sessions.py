@@ -152,12 +152,11 @@ class SessionStore:
             if config.character_directory is not None:
                 characters = {
                     "directory": str(config.character_directory),
-                    "protagonist": config.protagonist,
-                    "creature": config.creature,
+                    **{role: getattr(config, role) for role in config.flow.reference_roles},
                 }
             elif config.flow.uses_references:
                 characters = {
-                    role: str(getattr(config, role)) for role in ("protagonist", "creature")
+                    role: str(getattr(config, role)) for role in config.flow.reference_roles
                 }
             output = {**asdict(config.output), "directory": "."}
             legacy_outpainting = output.pop("outpainting_prompt", "")

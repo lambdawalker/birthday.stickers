@@ -8,7 +8,11 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent
 ALIASES = {"viking_duo": "multi_character_reference", "baby_dragon": "single_character_text"}
-NAMES = ("multi_character_reference", "single_character_text")
+NAMES = (
+    "multi_character_reference",
+    "single_character_text",
+    "protagonist_reference_creature_text",
+)
 LEGACY_ASSETS = {
     "prompts/plan_scene.md": "multi_character_reference/planning.md",
     "prompts/refine_scene.md": "multi_character_reference/refinement.md",
@@ -75,6 +79,14 @@ class Flow:
     @property
     def uses_references(self) -> bool:
         return self.module.USES_REFERENCES
+
+    @property
+    def reference_roles(self) -> tuple[str, ...]:
+        return getattr(
+            self.module,
+            "REFERENCE_ROLES",
+            ("protagonist", "creature") if self.uses_references else (),
+        )
 
     @property
     def directory(self) -> Path:

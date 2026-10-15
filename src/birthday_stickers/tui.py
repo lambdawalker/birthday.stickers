@@ -141,6 +141,15 @@ class StickerApp(App):
                     "300 solo activities · text-to-image · optional outpainting", classes="muted"
                 )
                 yield Button("Baby dragon only", variant="success", id="choose-dragon")
+            with Vertical(classes="card"):
+                yield Label("GIRL REFERENCE + DRAGON TEXT", classes="title")
+                yield Static(
+                    "One girl reference · dragon described in text · optional outpainting",
+                    classes="muted",
+                )
+                yield Button(
+                    "Girl reference + dragon text", variant="primary", id="choose-reference-dragon"
+                )
             yield Static("", id="type-error")
         with VerticalScroll(id="home"):
             yield Static("A new adventure, or right where you left off.", classes="title")
@@ -329,7 +338,10 @@ class StickerApp(App):
             if generation_type == self.launch_config.generation.type:
                 selected = copy.deepcopy(self.launch_config)
             else:
-                stem = "config.dragon" if generation_type == "single_character_text" else "config"
+                stem = {
+                    "single_character_text": "config.dragon",
+                    "protagonist_reference_creature_text": "config.reference-dragon",
+                }.get(generation_type, "config")
                 directory = self.launch_config.path.parent
                 local = directory / f"{stem}.local.yaml"
                 path = local if local.is_file() else directory / f"{stem}.yaml"
@@ -573,9 +585,13 @@ class StickerApp(App):
     @on(Button.Pressed)
     def pressed(self, event: Button.Pressed) -> None:
         action = event.button.id
-        if action in ("choose-duo", "choose-dragon"):
+        if action in ("choose-duo", "choose-dragon", "choose-reference-dragon"):
             self.choose_type(
-                "multi_character_reference" if action == "choose-duo" else "single_character_text"
+                {
+                    "choose-duo": "multi_character_reference",
+                    "choose-dragon": "single_character_text",
+                    "choose-reference-dragon": "protagonist_reference_creature_text",
+                }[action]
             )
         elif action == "change-type" and not self.busy:
             self.query_one("#home").display = False

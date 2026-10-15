@@ -205,7 +205,8 @@ def load_config(path: Path) -> Config:
     generation = section(data, "generation", GenerationConfig)
     output = section(data, "output", OutputConfig)
     generation.type = canonical_name(generation.type)
-    dragon = not get_flow(generation.type).uses_references
+    reference_roles = get_flow(generation.type).reference_roles
+    dragon = not reference_roles
     if "outpainting" not in data.get("generation", {}):
         generation.outpainting = not dragon  # Preserve older session behavior.
     if type(generation.outpainting) is not bool:
@@ -266,21 +267,22 @@ def load_config(path: Path) -> Config:
     output.directory = local_path(base, output.directory)
     paths = {"flux": None}
     characters = data.get("characters")
+    paths.update(protagonist="", creature="")
     if dragon:
-        paths.update(protagonist="", creature="", flux=None)
+        paths.update(flux=None)
     if not dragon and isinstance(characters, dict) and "directory" in characters:
-        if set(characters) != {"directory", "protagonist", "creature"}:
-            raise ValueError("characters must contain directory, protagonist, and creature")
+        if set(characters) != {"directory", *reference_roles}:
+            raise ValueError("characters must contain directory and: " + ", ".join(reference_roles))
         paths["character_directory"] = local_path(base, characters["directory"])
-        for role in ("protagonist", "creature"):
+        for role in reference_roles:
             value = characters[role]
             if not isinstance(value, str) or len(value) != 1 or not "A" <= value <= "Z":
                 raise ValueError(f"characters.{role} must be one character ID from A-Z")
             paths[role] = value
-        if paths["protagonist"] == paths["creature"]:
+        if len(reference_roles) == 2 and paths["protagonist"] == paths["creature"]:
             raise ValueError("Protagonist and creature must use different character IDs")
     for group, keys in (
-        ("characters", ("protagonist", "creature")),
+        ("characters", reference_roles),
         ("prompts", ("planning", "refinement", "guide")),
     ):
         if group == "characters" and (dragon or "character_directory" in paths):
@@ -324,8 +326,8 @@ def load_config(path: Path) -> Config:
     ):
         if key == "flux" and key not in workflows:
             continue
-        if dragon:
-            roles = roles - {"protagonist", "creature"}
+        if key == "qwen":
+            roles = (roles - {"protagonist", "creature"}) | set(reference_roles)
         item = section(workflows, key, WorkflowConfig)
         item.path = legacy_asset(base, item.path)
         if not isinstance(item.nodes, dict) or set(item.nodes) != roles:

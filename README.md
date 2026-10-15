@@ -702,3 +702,32 @@ receipts prevent duplicates on subsequent runs; changing a source creates a new
 version, and deleting its converted JPG recreates it while the source remains.
 Only uppercase character labels followed by digits are imported. The standalone
 `convert_to_jpg.py` also handles name collisions without overwriting existing JPGs.
+
+### Girl reference + dragon text
+
+Choose **Girl reference + dragon text** on the first screen, or launch with
+`--config config.reference-dragon.yaml`. This flow uses
+`protagonist_reference_creature_text`: one randomly selected protagonist reference
+in Qwen's first socket, plus a baby dragon described entirely in text. No B images
+are needed or uploaded. It keeps the same three pipelines, CFG/resolution controls,
+session resume, negative prompts, and optional outpainting as Girl + dragon.
+
+Its planning/refinement prompts, 300 shared-activity ideas, guide, and single-reference
+Qwen workflow live in `src/birthday_stickers/flows/protagonist_reference_creature_text/`.
+Edit its planning prompt to change the dragon's appearance. The profile requires
+only `characters.directory` and `characters.protagonist` (or an explicit protagonist
+file path). Use `config.reference-dragon.local.yaml` for personal settings.
+
+### Packaged JPG converter
+
+The converter implementation is now `src/birthday_stickers/convert_to_jpg.py` and
+shares JPEG encoding with automatic character conversion. Run:
+
+```powershell
+uv run python -m birthday_stickers.convert_to_jpg "C:\pictures"
+uv run birthday-convert-to-jpg "C:\pictures" --keep-originals
+```
+
+The old `uv run python convert_to_jpg.py ...` command remains a compatibility launcher.
+As before, the standalone converter deletes originals after successful conversion
+unless `--keep-originals` is supplied; automatic character conversion retains them.

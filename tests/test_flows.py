@@ -87,3 +87,51 @@ class FlowTests(unittest.TestCase):
             legacy = store.create(config)
             saved = load_config(store.directory(legacy["name"]) / "config.yaml")
             self.assertEqual(saved.outpainting.read_text(encoding="utf-8"), "Legacy inline prompt")
+
+    def test_protagonist_reference_text_dragon_end_to_end_and_snapshot(self):
+        import json
+
+        from PIL import Image
+
+        from birthday_stickers.pipeline import run
+        from birthday_stickers.references import reference_pools
+
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            data = yaml.safe_load(config.path.read_text(encoding="utf-8"))
+            data["flow"] = "protagonist_reference_creature_text"
+            data["generation"].pop("type", None)
+            data.pop("workflows")
+            data.pop("prompts")
+            characters = Path(temp) / "characters"
+            characters.mkdir()
+            Image.new("RGB", (32, 32), "green").save(characters / "A789.png")
+            data["characters"] = {"directory": str(characters), "protagonist": "A"}
+            data["generation"]["cfg"] = 2.5
+            config.path.write_text(yaml.safe_dump(data), encoding="utf-8")
+            config = load_config(config.path)
+            self.assertEqual(config.flow.reference_roles, ("protagonist",))
+            self.assertEqual(reference_pools(config)[1], [])
+            result = run(config)
+            self.assertEqual(len(result), 1)
+            graph = service.graphs[0]
+            loaders = [node for node in graph.values() if node["class_type"] == "LoadImage"]
+            self.assertEqual(len(loaders), 1)
+            self.assertNotIn("516", graph)
+            encoder = graph["459:474"]["inputs"]
+            self.assertNotIn("images.image_2", encoder)
+            self.assertNotIn("<image2>", encoder["prompt"])
+            self.assertEqual(graph["459:458"]["inputs"]["cfg"], 2.5)
+            self.assertEqual(len(service.graphs), 2)  # Qwen, then outpainting.
+            metadata = json.loads(
+                (config.output.directory / "metadata/stiker-0000.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(len(metadata["references"]), 1)
+            self.assertEqual(Path(metadata["references"][0]["path"]).name, "A789.jpg")
+            run(config, resume=True)
+            self.assertEqual(len(service.graphs), 2)
+            store = SessionStore(Path(temp) / "sessions")
+            item = store.create(config)
+            saved = load_config(store.directory(item["name"]) / "config.yaml")
+            self.assertEqual(saved.flow.reference_roles, ("protagonist",))
+            self.assertEqual(saved.creature, "")

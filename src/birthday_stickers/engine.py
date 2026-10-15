@@ -217,11 +217,16 @@ class Scene:
                     compose_refinement(local["refinement"], local["guide"], raw), refined=True
                 )
                 write_prompts(self.prompt_path, self.name, raw, refined, activity)
-                if self.config.flow.uses_references and (
-                    "<image1>" not in refined or "<image2>" not in refined
-                ):
+                required = [
+                    f"<image{i}>" for i in range(1, len(self.config.flow.reference_roles) + 1)
+                ]
+                if any(tag not in refined for tag in required):
                     raise ValueError(
-                        "Refined prompt must name both <image1> and <image2> reference roles"
+                        "Refined prompt must name reference roles: " + ", ".join(required)
+                    )
+                if len(required) == 1 and "<image2>" in refined:
+                    raise ValueError(
+                        "This flow has no second reference; describe the dragon in text"
                     )
                 self.meta["refined_scene"] = refined
         self.meta["status"] = "prompts_ready"
@@ -297,7 +302,7 @@ class Scene:
         if not self.meta.get("intermediate_saved"):
             if references and "qwen_prompt_id" not in self.meta:
                 with self.step("upload_references", "Upload character references"):
-                    for role, path in zip(("protagonist", "creature"), references, strict=True):
+                    for role, path in zip(config.flow.reference_roles, references, strict=True):
                         self.pipeline.check()
                         key = (path, hashlib.sha256(read_bytes(path)).hexdigest())
                         if key not in self.pipeline.uploaded:

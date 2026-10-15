@@ -27,11 +27,17 @@ def reference_pools(config: Config) -> tuple[list[Path], list[Path]]:
         return [], []
     if config.character_directory is None:
         # Keep existing configs with explicit image paths working.
-        return [Path(config.protagonist)], [Path(config.creature)]
+        return tuple(
+            [Path(getattr(config, role))] if role in config.flow.reference_roles else []
+            for role in ("protagonist", "creature")
+        )
     convert_characters(config.character_directory)
     groups = discover_characters(config.character_directory)
     pools = []
     for role, character_id in (("protagonist", config.protagonist), ("creature", config.creature)):
+        if role not in config.flow.reference_roles:
+            pools.append([])
+            continue
         candidates = groups.get(str(character_id), [])
         if not candidates:
             raise ValueError(
