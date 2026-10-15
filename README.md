@@ -650,3 +650,15 @@ attempts reuse the newly chosen seeds until another saved output is deleted.
 
 Only missing image outputs trigger regeneration. Deleting prompt Markdown files,
 logs, or metadata is not a regeneration control; retain those files.
+
+### Standalone dragon-centering tool
+
+`scripts/center_dragon.py` detects the main black subject, saves a bounding-box
+preview and mask, and crops around its center. It runs independently from the
+pipeline, using Pillow only:
+
+```powershell
+uv run scripts/center_dragon.py "path/to/image.jpg" --padding 0.15 --size 1024 1024
+```
+
+See [standalone image tools](scripts/README.md) for tuning and limitations.
