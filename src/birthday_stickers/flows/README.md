@@ -60,3 +60,8 @@ Sources checked October 14, 2026:
 - [Core latent and sampler nodes](https://github.com/Comfy-Org/ComfyUI/blob/master/nodes.py)
 - [Empty-latent adaptation](https://github.com/Comfy-Org/ComfyUI/blob/master/comfy/sample.py)
 - [ComfyUI HTTP routes](https://docs.comfy.org/development/comfyui-server/comms_routes)
+
+The `protagonist_reference_creature_text` flow derives its Qwen graph from the
+multi-character export, removes the second image loader/socket and unused prompt
+enhancer branch, and binds only node `514` to the protagonist. The dragon is
+described in text. It uses the same latent, sampler, output, and outpainting nodes.

@@ -14,18 +14,21 @@ from .control import RunControl
 from .images import decode_image, plan_padding
 from .llm import compose_refinement
 from .references import reference_pools
+from .retry import file_retry, retry_scope
 from .workflows import build_flux, load_workflow
 
 log = logging.getLogger(__name__)
 SEED_MODULUS = 2**63
 
 
+@file_retry
 def write_json(path: Path, value: dict) -> None:
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     os.replace(temporary, path)
 
 
+@file_retry
 def validate_local(config: Config) -> dict:
     activities = load_activities(config.activities) if config.activities else None
     pools = reference_pools(config)
@@ -95,6 +98,7 @@ def validate_local(config: Config) -> dict:
     }
 
 
+@file_retry
 def reserve_sticker(root: Path) -> tuple[int, str, Path]:
     ensure_layout(root)
     folders = [root / name for name in ("intermediate", "final", "prompts", "metadata")]
@@ -119,6 +123,7 @@ def reserve_sticker(root: Path) -> tuple[int, str, Path]:
             index += 1
 
 
+@file_retry
 def write_prompts(
     path: Path, name: str, raw: str, refined: str | None = None, activity: dict | None = None
 ) -> None:
@@ -188,9 +193,12 @@ def run(
     """Run prompt, image, and outpainting workers with durable scene handoff."""
     from .engine import execute
 
-    return execute(config, resume, control or RunControl(), progress, worker_progress)
+    control = control or RunControl()
+    with retry_scope(control.check):
+        return execute(config, resume, control, progress, worker_progress)
 
 
+@file_retry
 def prepare_records(config: Config) -> list[tuple[Path, dict]]:
     """Import legacy paths and reopen generated-only scenes when outpainting is enabled."""
     from .artifacts import generated_only, import_legacy, result_path

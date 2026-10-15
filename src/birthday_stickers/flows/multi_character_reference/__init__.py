@@ -1,10 +1,12 @@
 """Two ordered identity references plus a locally planned scene."""
 
+from ...retry import file_retry
 from ...workflows import build_qwen
 
 USES_REFERENCES = True
 
 
+@file_retry
 def build_graph(config, template, prompt, references, seed, prefix):
     overrides = {key: dict(value) for key, value in config.qwen.overrides.items()}
     if config.generation.cfg is not None:

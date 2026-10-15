@@ -7,6 +7,8 @@ from pathlib import Path
 
 from PIL import Image, ImageColor, ImageDraw, ImageOps
 
+from .retry import file_retry
+
 
 @dataclass(frozen=True)
 class PaddingPlan:
@@ -44,6 +46,7 @@ def plan_padding(source: tuple[int, int], target: tuple[int, int]) -> PaddingPla
     )
 
 
+@file_retry
 def decode_image(data: bytes | Path | Image.Image) -> Image.Image:
     if isinstance(data, Image.Image):
         return ImageOps.exif_transpose(data).copy()
@@ -58,6 +61,7 @@ def rgb_image(image: Image.Image, background: str = "white") -> Image.Image:
     return result
 
 
+@file_retry
 def save_jpeg(
     data: bytes | Path | Image.Image, path: Path, quality: int, subsampling: int, background: str
 ) -> None:

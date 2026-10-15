@@ -1,13 +1,20 @@
-"""Small HTTP transport: bounded reads, explicit timeouts, GET-only retries."""
+"""Small HTTP transport: explicit timeouts and cooperative transient-error retries."""
 
+import errno
 import json
-import time
+import socket
 from http.client import HTTPException
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from .retry import pause
+
 
 class ServiceError(RuntimeError):
+    pass
+
+
+class RejectedSubmission(ServiceError):
     pass
 
 
@@ -37,35 +44,59 @@ class HTTPClient:
         headers = {**self.headers, "Accept": "application/json"}
         if content_type:
             headers["Content-Type"] = content_type
-        attempts = 1 + (self.get_retries if method == "GET" else 0)
-        for attempt in range(attempts):
+        attempt = 0
+        while True:
             timeout = self.timeout
-            if deadline is not None:
-                timeout = min(timeout, deadline - time.monotonic())
-                if timeout <= 0:
-                    raise TimeoutError("Request deadline elapsed")
             request = Request(self.base_url + path, data=data, headers=headers, method=method)
             try:
                 with urlopen(request, timeout=timeout) as response:
                     return response.read()
             except HTTPError as error:
                 details = error.read(2000).decode("utf-8", errors="replace")
+                if method == "POST" and path == "/prompt" and error.code == 429:
+                    attempt += 1
+                    try:
+                        pause(attempt, "ComfyUI rate limit", error)
+                    except BaseException as interrupted:
+                        interrupted.submission_not_sent = True
+                        raise
+                    continue
+                if (
+                    method == "POST"
+                    and path == "/prompt"
+                    and error.code < 500
+                    and error.code != 408
+                ):
+                    raise RejectedSubmission(
+                        f"POST /prompt rejected: HTTP {error.code}: {details}"
+                    ) from error
                 retryable = error.code in (408, 429, 500, 502, 503, 504)
                 reason = f"HTTP {error.code}: {details}"
             except (URLError, OSError, HTTPException) as error:
+                reason_error = getattr(error, "reason", error)
+                if path == "/prompt" and (
+                    isinstance(reason_error, (ConnectionRefusedError, socket.gaierror))
+                    or getattr(reason_error, "errno", None)
+                    in {errno.ECONNREFUSED, errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ENETDOWN}
+                ):
+                    attempt += 1
+                    try:
+                        pause(attempt, "Connecting to ComfyUI", error)
+                    except BaseException as interrupted:
+                        interrupted.submission_not_sent = True
+                        raise
+                    continue
                 retryable = True
                 reason = str(error)
-            if method != "GET":
+            if method != "GET" and path not in ("/chat/completions", "/upload/image"):
                 raise ServiceError(
                     f"{method} {path} failed: {reason}. Request was not retried; "
                     "the server may already have accepted it. Inspect its queue/history."
                 )
-            if not retryable or attempt == attempts - 1:
-                raise ServiceError(f"GET {path} failed: {reason}")
-            delay = self.retry_delay * 2**attempt
-            if deadline is not None:
-                delay = min(delay, max(0, deadline - time.monotonic()))
-            time.sleep(delay)
+            if not retryable:
+                raise ServiceError(f"{method} {path} failed: {reason}")
+            attempt += 1
+            pause(attempt, f"{method} {path}", reason)
         raise AssertionError("unreachable")
 
     def json(

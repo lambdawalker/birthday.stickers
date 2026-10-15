@@ -5,12 +5,14 @@ import random
 import re
 from pathlib import Path
 
+from .retry import read_text
+
 RNG = random.SystemRandom()
 
 
 def load_activities(path: Path) -> list[dict]:
     try:
-        rows = json.loads(path.read_text(encoding="utf-8"))
+        rows = json.loads(read_text(path, encoding="utf-8"))
     except (OSError, ValueError) as error:
         raise ValueError(f"Cannot read activity catalog {path}: {error}") from error
     ids = set()
@@ -47,7 +49,7 @@ def select_activity(catalog: list[dict], metadata_directory: Path) -> dict:
             paths.append((int(match[1]), path))
     for _, path in sorted(paths):
         try:
-            meta = json.loads(path.read_text(encoding="utf-8"))
+            meta = json.loads(read_text(path, encoding="utf-8"))
             if not isinstance(meta, dict):
                 raise ValueError("expected an object")
             selected = meta.get("activity")

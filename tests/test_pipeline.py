@@ -29,6 +29,7 @@ class FakeServices:
         self.history_gets = 0
         self.fail_refine = False
         self.fail_submit = False
+        self.submissions = {}
         self.fail_execution = False
         self.never_complete = False
         self.transient_history = False
@@ -53,7 +54,7 @@ class FakeServices:
                 if self.path == "/v1/chat/completions":
                     service.chats.append(json.loads(data))
                     if service.fail_refine and len(service.chats) == 2:
-                        self.reply({"error": "LLM unavailable"}, 503)
+                        self.reply({"error": "Invalid LLM request"}, 400)
                         return
                     text = (
                         "A child and a creature explore a moonlit castle."
@@ -61,6 +62,15 @@ class FakeServices:
                         else "Create a castle scene with the protagonist from <image1> "
                         "and the creature from <image2>, preserving their identities."
                     )
+                    if (
+                        "The only reference, <image1>"
+                        in service.chats[-1]["messages"][0]["content"]
+                    ):
+                        text = (
+                            "Create a scene with the girl from <image1> and a black baby dragon "
+                            "with green eyes, pointed ears, no horns, four legs, "
+                            "two wings, and a tail."
+                        )
                     if "This is text-to-image" in service.chats[-1]["messages"][0]["content"]:
                         text = "One baby dragon curls up beside a pastel Viking longhouse."
                     if service.bad_refinement and len(service.chats) % 2 == 0:
@@ -80,7 +90,11 @@ class FakeServices:
                         }
                     )
                 elif self.path == "/prompt":
-                    service.graphs.append(json.loads(data)["prompt"])
+                    payload = json.loads(data)
+                    service.graphs.append(payload["prompt"])
+                    service.submissions[f"job-{len(service.graphs)}"] = payload.get(
+                        "extra_data", {}
+                    )
                     if service.fail_submit:
                         self.reply({"error": "submission response lost"}, 503)
                     else:
@@ -109,6 +123,15 @@ class FakeServices:
                             service.missing_flux_encoder
                         ] = [["a-different-encoder.safetensors"], {}]
                     self.reply(info)
+                elif parts.path == "/queue":
+                    self.reply({"queue_running": [], "queue_pending": []})
+                elif parts.path == "/history":
+                    self.reply(
+                        {
+                            key: {"prompt": [0, key, {}, extra]}
+                            for key, extra in service.submissions.items()
+                        }
+                    )
                 elif parts.path.startswith("/history/"):
                     service.history_gets += 1
                     if service.transient_history and service.history_gets == 1:
@@ -320,9 +343,8 @@ class PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
             service.fail_submit = True
             config = self.configuration(temp, service)
-            with self.assertRaisesRegex(RuntimeError, "not retried"):
-                run(config)
-            self.assertEqual(len(service.graphs), 1)
+            run(config)
+            self.assertEqual(len(service.graphs), 2)
             self.assertTrue((config.output.directory / "metadata/stiker-0000.json").exists())
 
     def test_get_retry_recovers_without_resubmitting(self):
@@ -343,13 +365,21 @@ class PipelineTests(unittest.TestCase):
             )
             self.assertEqual(meta["qwen_prompt_id"], "job-1")
 
-    def test_timeout_is_bounded_and_does_not_resubmit(self):
+    def test_waiting_job_can_be_paused_without_resubmitting(self):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
             service.never_complete = True
             config = self.configuration(temp, service)
             config.comfy.job_timeout = 0.04
-            with self.assertRaisesRegex(RuntimeError, "timed out.*job-1"):
-                run(config)
+            from birthday_stickers.control import RunControl, RunHalted
+
+            control = RunControl()
+            timer = threading.Timer(0.2, control.request)
+            timer.start()
+            try:
+                with self.assertRaises(RunHalted):
+                    run(config, control=control)
+            finally:
+                timer.cancel()
             self.assertEqual(len(service.graphs), 1)
 
     def test_equal_target_skips_outpaint(self):
@@ -373,7 +403,7 @@ class PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
             service.bad_refinement = True
             config = self.configuration(temp, service)
-            with self.assertRaisesRegex(RuntimeError, "must name both"):
+            with self.assertRaisesRegex(RuntimeError, "must name reference roles"):
                 run(config)
             saved = (config.output.directory / "scene_planning/results/stiker-0000.md").read_text(
                 encoding="utf-8"

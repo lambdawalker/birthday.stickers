@@ -277,3 +277,17 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
                 app.query_one("#generation-width", Input).value = "641"
                 with self.assertRaises(ValueError):
                     app.apply_generation_settings()
+
+    async def test_one_reference_flow_is_selectable(self):
+        from birthday_stickers.config import load_config
+
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = fixtures.PipelineTests().configuration(temp, service)
+            profile = load_config(fixtures.ROOT / "config.reference-dragon.yaml")
+            app = StickerApp(config, SessionStore(Path(temp) / "sessions"))
+            async with app.run_test(size=(110, 40)) as pilot:
+                with patch("birthday_stickers.tui.load_config", return_value=profile):
+                    await pilot.click("#choose-reference-dragon")
+                self.assertEqual(app.config.flow.reference_roles, ("protagonist",))
+                self.assertTrue(app.query_one("#reference-settings").display)
+                self.assertEqual(app.config.comfy.base_url, config.comfy.base_url)

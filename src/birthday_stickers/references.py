@@ -3,11 +3,14 @@
 import re
 from pathlib import Path
 
+from .character_conversion import convert_characters
 from .config import Config
+from .retry import file_retry
 
 FILENAME = re.compile(r"([A-Z])[0-9]+\.(?i:jpg)")
 
 
+@file_retry
 def discover_characters(directory: Path) -> dict[str, list[Path]]:
     if not directory.is_dir():
         raise ValueError(f"Character reference directory is missing: {directory}")
@@ -24,10 +27,17 @@ def reference_pools(config: Config) -> tuple[list[Path], list[Path]]:
         return [], []
     if config.character_directory is None:
         # Keep existing configs with explicit image paths working.
-        return [Path(config.protagonist)], [Path(config.creature)]
+        return tuple(
+            [Path(getattr(config, role))] if role in config.flow.reference_roles else []
+            for role in ("protagonist", "creature")
+        )
+    convert_characters(config.character_directory)
     groups = discover_characters(config.character_directory)
     pools = []
     for role, character_id in (("protagonist", config.protagonist), ("creature", config.creature)):
+        if role not in config.flow.reference_roles:
+            pools.append([])
+            continue
         candidates = groups.get(str(character_id), [])
         if not candidates:
             raise ValueError(

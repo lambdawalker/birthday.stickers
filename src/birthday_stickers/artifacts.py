@@ -5,6 +5,8 @@ import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
+from .retry import file_retry
+
 STAGES = {"prompts": "scene_planning", "images": "image_generation", "outpainting": "outpainting"}
 
 
@@ -13,6 +15,7 @@ def result_path(root: Path, lane: str, name: str) -> Path:
     return root / STAGES[lane] / "results" / (name + suffix)
 
 
+@file_retry
 def ensure_layout(root: Path) -> None:
     (root / "metadata").mkdir(parents=True, exist_ok=True)
     for stage in STAGES.values():
@@ -20,6 +23,7 @@ def ensure_layout(root: Path) -> None:
             (root / stage / folder).mkdir(parents=True, exist_ok=True)
 
 
+@file_retry
 def stage_log(root: Path, lane: str, name: str, **event) -> None:
     path = root / STAGES[lane] / "logs" / f"{name or 'worker'}.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -36,6 +40,7 @@ def generated_only(meta: dict) -> bool:
     return meta.get("generation_type") in ("baby_dragon", "single_character_text")
 
 
+@file_retry
 def import_legacy(root: Path, records: list) -> None:
     """Copy old artifacts without deleting originals or overwriting new stage outputs."""
     ensure_layout(root)
