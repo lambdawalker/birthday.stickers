@@ -26,6 +26,9 @@ def service_urls(config: Config) -> dict[str, str]:
     }
 
 
+SESSION_VERSION = 2
+
+
 def now() -> str:
     return datetime.now().astimezone().isoformat()
 
@@ -88,8 +91,13 @@ class SessionStore:
 
     def read(self, name: str) -> dict:
         data = json.loads(read_text(self.directory(name) / "session.json", encoding="utf-8"))
-        if not isinstance(data, dict) or data.get("version") != 1 or data.get("name") != name:
+        if not isinstance(data, dict) or data.get("name") != name:
             raise ValueError(f"Invalid session manifest: {name}")
+        if data.get("version") != SESSION_VERSION:
+            raise ValueError(
+                f"Unsupported session version for {name}; start a new session. "
+                "Existing files have been retained."
+            )
         integer(data.get("count"), "session count", 1)
         return data
 
@@ -190,7 +198,7 @@ class SessionStore:
                 data["preset"] = "inputs/preset"
             write_text(directory / "config.yaml", yaml.safe_dump(data), encoding="utf-8")
             manifest = {
-                "version": 1,
+                "version": SESSION_VERSION,
                 "preset_name": config.preset.directory.name if config.preset else None,
                 "service_urls": service_urls(config),
                 "generation_type": config.generation.type,
@@ -234,6 +242,7 @@ class SessionStore:
         write_json(directory / "session.json", manifest)
 
     def set_outpainting(self, name: str, enabled: bool, settings: Config) -> None:
+        self.read(name)
         if enabled:
             self.enable_outpainting(name, settings)
             return
@@ -247,6 +256,7 @@ class SessionStore:
 
     def enable_outpainting(self, name: str, settings: Config) -> None:
         """Add the stage to an existing session without touching generated originals."""
+        self.read(name)
         directory = self.directory(name)
         with session_lock(directory):
             path = directory / "config.yaml"

@@ -11,6 +11,7 @@ import test_pipeline as fixtures
 
 from birthday_stickers.comfy import ComfyClient
 from birthday_stickers.control import RunControl, RunHalted
+from birthday_stickers.engine import Pipeline
 from birthday_stickers.llm import LLMClient
 from birthday_stickers.pipeline import run, scene_records
 from birthday_stickers.sessions import SessionStore, session_lock
@@ -146,12 +147,18 @@ class ParallelTests(unittest.TestCase):
                         self.assertTrue(image_failed.wait(5))
                 return original_llm(client, prompt, refined=refined)
 
+            def make_pipeline(*args):
+                pipeline = Pipeline(*args)
+                # Release the in-flight LLM only after the worker records its failure.
+                pipeline.abort = image_failed
+                return pipeline
+
             def wait(*args):
                 self.assertTrue(second_planning.wait(5))
-                image_failed.set()
                 raise RuntimeError("image service disconnected")
 
             with (
+                patch("birthday_stickers.engine.Pipeline", side_effect=make_pipeline),
                 patch.object(LLMClient, "complete", llm),
                 patch.object(ComfyClient, "wait_image", wait),
             ):

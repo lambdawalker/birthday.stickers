@@ -52,7 +52,7 @@ class ArtifactTests(unittest.TestCase):
             store.execute(name, RunControl())
             self.assertEqual(len(service.graphs), 4)
 
-    def test_legacy_generated_image_can_be_outpainted_without_recreation(self):
+    def test_legacy_artifacts_are_rejected_without_copying_or_deleting(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
             config = fixtures.PipelineTests().configuration(temp, service)
             config.generation.outpainting = False
@@ -71,15 +71,10 @@ class ArtifactTests(unittest.TestCase):
             meta.pop("intermediate_saved", None)
             metadata.write_text(json.dumps(meta), encoding="utf-8")
             config.generation.outpainting = True
-            prepare_records(config)
-            prepare_records(config)
-            self.assertFalse(result_path(root, "outpainting", "stiker-0000").exists())
-            result = run(config, resume=True)
-            self.assertEqual(result[0], result_path(root, "outpainting", "stiker-0000"))
-            self.assertEqual(result_path(root, "images", "stiker-0000").read_bytes(), content)
+            with self.assertRaisesRegex(ValueError, "Unsupported artifact layout"):
+                prepare_records(config)
+            self.assertFalse(result_path(root, "images", "stiker-0000").exists())
             self.assertEqual((root / "final/stiker-0000.jpg").read_bytes(), content)
-            self.assertEqual(len(service.chats), 2)
-            self.assertEqual(len(service.graphs), 2)
 
     def test_enable_is_noop_for_legacy_duo_with_implicit_outpainting(self):
         import yaml

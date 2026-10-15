@@ -114,3 +114,21 @@ class SessionTests(unittest.TestCase):
             self.assertTrue(store.errors)
             with self.assertRaises(ValueError):
                 store.directory("../escape")
+
+    def test_old_session_version_is_rejected_without_modifying_files(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = self.config(temp, service)
+            store = SessionStore(Path(temp) / "sessions")
+            item = store.create(config)
+            path = store.directory(item["name"]) / "session.json"
+            item["version"] = 1
+            path.write_text(json.dumps(item), encoding="utf-8")
+            original = path.read_bytes()
+            with self.assertRaisesRegex(ValueError, "Unsupported session version"):
+                store.read(item["name"])
+            self.assertEqual(store.list_sessions(), [])
+            self.assertIn("Unsupported session version", store.errors[0])
+            with self.assertRaisesRegex(ValueError, "Unsupported session version"):
+                store.execute(item["name"], RunControl())
+            self.assertEqual(path.read_bytes(), original)
+            self.assertEqual(service.chats, [])

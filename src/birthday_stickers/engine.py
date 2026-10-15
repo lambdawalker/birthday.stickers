@@ -1,9 +1,7 @@
 """Three workers with durable prompt/image handoff and optional GPU overlap."""
 
 import hashlib
-import json
 import logging
-import re
 import secrets
 import time
 import uuid
@@ -23,6 +21,7 @@ from .control import RunControl, RunHalted
 from .http import RejectedSubmission
 from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
 from .llm import LLMClient, compose_refinement
+from .master_prompts import correction_request, plan_request, refine_request, tag_error
 from .pipeline import (
     SEED_MODULUS,
     planning_prompt,
@@ -221,10 +220,13 @@ class Scene:
         activity = self.meta.get("activity")
         if "raw_scene" not in self.meta:
             if self.config.preset and "planning_request" not in self.meta:
-                self.meta["planning_request"] = (
-                    self.meta["planning_prompt"]
-                    + "\n\nRecent scenes (vary details):\n"
-                    + "\n".join(previous_scenes[-10:])
+                self.meta["planning_request"] = plan_request(
+                    local["planning"],
+                    self.meta["planning_prompt"],
+                    previous_scenes,
+                    iteration,
+                    self.config.generation.count,
+                    self.name,
                 )
                 self.save()
             with self.step("planning", "Plan scene"):
@@ -249,16 +251,20 @@ class Scene:
             activity,
             self.meta.get("planning_request"),
         )
-        if "refined_scene" not in self.meta:
+        if "refined_scene" not in self.meta and self.config.preset:
+            self.refine_preset(llm, local, raw)
+            write_prompts(
+                self.prompt_path,
+                self.name,
+                raw,
+                self.meta["refined_scene"],
+                activity,
+                self.meta.get("planning_request"),
+            )
+        elif "refined_scene" not in self.meta:
             with self.step("refining", "Refine Qwen prompt"):
                 refined = llm.complete(
-                    compose_refinement(local["refinement"], local["guide"], raw)
-                    + (
-                        "\n\nCharacter-source assignments:\n"
-                        + json.dumps(self.meta["scene_selection"]["characters"], ensure_ascii=False)
-                        if self.config.preset
-                        else ""
-                    ),
+                    compose_refinement(local["refinement"], local["guide"], raw),
                     refined=True,
                 )
                 write_prompts(
@@ -276,10 +282,6 @@ class Scene:
                     raise ValueError(
                         "Refined prompt must name reference roles: " + ", ".join(required)
                     )
-                if self.config.preset and set(re.findall(r"<image\d+>", refined)) != set(required):
-                    raise ValueError(
-                        "Refinement image tags do not match assigned character references"
-                    )
                 if len(required) == 1 and "<image2>" in refined:
                     raise ValueError(
                         "This flow has no second reference; describe the dragon in text"
@@ -287,6 +289,53 @@ class Scene:
                 self.meta["refined_scene"] = refined
         self.meta["status"] = "prompts_ready"
         self.save()
+
+    def refine_preset(self, llm, local, raw):
+        from .retry import pause
+
+        if "refinement_request" not in self.meta:
+            self.meta["refinement_request"] = refine_request(
+                local["refinement"],
+                local["guide"],
+                raw,
+                self.meta["scene_selection"]["characters"],
+            )
+            self.save()
+        base = self.meta["refinement_request"]
+        required = [f"<image{i}>" for i in range(1, len(self.config.reference_roles) + 1)]
+        while True:
+            self.pipeline.check()
+            request = base
+            if self.meta.get("refinement_error"):
+                request = correction_request(
+                    base, self.meta["refinement_candidate"], self.meta["refinement_error"]
+                )
+            with self.step("refining", "Refine Qwen prompt"):
+                candidate = llm.complete(request, refined=True)
+                error = tag_error(candidate, required)
+                if not error:
+                    self.meta["refined_scene"] = candidate
+                    self.meta.pop("refinement_candidate", None)
+                    self.meta.pop("refinement_error", None)
+                    return
+                attempt = self.meta.get("refinement_retries", 0) + 1
+                self.meta.update(
+                    refinement_candidate=candidate,
+                    refinement_error=error,
+                    refinement_retries=attempt,
+                )
+                stage_log(
+                    self.root,
+                    "prompts",
+                    self.name,
+                    outcome="rejected",
+                    error=error,
+                    candidate=candidate,
+                    attempt=attempt,
+                )
+            # Keep the raw scene, assignments and latest rejected answer across resumes.
+            # The standard cooperative delay grows to 15 seconds and remains capped.
+            pause(attempt, "Correct Qwen reference tags", ValueError(error))
 
     def client(self, kind):
         client = (

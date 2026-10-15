@@ -51,7 +51,13 @@ def validate_local(config: Config) -> dict:
     refinement = config.refinement.read_text(encoding="utf-8").strip()
     if not planning or not guide:
         raise ValueError("Planning prompt and Qwen guide must not be empty")
-    compose_refinement(refinement, guide, "validation scene")
+    if config.preset:
+        from .master_prompts import plan_request, refine_request
+
+        plan_request(planning, "validation brief", [], 1, config.generation.count, "validation")
+        refine_request(refinement, guide, "validation scene", [])
+    else:
+        compose_refinement(refinement, guide, "validation scene")
     qwen = load_workflow(config.qwen.path)
     graph = config.flow.build_graph(
         config,
@@ -109,7 +115,7 @@ def validate_local(config: Config) -> dict:
 @file_retry
 def reserve_sticker(root: Path) -> tuple[int, str, Path]:
     ensure_layout(root)
-    folders = [root / name for name in ("intermediate", "final", "prompts", "metadata")]
+    folders = [root / "metadata"]
     folders += [root / stage / "results" for stage in STAGES.values()]
     folders = [folder for folder in folders if folder.is_dir()]
     pattern = re.compile(r"^stiker-(\d+)\.")
@@ -218,17 +224,16 @@ def run(
 
 @file_retry
 def prepare_records(config: Config) -> list[tuple[Path, dict]]:
-    """Import legacy paths and reopen generated-only scenes when outpainting is enabled."""
-    from .artifacts import generated_only, import_legacy, result_path
+    """Reconcile current stage outputs when resuming or toggling outpainting."""
+    from .artifacts import result_path
     from .regeneration import reconcile_outputs
 
     records = scene_records(config.output.directory)
-    import_legacy(config.output.directory, records)
     for path, meta in records:
         original = dict(meta)
-        was_generated_only = generated_only(meta)
-        if meta.get("artifact_layout") != 2:
-            meta["artifact_layout"] = 2
+        was_generated_only = meta.get("outpainting") is False
+        if meta.get("artifact_layout") != 2 and "references" in meta:
+            raise ValueError(f"Unsupported artifact layout in {path}; start a new session")
         if meta.get("status") == "complete" and not was_generated_only:
             meta["outpainting_saved"] = True
         reconcile_outputs(config, path, meta, write_json)
