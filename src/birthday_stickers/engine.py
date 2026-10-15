@@ -100,16 +100,6 @@ class Pipeline:
                 for role, path in selected
             ],
         )
-        if self.config.preset:
-            from .presets import select_scene
-
-            metadata["scene_selection"] = select_scene(
-                self.config.preset,
-                self.config.output.directory / "metadata",
-                metadata["references"],
-            )
-            metadata["activity"] = metadata["scene_selection"]["activity"]
-            metadata["planning_prompt"] = metadata["scene_selection"]["prompt"]
         if self.local["activities"]:
             metadata["activity"] = select_activity(
                 self.local["activities"], self.config.output.directory / "metadata"
@@ -209,6 +199,22 @@ class Scene:
         local = self.pipeline.local
         if "references" not in self.meta:
             self.pipeline.prepare_references(self.meta, int(self.name.split("-")[-1]))
+            self.save()
+        # Reference selection and preset rendering are separate checkpoints. A pause
+        # or error while rendering may have saved references without a planning brief.
+        if self.config.preset and "planning_prompt" not in self.meta:
+            from .presets import select_scene
+
+            selection = self.meta.get("scene_selection")
+            if selection is None:
+                selection = select_scene(
+                    self.config.preset, self.root / "metadata", self.meta["references"]
+                )
+            self.meta.update(
+                scene_selection=selection,
+                activity=selection["activity"],
+                planning_prompt=selection["prompt"],
+            )
             self.save()
         references = self.references()
         llm = LLMClient(self.config.llm, references, self.config.generation.type)

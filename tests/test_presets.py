@@ -10,7 +10,7 @@ import yaml
 from PIL import Image
 
 from birthday_stickers.config import load_config
-from birthday_stickers.control import RunControl
+from birthday_stickers.control import RunControl, RunHalted
 from birthday_stickers.engine import Pipeline, Scene
 from birthday_stickers.llm import LLMClient
 from birthday_stickers.pipeline import reserve_sticker, run, validate_local
@@ -255,3 +255,64 @@ class PresetTests(unittest.TestCase):
             self.assertTrue(
                 (config.output.directory / "outpainting/results/stiker-0000.jpg").is_file()
             )
+
+    def test_pause_during_selection_recovers_without_changing_references_or_seed(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = with_preset(
+                fixtures.PipelineTests().configuration(temp, service),
+                ROOT / "girl_reference_dragon_text",
+            )
+            config.character_directory = Path(temp) / "characters"
+            config.character_directory.mkdir()
+            Image.new("RGB", (32, 32)).save(config.character_directory / "A12.jpg")
+            pipeline = Pipeline(config, RunControl(), lambda *_: None, lambda *_: None)
+            pipeline.local = validate_local(config)
+            _, name, path = reserve_sticker(config.output.directory)
+            scene = Scene(pipeline, path, {"sticker": name}, "prompts")
+            with patch("birthday_stickers.presets.select_scene", side_effect=RunHalted("paused")):
+                with self.assertRaises(RunHalted), scene.guard():
+                    scene.prepare(1, [])
+            saved = json.loads(path.read_text())
+            self.assertIn("references", saved)
+            self.assertNotIn("planning_prompt", saved)
+            original_refs = copy.deepcopy(saved["references"])
+            original_seed = saved["qwen_seed"]
+            Image.new("RGB", (32, 32)).save(config.character_directory / "A13.jpg")
+            with patch.object(LLMClient, "complete", return_value="Girl <image1> and baby dragon."):
+                try:
+                    Scene(pipeline, path, saved, "prompts").prepare(1, [])
+                except KeyError as error:
+                    self.fail(f"Partial scene must recover on resume, missing {error}")
+            recovered = json.loads(path.read_text())
+            self.assertEqual(recovered["status"], "prompts_ready")
+            self.assertEqual(recovered["references"], original_refs)
+            self.assertEqual(recovered["qwen_seed"], original_seed)
+            self.assertTrue(recovered["planning_request"].startswith(recovered["planning_prompt"]))
+
+    def test_resume_restores_missing_brief_from_existing_selection(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = with_preset(
+                fixtures.PipelineTests().configuration(temp, service), ROOT / "baby_dragon_text"
+            )
+            pipeline = Pipeline(config, RunControl(), lambda *_: None, lambda *_: None)
+            pipeline.local = validate_local(config)
+            _, name, path = reserve_sticker(config.output.directory)
+            scene = Scene(pipeline, path, {"sticker": name}, "prompts")
+            with patch.object(LLMClient, "complete", side_effect=RunHalted("paused")):
+                with self.assertRaises(RunHalted), scene.guard():
+                    scene.prepare(1, [])
+            saved = json.loads(path.read_text())
+            selection = copy.deepcopy(saved["scene_selection"])
+            del saved["planning_prompt"]
+            del saved["planning_request"]
+            with patch(
+                "birthday_stickers.presets.select_scene", side_effect=AssertionError("reroll")
+            ):
+                with patch.object(LLMClient, "complete", return_value="One baby dragon sleeps."):
+                    try:
+                        Scene(pipeline, path, saved, "prompts").prepare(1, [])
+                    except KeyError as error:
+                        self.fail(f"Saved selection must restore missing {error}")
+            recovered = json.loads(path.read_text())
+            self.assertEqual(recovered["scene_selection"], selection)
+            self.assertEqual(recovered["planning_prompt"], selection["prompt"])
