@@ -144,3 +144,23 @@ class MasterPromptTests(unittest.TestCase):
             self.assertEqual(saved.refinement.read_text(), config.refinement.read_text())
             self.assertIn("scene_brief", saved.planning.read_text())
             self.assertIn("character_sources", saved.refinement.read_text())
+
+    def test_each_shipped_preset_owns_its_master_templates(self):
+        from birthday_stickers.config import load_config
+
+        for filename in ("config.yaml", "config.dragon.yaml", "config.reference-dragon.yaml"):
+            config = load_config(fixtures.ROOT / filename)
+            with self.subTest(config=filename):
+                self.assertEqual(config.planning.parent, config.preset.directory)
+                self.assertEqual(config.refinement.parent, config.preset.directory)
+                self.assertTrue(config.planning.is_file())
+                self.assertTrue(config.refinement.is_file())
+
+    def test_switching_preset_switches_default_master_templates(self):
+        from birthday_stickers.config import load_config
+
+        config = load_config(fixtures.ROOT / "config.yaml")
+        switched = with_preset(config, ROOT / "baby_dragon_text")
+        self.assertEqual(switched.planning.parent, switched.preset.directory)
+        self.assertEqual(switched.refinement.parent, switched.preset.directory)
+        self.assertNotEqual(switched.planning, config.planning)

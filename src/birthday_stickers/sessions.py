@@ -189,12 +189,16 @@ class SessionStore:
                 "workflows": workflows,
             }
             if config.preset:
-                from .presets import FILES
+                from .presets import FILES, MASTER_FILES
 
                 preset_directory = snapshots / "preset"
                 preset_directory.mkdir()
                 for filename in FILES:
                     copyfile(config.preset.directory / filename, preset_directory / filename)
+                for filename in MASTER_FILES.values():
+                    source = config.preset.directory / filename
+                    if source.is_file():
+                        copyfile(source, preset_directory / filename)
                 data["preset"] = "inputs/preset"
             write_text(directory / "config.yaml", yaml.safe_dump(data), encoding="utf-8")
             manifest = {

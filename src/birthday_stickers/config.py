@@ -185,7 +185,7 @@ def load_config(path: Path) -> Config:
         raise ValueError("Config must be a YAML mapping")
     preset = None
     if data.get("preset"):
-        from .presets import ROOT, load_preset
+        from .presets import MASTER_FILES, ROOT, load_preset, master_path
 
         value = data["preset"]
         candidate = local_path(path.parent, value)
@@ -196,6 +196,11 @@ def load_config(path: Path) -> Config:
             data["flow"] = "scene_preset"
         if data.get("flow", "scene_preset") != "scene_preset":
             raise ValueError("preset requires flow: scene_preset")
+    if preset:
+        prompt_settings = data.setdefault("prompts", {})
+        if isinstance(prompt_settings, dict):
+            for key in MASTER_FILES:
+                prompt_settings.setdefault(key, str(master_path(preset.directory, key)))
     data = expand_config(data, path.parent)
     expected = {
         "preset",

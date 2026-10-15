@@ -25,6 +25,16 @@ FILES = (
 )
 
 
+MASTER_FILES = {"planning": "planning_master.md", "refinement": "refinement_master.md"}
+
+
+def master_path(directory, key):
+    """Prefer a preset's own master; common is the fallback for custom presets."""
+    name = MASTER_FILES[key]
+    own = Path(directory) / name
+    return own if own.is_file() else ROOT.parent / "flows" / "common" / name
+
+
 def mapping(path):
     try:
         value = yaml.safe_load(read_text(path, encoding="utf-8"))
@@ -305,6 +315,10 @@ def with_preset(config, directory):
         for key in ("planning", "refinement", "guide", "activities"):
             value = defaults["prompts"].get(key)
             setattr(result, key, Path(value) if value else None)
+    for key in MASTER_FILES:
+        previous = master_path(config.preset.directory, key) if config.preset else None
+        if config.preset is None or getattr(config, key) == previous:
+            setattr(result, key, master_path(result.preset.directory, key))
     workflow = defaults["workflows"]["qwen"]
     if config.preset is None:
         result.qwen = WorkflowConfig(
