@@ -616,3 +616,37 @@ appear in the positive planning/refinement and outpainting prompts. CFG is left
 unchanged; increasing it changes rendering behavior and has not been GPU-tested
 here. Negative prompts reduce unwanted elements but do not guarantee frame-free
 results or repair frames already present in a saved source image.
+
+### Regenerate selected images by deleting their files
+
+Pause or stop the session before deleting files. Review the images in your usual
+image viewer or file manager, delete unwanted results, then select the saved
+session and press **Resume selected** (completed sessions are listed too).
+
+| Deleted result | Work repeated on resume |
+| --- | --- |
+| `image_generation/results/stiker-NNNN.jpg` | Generate a new base image and invalidate its outpainting |
+| `outpainting/results/stiker-NNNN.jpg` | Outpaint the existing base image again |
+| Both images | Generate the base, then outpaint if enabled |
+
+Each invalidated stage gets a new seed, different from its preceding seed, even
+when the initial batch used a configured fixed seed. The saved raw/refined
+prompts and selected character references are reused. Other stickers are untouched.
+Reference files must still exist and match their recorded hashes.
+
+When a base image is deleted, its existing outpainted image moves to
+`outpainting/superseded/` before regeneration. This prevents outdated derived images
+from remaining in `results/`. If outpainting is disabled, it remains pending until
+re-enabled. Deleted files themselves cannot be recovered by this process.
+
+The program distinguishes deleted completed results from outputs that have never
+finished: pending jobs still resume with their original IDs and seeds. If a
+base image is removed while its outpainting job is pending, that job's identity
+is retained and its completion is checked before replacement work starts.
+Unknown submission outcomes still require resolution rather than duplicate jobs.
+Regeneration history (old seeds/IDs and new seeds) is saved in sticker metadata,
+and the affected stage's log records the regeneration request. Repeated resume
+attempts reuse the newly chosen seeds until another saved output is deleted.
+
+Only missing image outputs trigger regeneration. Deleting prompt Markdown files,
+logs, or metadata is not a regeneration control; retain those files.

@@ -194,6 +194,7 @@ def run(
 def prepare_records(config: Config) -> list[tuple[Path, dict]]:
     """Import legacy paths and reopen generated-only scenes when outpainting is enabled."""
     from .artifacts import generated_only, import_legacy, result_path
+    from .regeneration import reconcile_outputs
 
     records = scene_records(config.output.directory)
     import_legacy(config.output.directory, records)
@@ -204,6 +205,7 @@ def prepare_records(config: Config) -> list[tuple[Path, dict]]:
             meta["artifact_layout"] = 2
         if meta.get("status") == "complete" and not was_generated_only:
             meta["outpainting_saved"] = True
+        reconcile_outputs(config, path, meta, write_json)
         image = result_path(config.output.directory, "images", meta["sticker"])
         if config.generation.outpainting != meta.get("outpainting", not was_generated_only):
             if image.is_file():

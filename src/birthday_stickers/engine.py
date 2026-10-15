@@ -331,6 +331,7 @@ class Scene:
                     config.output.jpeg_background,
                 )
                 self.meta["intermediate_saved"] = True
+                self.meta["image_saved"] = True
         self.meta["status"] = "image_ready"
         self.save()
         self.pipeline.report("images", self.name, "image_ready", increment=1)
@@ -425,6 +426,18 @@ def execute(
         pipeline.comfy_outpainting.preflight(pipeline.local["graphs"][1])
     log.info("Service checks finished in %.2fs", time.perf_counter() - start)
     records = prepare_records(config) if resume else []
+    for path, meta in records:
+        while meta.get("retired_jobs"):
+            job = meta["retired_jobs"][0]
+            if job["server"] != config.outpainting_comfy.base_url.rstrip("/"):
+                raise ValueError(
+                    "Restore the original outpainting endpoint to settle its invalidated job"
+                )
+            client = ComfyClient(config.outpainting_comfy, "outpainting")
+            pipeline.report("outpainting", meta["sticker"], "waiting_for_invalidated_job")
+            client.wait_terminal(job["prompt_id"], pipeline.check)
+            meta["retired_jobs"].pop(0)
+            write_json(path, meta)
     # Disabling a stage cannot cancel work already submitted to its server.
     # Drain those jobs before starting more GPU work, including separate ports
     # that may share the same physical GPU. Keep IDs for later re-enabling.
