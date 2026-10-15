@@ -8,6 +8,7 @@ import argparse
 import json
 import math
 from collections import deque
+from copy import copy
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps
@@ -141,8 +142,13 @@ def ratio(value):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("image", type=Path)
-    parser.add_argument("--output", type=Path, help="Output JPEG/PNG (default: IMAGE.centered.jpg)")
+    parser.add_argument("image", type=Path, help="Image file or directory")
+    parser.add_argument("--recursive", action="store_true", help="Include subdirectories")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="Output file, or directory for batch input (default: INPUT/centered)",
+    )
     parser.add_argument(
         "--threshold",
         type=int,
@@ -198,6 +204,61 @@ def main(argv=None):
     aspect = args.aspect or (args.size[0] / args.size[1] if args.size else 1.0)
     if args.size and args.aspect and not math.isclose(aspect, args.size[0] / args.size[1]):
         parser.error("--aspect and --size must have matching proportions")
+    if args.image.is_dir():
+        return process_directory(args, parser, aspect)
+    if args.recursive:
+        parser.error("--recursive requires a directory input")
+    return process_image(args, parser, aspect)
+
+
+def process_directory(args, parser, aspect):
+    root = args.image.resolve()
+    destination = (args.output or root / "centered").resolve()
+    if destination == root or root.is_relative_to(destination):
+        parser.error("Output directory must not be the input directory or its ancestor")
+    if destination.exists() and not destination.is_dir():
+        parser.error("Directory input requires an output directory")
+    paths = root.rglob("*") if args.recursive else root.iterdir()
+    sources = sorted(
+        path
+        for path in paths
+        if path.is_file()
+        and path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff"}
+        and not path.resolve().is_relative_to(destination)
+        and not any(tag in path.stem.lower() for tag in (".centered", ".detection", ".mask"))
+    )
+    if not sources:
+        parser.error("No supported source images found in the directory")
+    completed = skipped = failed = 0
+    for index, source in enumerate(sources, 1):
+        item = copy(args)
+        item.image = source
+        # Keep the source extension in batch names to avoid JPG/PNG stem collisions.
+        item.output = (
+            destination / source.relative_to(root).parent / (source.name + ".centered.jpg")
+        )
+        targets = [item.output, item.output.with_suffix(".json")]
+        targets += [
+            item.output.with_name(item.output.stem + suffix)
+            for suffix in (".detection.png", ".mask.png")
+        ]
+        print(f"[{index}/{len(sources)}] {source.relative_to(root)}")
+        if any(path.exists() for path in targets) and not args.force:
+            print("Skipped: derived output exists (use --force to replace).")
+            skipped += 1
+            continue
+        try:
+            process_image(item, parser, aspect)
+            completed += 1
+        except SystemExit as error:
+            if error.code == 0:
+                raise
+            failed += 1
+    print(f"Batch finished: {completed} processed, {skipped} skipped, {failed} failed.")
+    return 1 if failed else 0
+
+
+def process_image(args, parser, aspect):
     output = args.output or args.image.with_name(args.image.stem + ".centered.jpg")
     if output.suffix.lower() not in (".jpg", ".jpeg", ".png"):
         parser.error("output must be a JPEG or PNG")

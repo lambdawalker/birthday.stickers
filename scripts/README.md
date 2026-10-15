@@ -62,3 +62,22 @@ need manual tuning or a future semantic segmentation model.
 
 This tool creates separate files. It does not automatically replace generated
 images or alter their downstream outpainting state.
+
+### Process a directory
+
+```powershell
+uv run scripts/center_dragon.py "C:\pictures" --size 1024 1024
+uv run scripts/center_dragon.py "C:\pictures" --recursive --output "C:\crops"
+```
+
+Directory mode supports JPG, JPEG, PNG, WebP, BMP, and TIFF (case-insensitive).
+By default it processes only files directly inside the directory and saves results
+under `INPUT/centered`. Use `--recursive` to include subdirectories; their structure
+is preserved in the output. Batch names retain the original extension, for example
+`scene.png.centered.jpg`, so `scene.jpg` and `scene.png` cannot collide.
+
+The output directory and names containing `.centered`, `.detection`, or `.mask`
+are excluded from discovery. Existing outputs are skipped; use `--force` to redo
+them. If any of an image's four output files exists, the image is skipped, so use
+`--force` to repair partial results. A failed image does not stop the batch; the
+summary reports processed, skipped, and failed counts. Any failure gives exit code 1.

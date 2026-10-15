@@ -65,3 +65,28 @@ class CenterDragonTests(unittest.TestCase):
             self.assertEqual(source.read_bytes(), original)
             with self.assertRaises(SystemExit):
                 API["main"]([str(source), "--output", str(source), "--force"])
+
+    def test_directory_recursion_collisions_skip_and_failure_isolation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            image = Image.new("RGB", (100, 100), "pink")
+            ImageDraw.Draw(image).ellipse((30, 20, 80, 75), fill="black")
+            image.save(root / "scene.jpg")
+            image.save(root / "scene.png")
+            image.save(root / "old.centered.jpg")
+            (root / "nested").mkdir()
+            image.save(root / "nested" / "other.png")
+            self.assertEqual(API["main"]([temp]), 0)
+            output = root / "centered"
+            self.assertTrue((output / "scene.jpg.centered.jpg").exists())
+            self.assertTrue((output / "scene.png.centered.jpg").exists())
+            self.assertFalse((output / "old.centered.jpg.centered.jpg").exists())
+            before = (output / "scene.jpg.centered.jpg").stat().st_mtime_ns
+            self.assertEqual(API["main"]([temp, "--recursive"]), 0)
+            self.assertTrue((output / "nested" / "other.png.centered.jpg").exists())
+            self.assertFalse((output / "centered").exists())
+            self.assertEqual((output / "scene.jpg.centered.jpg").stat().st_mtime_ns, before)
+            (root / "broken.jpg").write_bytes(b"not an image")
+            image.save(root / "valid.jpg")
+            self.assertEqual(API["main"]([temp]), 1)
+            self.assertTrue((output / "valid.jpg.centered.jpg").exists())
