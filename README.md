@@ -214,7 +214,7 @@ configured tokens as Bearer headers. It never stores their values in output meta
 
 ## Prompts and the Qwen guide
 
-Edit the selected preset's six files to change style, characters, activities,
+Edit the selected preset's files to change style, characters, activities,
 venues and composition. The assembled brief is saved before the LLM request, with
 up to ten recent scenes appended to encourage variety.
 
@@ -227,10 +227,12 @@ Qwen refinement. The graph's internal prompt enhancer is bypassed.
 
 ### Master planning and refinement templates
 
-The shared, editable templates live in:
-
-- `src/birthday_stickers/flows/common/planning_master.md`
-- `src/birthday_stickers/flows/common/refinement_master.md`
+Each preset has its own editable `planning_master.md` and `refinement_master.md`
+in `src/birthday_stickers/presets/<preset-name>/`. Edit these to customize only
+that preset. Switching presets selects its own templates. A custom preset missing
+either file falls back to that file in `src/birthday_stickers/flows/common/`.
+An explicit `prompts.planning` or `prompts.refinement` YAML override takes priority
+and is retained when switching presets.
 
 Planning inserts `{{ scene_brief }}` (required), which contains the rendered image
 style, character blocks and general direction in that order. Optional variables
@@ -247,7 +249,7 @@ prompts:
   refinement: ./my-prompts/refinement_master.md
 ```
 
-Switching presets keeps these overrides. New sessions snapshot the files into
+Switching presets keeps these explicit overrides. New sessions snapshot the resolved files into
 `inputs/planning.md` and `inputs/refinement.md`. The rendered `planning_request`
 and `refinement_request` are saved in scene metadata before their first LLM call.
 `--preview-prompt` now shows the final master planning request. Invalid template
@@ -381,6 +383,8 @@ with the same name overrides its packaged counterpart. A preset folder contains:
 | `props.yaml` | Global props for styling and general direction |
 | `image_style.md` | Medium, palette and visual style; first in the planning prompt |
 | `general_direction.md` | Environment, placement, activity and composition template |
+| `planning_master.md` | Master template for the initial LLM request |
+| `refinement_master.md` | Master template for the Qwen refinement request |
 
 ```yaml
 # Launch YAML
@@ -503,7 +507,7 @@ lists, and activities with no compatible venues fail before LLM/Comfy work.
 The rendered brief, selections, seed, reference paths and hashes are saved before
 calling the LLM. A retry/resume reuses those choices. The Markdown scene artifact
 contains the assembled request plus the raw and refined responses. Sessions copy
-all six small preset files; they keep references in their live source directory.
+the preset files and its own master templates; they keep references in their live source directory.
 New reference files become available to unplanned scenes, including after resume.
 Already-planned scenes keep their selected reference files and hashes.
 
