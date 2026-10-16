@@ -113,7 +113,8 @@ async function load(asGrid = false) {
     images = data.images;
     index = 0;
     const done = (data.counts.accepted || 0) + (data.counts.rejected || 0);
-    $("progress").textContent = done + " of " + data.total + " reviewed";
+    $("progress").textContent = done + " / " + data.total;
+    $("progress").title = done + " of " + data.total + " reviewed";
     if (asGrid) grid();
     else show();
   } catch (e) {
@@ -180,15 +181,21 @@ $("hero").onerror = () =>
 let start = null;
 $("stage").addEventListener("pointerdown", (e) => {
   if (busy || pending || !images[index] || e.target.closest("button")) return;
-  start = { x: e.clientX, y: e.clientY };
+  if (
+    start ||
+    e.isPrimary === false ||
+    (e.button !== undefined && e.button !== 0)
+  )
+    return;
+  start = { x: e.clientX, y: e.clientY, pointerId: e.pointerId };
+  $("stage").classList.add("dragging");
   $("stage").setPointerCapture(e.pointerId);
 });
 $("stage").addEventListener("pointermove", (e) => {
-  if (!start) return;
+  if (!start || e.pointerId !== start.pointerId) return;
   const x = e.clientX - start.x,
     y = e.clientY - start.y;
-  $("hero").style.transform =
-    `translate(${x * 0.35}px,${y * 0.35}px) rotate(${x * 0.02}deg)`;
+  $("hero").style.transform = `translate(${x}px,${y}px)`;
   const action =
     Math.abs(x) > Math.abs(y)
       ? x > 0
@@ -205,11 +212,12 @@ $("stage").addEventListener("pointermove", (e) => {
 });
 function clearGesture() {
   start = null;
+  $("stage").classList.remove("dragging");
   $("hero").style.transform = "";
   $("gesture").style.opacity = 0;
 }
 $("stage").addEventListener("pointerup", (e) => {
-  if (!start) return;
+  if (!start || e.pointerId !== start.pointerId) return;
   const x = e.clientX - start.x,
     y = e.clientY - start.y;
   clearGesture();
@@ -225,6 +233,8 @@ $("stage").addEventListener("pointerup", (e) => {
   );
 });
 $("stage").addEventListener("pointercancel", clearGesture);
+$("stage").addEventListener("lostpointercapture", clearGesture);
+window.addEventListener("blur", clearGesture);
 document.addEventListener("keydown", (e) => {
   if (e.target.closest("input,button,a") || inGrid || !name) return;
   const action = {
@@ -243,8 +253,8 @@ async function sessions() {
   $("review").hidden = true;
   $("categories").hidden = true;
   $("sessions").hidden = false;
-  $("title").textContent = "Everyone’s picks.";
-  $("eyebrow").textContent = "REVIEW SESSIONS";
+  $("title").textContent = "Review sessions";
+  $("sessions-link").hidden = true;
   try {
     const rows = await request(
       "/api/sessions?" + new URLSearchParams({ pipeline }),
@@ -273,7 +283,8 @@ async function sessions() {
   }
 }
 if (name) {
-  $("title").textContent = name + "’s little adventures.";
+  $("title").textContent = name + " Space";
+  document.title = name + " Space";
   $("sessions-link").href = "/sessions?" + new URLSearchParams({ pipeline });
   for (const [cat, label] of Object.entries(categories)) {
     const link = document.createElement("a");
