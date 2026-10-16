@@ -1,6 +1,12 @@
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const pipeline = params.get("pipeline") || "image_generation";
+const requestedBuffer = Number(params.get("preload") ?? 3);
+const bufferSize = Number.isFinite(requestedBuffer)
+  ? Math.max(1, Math.min(20, Math.floor(requestedBuffer)))
+  : 3;
+const imageBuffer = new Map();
+const recentImages = [];
 const category = params.get("category") || "pending";
 const name = location.pathname.startsWith("/user/")
   ? decodeURIComponent(location.pathname.slice(6))
@@ -17,7 +23,8 @@ let images = [],
   busy = false,
   inGrid = false,
   pending = null;
-const query = (cat) => "?" + new URLSearchParams({ pipeline, category: cat });
+const query = (cat) =>
+  "?" + new URLSearchParams({ pipeline, category: cat, preload: bufferSize });
 const userURL = (user, cat) => "/user/" + encodeURIComponent(user) + query(cat);
 const api =
   "/api/user/" +
@@ -77,12 +84,47 @@ function show() {
     $("tshirt").classList.toggle("selected", !!item.tshirt);
     $("favorite").setAttribute("aria-pressed", String(!!item.favorite));
     $("tshirt").setAttribute("aria-pressed", String(!!item.tshirt));
-    if (images[index + 1]) {
-      const preload = new Image();
-      preload.src = imageURL(images[index + 1]);
-    }
   }
+  const underneath = images[index + 1];
+  $("underneath").hidden = !underneath;
+  if (underneath) $("underneath").src = imageURL(underneath);
+  else $("underneath").removeAttribute("src");
+  warmImages();
   controls();
+}
+function warmImages() {
+  const nearby = images.slice(
+    Math.max(0, index - bufferSize),
+    index + bufferSize + 1,
+  );
+  const wanted = new Set([...recentImages, ...nearby].map(imageURL));
+  for (const url of imageBuffer.keys()) {
+    if (!wanted.has(url)) imageBuffer.delete(url);
+  }
+  for (const url of wanted) {
+    if (imageBuffer.has(url)) continue;
+    const image = new Image();
+    image.src = url;
+    imageBuffer.set(url, image);
+    image.decode?.().catch(() => {});
+  }
+}
+function confirmChoice(action) {
+  const labels = {
+    accept: ["😊", "Accepted"],
+    reject: ["😢", "Rejected"],
+    favorite: ["⭐", "Favorite updated"],
+    tshirt: ["👕", "T-shirt selection updated"],
+  };
+  if (!labels[action]) return;
+  const [symbol, label] = labels[action];
+  const pop = document.createElement("div");
+  pop.className = "confirmation-pop";
+  pop.setAttribute("aria-hidden", "true");
+  pop.textContent = symbol;
+  pop.addEventListener("animationend", () => pop.remove());
+  $("confirmation").replaceChildren(pop);
+  $("announcement").textContent = label;
 }
 function grid() {
   inGrid = true;
@@ -129,7 +171,14 @@ async function send() {
   busy = true;
   controls();
   try {
+    const action = pending.action;
+    const current = images.find((item) => item.hash === pending.hash);
     await request(api, pending);
+    if (current && action !== "undo") {
+      recentImages.push(current);
+      recentImages.splice(0, Math.max(0, recentImages.length - bufferSize));
+    }
+    confirmChoice(action);
     localStorage.removeItem(storageKey);
     pending = null;
     $("retry").hidden = true;

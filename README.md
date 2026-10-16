@@ -873,3 +873,9 @@ selection. Preview, validation, and the review server do not start the watchdog.
 
 The destructive flattening utility and its command have been removed. Use
 **Generate gallery** or `birthday-gallery-fix` instead.
+
+Review pages preload 3 images ahead and behind by default (including recently reviewed
+images for Undo). Set `?preload=5` on a reviewer link to change the buffer to 5
+images in each direction; supported values are 1–20. The next image sits underneath
+the current card while dragging. Saved choices show a brief confirmation icon;
+failed requests retain the retry action without showing a success confirmation.

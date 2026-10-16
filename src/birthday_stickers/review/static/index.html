@@ -21,12 +21,26 @@
       <h1 id="title">Review sessions</h1>
       <span id="progress" aria-live="polite"></span>
     </header>
+    <div id="confirmation" aria-hidden="true"></div>
+    <div
+      id="announcement"
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+    ></div>
     <main>
       <nav id="categories" aria-label="Review categories"></nav>
       <p id="error" role="alert"></p>
       <button id="retry" hidden>Retry saved action</button>
       <section id="review">
         <div class="stage" id="stage">
+          <img
+            id="underneath"
+            alt=""
+            aria-hidden="true"
+            draggable="false"
+            hidden
+          />
           <img id="hero" alt="Illustration to review" draggable="false" />
           <div id="empty" hidden>
             <h2>You're all caught up.</h2>

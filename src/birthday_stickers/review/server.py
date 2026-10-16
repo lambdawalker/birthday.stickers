@@ -20,11 +20,11 @@ def make_server(gallery, host="0.0.0.0", port=8080):
         def reply(self, value, status=200):
             self.send_bytes(json.dumps(value).encode(), "application/json", status)
 
-        def send_bytes(self, data, kind, status=200):
+        def send_bytes(self, data, kind, status=200, cache="no-store"):
             self.send_response(status)
             self.send_header("Content-Type", kind)
             self.send_header("Content-Length", str(len(data)))
-            self.send_header("Cache-Control", "no-store")
+            self.send_header("Cache-Control", cache)
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header(
                 "Content-Security-Policy",
@@ -65,7 +65,9 @@ def make_server(gallery, host="0.0.0.0", port=8080):
                         self.reply({"error": "Image not found"}, 404)
                         return
                     self.send_bytes(
-                        source.read_bytes(), mimetypes.guess_type(source.name)[0] or "image/jpeg"
+                        source.read_bytes(),
+                        mimetypes.guess_type(source.name)[0] or "image/jpeg",
+                        cache="private, max-age=31536000, immutable",
                     )
                 elif path in ("/app.js", "/style.css"):
                     source = STATIC / path[1:]
