@@ -57,6 +57,21 @@ const imageURL = (item) =>
 const positionKey = "review-position:" + name + ":" + pipeline + ":" + category;
 let loadedPosition = false;
 const storageKey = "pending-review:" + name + ":" + pipeline;
+const zoom = window.createPinchZoom({
+  surface: $("review"),
+  getImage: () =>
+    galleryMode
+      ? $("carousel").children[
+          index + (images.length > 1 ? 1 : 0)
+        ]?.querySelector("img")
+      : $("hero"),
+  canStart: () => !busy && !pending && !exiting && !!images[index],
+  onStart: () => {
+    clearGesture();
+    $("confirmation").replaceChildren();
+  },
+  onChange: controls,
+});
 function error(e) {
   $("error").textContent = e.message || String(e);
 }
@@ -84,12 +99,15 @@ function controls() {
   document
     .querySelectorAll("[data-action]")
     .forEach(
-      (b) => (b.disabled = busy || !!pending || !images[index] || exiting),
+      (b) =>
+        (b.disabled =
+          zoom.active || busy || !!pending || !images[index] || exiting),
     );
-  $("undo").disabled = busy || !!pending || exiting;
-  $("next").disabled = busy || exiting || !!pending;
+  $("undo").disabled = zoom.active || busy || !!pending || exiting;
+  $("next").disabled = zoom.active || busy || exiting || !!pending;
   for (const id of ["previous-image", "next-image"])
-    $(id).disabled = busy || exiting || !!pending || images.length < 2;
+    $(id).disabled =
+      zoom.active || busy || exiting || !!pending || images.length < 2;
 }
 function renderCategoryBadge(badge, item) {
   badge.textContent = [
@@ -349,7 +367,7 @@ async function send() {
   }
 }
 async function act(action, fromSwipe = false) {
-  if (busy || pending || (exiting && !fromSwipe)) return;
+  if (zoom.active || busy || pending || (exiting && !fromSwipe)) return;
   if (action !== "undo" && !images[index]) return;
   pending = { hash: images[index]?.hash, action, token: token() };
   try {
@@ -366,7 +384,7 @@ async function act(action, fromSwipe = false) {
   await send();
 }
 function navigateImage(direction) {
-  if (busy || pending || exiting || images.length < 2) return;
+  if (zoom.active || busy || pending || exiting || images.length < 2) return;
   index = (index + direction + images.length) % images.length;
   show();
   if (galleryMode)
@@ -392,6 +410,7 @@ let start = null;
 $("stage").addEventListener("pointerdown", (e) => {
   if (
     galleryMode ||
+    zoom.active ||
     exiting ||
     busy ||
     pending ||
@@ -410,7 +429,7 @@ $("stage").addEventListener("pointerdown", (e) => {
   $("stage").setPointerCapture(e.pointerId);
 });
 $("stage").addEventListener("pointermove", (e) => {
-  if (!start || e.pointerId !== start.pointerId) return;
+  if (zoom.active || !start || e.pointerId !== start.pointerId) return;
   const x = e.clientX - start.x,
     y = e.clientY - start.y;
   const strength = Math.min(1, Math.max(Math.abs(x), Math.abs(y)) / 140);
@@ -439,7 +458,7 @@ function clearGesture() {
   $("gesture").style.opacity = 0;
 }
 $("stage").addEventListener("pointerup", async (e) => {
-  if (!start || e.pointerId !== start.pointerId) return;
+  if (zoom.active || !start || e.pointerId !== start.pointerId) return;
   const x = e.clientX - start.x,
     y = e.clientY - start.y;
   if (!reachesSwipeThreshold(x, y)) {

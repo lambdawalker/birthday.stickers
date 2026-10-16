@@ -583,3 +583,15 @@ nav::-webkit-scrollbar {
   color: #9c352d;
   font-size: 12px;
 }
+
+.pinch-image {
+  position: fixed;
+  z-index: 3000;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  background: transparent;
+  will-change: transform;
+}

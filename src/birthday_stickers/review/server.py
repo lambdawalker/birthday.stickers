@@ -71,7 +71,7 @@ def make_server(gallery, host="0.0.0.0", port=8080):
                     )
                 elif path in ("/view.png", "/pointing-hand.png"):
                     self.send_bytes((STATIC / path[1:]).read_bytes(), "image/png")
-                elif path in ("/app.js", "/style.css"):
+                elif path in ("/app.js", "/zoom.js", "/style.css"):
                     source = STATIC / path[1:]
                     self.send_bytes(
                         source.read_bytes(),
