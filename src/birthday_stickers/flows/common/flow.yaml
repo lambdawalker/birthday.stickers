@@ -1,15 +1,13 @@
 prompts:
   negative: negative.md
 workflows:
+  # Historical key retained for session/job bookkeeping; this graph uses Qwen.
   flux:
-    path: flux-outpaint.json
+    path: qwen-outpaint.json
     nodes:
-      image: '47'
-      prompt: '23'
-      pad: '44'
-      sampler: '3'
-      conditioning: '38'
-      output: '9'
-    overrides:
-      '3':
-        steps: 50
+      image: '200'
+      encoder: '112'
+      pad: '202'
+      sampler: '114'
+      output: '207'
+    overrides: {}

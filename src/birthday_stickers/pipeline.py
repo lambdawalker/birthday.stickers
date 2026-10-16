@@ -13,7 +13,7 @@ from .control import RunControl
 from .images import decode_image, plan_padding
 from .references import reference_pools
 from .retry import file_retry, retry_scope
-from .workflows import build_flux, load_workflow
+from .workflows import build_outpaint, load_workflow
 
 log = logging.getLogger(__name__)
 SEED_MODULUS = 2**63
@@ -69,7 +69,7 @@ def validate_local(config: Config) -> dict:
         )
         flux = load_workflow(config.flux.path)
         graphs.append(
-            build_flux(
+            build_outpaint(
                 flux,
                 config.flux.nodes,
                 config.flux.overrides,

@@ -312,7 +312,7 @@ def load_config(path: Path) -> Config:
         raise ValueError("Outpainting requires workflows.flux")
     for key, roles in (
         ("qwen", {"encoder", "latent", "sampler", "output"}),
-        ("flux", {"image", "prompt", "pad", "sampler", "conditioning", "output"}),
+        ("flux", {"image", "encoder", "pad", "sampler", "output"}),
     ):
         if key == "flux" and key not in workflows:
             continue

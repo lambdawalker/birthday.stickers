@@ -121,7 +121,7 @@ class GenerationTypeTests(unittest.TestCase):
             original = ComfyClient.wait_image
 
             def pause(client, prompt_id, output_id, checkpoint=lambda: None):
-                if output_id == "9":
+                if output_id == "207":
                     control.request()
                 return original(client, prompt_id, output_id, checkpoint)
 
@@ -135,12 +135,12 @@ class GenerationTypeTests(unittest.TestCase):
             self.assertEqual(len(service.graphs), 2)
             self.assertEqual(len(service.uploads), 1)
             self.assertEqual(
-                service.graphs[1]["23"]["inputs"]["text"],
+                service.graphs[1]["112"]["inputs"]["prompt"],
                 "One baby dragon curls up beside a pastel Viking longhouse.\n\n"
                 + config.outpainting.read_text(encoding="utf-8").strip(),
             )
-            self.assertEqual(service.graphs[1]["3"]["inputs"]["steps"], 50)
-            self.assertEqual(service.graphs[1]["26"]["inputs"]["guidance"], 30)
+            self.assertEqual(service.graphs[1]["114"]["inputs"]["steps"], 25)
+            self.assertEqual(service.graphs[1]["205"]["inputs"]["strength_model"], 1.0)
             with Image.open(
                 store.directory(session["name"]) / "outpainting/results/stiker-0000.jpg"
             ) as image:

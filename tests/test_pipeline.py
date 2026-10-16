@@ -14,6 +14,7 @@ from PIL import Image
 
 from birthday_stickers.config import load_config
 from birthday_stickers.flows import expand_config
+from birthday_stickers.images import finish_outpaint, plan_padding
 from birthday_stickers.pipeline import run
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -114,7 +115,7 @@ class FakeServices:
                                 encoding="utf-8"
                             )
                         )
-                        for name in ("scene_preset/qwen", "common/flux-outpaint")
+                        for name in ("scene_preset/qwen", "common/qwen-outpaint")
                     ]
                     info = {
                         node["class_type"]: {"input": {"required": {}}}
@@ -122,9 +123,10 @@ class FakeServices:
                         for node in graph.values()
                     }
                     if service.missing_flux_encoder:
-                        info["DualCLIPLoader"]["input"]["required"][
-                            service.missing_flux_encoder
-                        ] = [["a-different-encoder.safetensors"], {}]
+                        info["CLIPLoader"]["input"]["required"][service.missing_flux_encoder] = [
+                            ["a-different-encoder.safetensors"],
+                            {},
+                        ]
                     self.reply(info)
                 elif parts.path == "/queue":
                     self.reply({"queue_running": [], "queue_pending": []})
@@ -162,7 +164,7 @@ class FakeServices:
                         )
                         return
                     graph = service.graphs[int(job_id.split("-")[-1]) - 1]
-                    output = "461" if "461" in graph else "9"
+                    output = "461" if "461" in graph else "207"
                     self.reply(
                         {
                             job_id: {
@@ -189,11 +191,20 @@ class FakeServices:
                     if "461" in graph:
                         size, color = (32, 32), "red"
                     else:
-                        pad = graph["44"]["inputs"]
+                        pad = graph["202"]["inputs"]
                         size = (32 + pad["left"] + pad["right"], 32 + pad["top"] + pad["bottom"])
                         color = "blue"
                     buffer = io.BytesIO()
-                    Image.new("RGB", size, color).save(buffer, format="PNG")
+                    rendered = Image.new("RGB", size, color)
+                    if "206" in graph:
+                        rendered = finish_outpaint(
+                            rendered,
+                            Image.new("RGB", (32, 32), "red"),
+                            plan_padding((32, 32), size),
+                            graph["202"]["inputs"]["feathering"],
+                            True,
+                        )
+                    rendered.save(buffer, format="PNG")
                     self.reply(buffer.getvalue(), content_type="image/png")
                 else:
                     self.reply({"error": self.path}, 404)
@@ -265,15 +276,15 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(
                 service.graphs[0]["character_reference_2"]["inputs"]["image"], "refs/upload-2.png"
             )
-            self.assertEqual(service.graphs[1]["47"]["inputs"]["image"], "refs/upload-3.png")
+            self.assertEqual(service.graphs[1]["200"]["inputs"]["image"], "refs/upload-3.png")
             self.assertIn("<image1>", service.graphs[0]["459:474"]["inputs"]["prompt"])
             self.assertEqual(
-                service.graphs[1]["23"]["inputs"]["text"],
+                service.graphs[1]["112"]["inputs"]["prompt"],
                 "A child and a creature explore a moonlit castle.\n\n"
                 + config.outpainting.read_text(encoding="utf-8").strip(),
             )
             self.assertEqual(service.graphs[0]["459:458"]["inputs"]["seed"], 100)
-            self.assertEqual(service.graphs[1]["3"]["inputs"]["seed"], 101)
+            self.assertEqual(service.graphs[1]["114"]["inputs"]["seed"], 101)
             root = config.output.directory
             for index in range(2):
                 name = f"stiker-{index:04d}"
@@ -362,7 +373,7 @@ class PipelineTests(unittest.TestCase):
     def test_missing_numbered_flux_encoder_fails_before_llm_or_rendering(self):
         with tempfile.TemporaryDirectory() as temp, FakeServices() as service:
             config = self.configuration(temp, service)
-            for field in ("clip_name1", "clip_name2"):
+            for field in ("clip_name",):
                 service.missing_flux_encoder = field
                 with self.subTest(field=field), self.assertRaisesRegex(RuntimeError, field):
                     run(config)

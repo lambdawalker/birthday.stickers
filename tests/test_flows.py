@@ -41,10 +41,10 @@ class FlowTests(unittest.TestCase):
                 get_flow(name)
         data = {
             "flow": "scene_preset",
-            "workflows": {"flux": {"overrides": {"3": {"cfg": 1.2}}}},
+            "workflows": {"flux": {"overrides": {"114": {"cfg": 1.2}}}},
         }
         expanded = expand_config(data, Path.cwd())
-        self.assertEqual(expanded["workflows"]["flux"]["overrides"]["3"], {"steps": 50, "cfg": 1.2})
+        self.assertEqual(expanded["workflows"]["flux"]["overrides"]["114"], {"cfg": 1.2})
         self.assertEqual(Path(expanded["prompts"]["outpainting"]), ROOT / "common/outpainting.md")
         self.assertNotIn("generation", data)
         disabled = expand_config({"flow": "scene_preset", "prompts": {"outpainting": None}}, ROOT)

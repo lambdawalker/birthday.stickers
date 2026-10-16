@@ -29,7 +29,7 @@ def plan_padding(source: tuple[int, int], target: tuple[int, int]) -> PaddingPla
         raise ValueError(
             f"Target {target} is smaller than source {source}; outpainting cannot shrink it"
         )
-    canvas = tuple((value + 15) // 16 * 16 for value in target)
+    canvas = tuple((value + 31) // 32 * 32 for value in target)
     dx, dy = canvas[0] - source[0], canvas[1] - source[1]
     left, top = dx // 2, dy // 2
     crop_x = left - (target[0] - source[0]) // 2

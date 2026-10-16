@@ -2,7 +2,7 @@
 
 Generate illustrated scenes from configurable characters, activities, venues and props.
 An OpenAI-compatible LLM plans each scene and refines it with a local Qwen guide;
-ComfyUI renders it with Qwen 2.1 and extends it with Flux Fill to your final size.
+ComfyUI renders it with Qwen 2.1 and extends it with Qwen 2.1 outpainting to your final size.
 
 The default command opens a Textual session picker and live generation dashboard.
 Each session has its own folder under `output/sessions/YYYY-MM-DD-NNN/`.
@@ -16,7 +16,7 @@ that session folder):
    the same LLM for the refined Qwen editing instruction.
 3. Upload referenced characters to consecutive Qwen inputs in character-list order.
 4. Run the Qwen workflow and save `image_generation/results/stiker-0000.jpg`.
-5. Upload that JPEG, compute centered padding, and run Flux with the **raw** scene.
+5. Upload that JPEG, compute centered padding, and run Qwen outpainting with the **raw** scene.
 6. Save `outpainting/results/stiker-0000.jpg` at the exact configured width and height.
 7. Keep both descriptions in `scene_planning/results/stiker-0000.md`, plus job metadata
    and the exact submitted graphs for troubleshooting.
@@ -114,7 +114,7 @@ session reports the original error. Existing sequential sessions can also resume
 Log lines include durations, for example `Plan scene finished in 2.31s` and
 `Qwen render and download finished in 43.72s`. Timed steps cover planning,
 refinement, reference uploads, Qwen rendering/download, intermediate JPEG saving,
-intermediate upload, Flux rendering/download, and final compositing/saving.
+intermediate upload, Qwen outpainting rendering/download, and final compositing/saving.
 Durations are elapsed wall time for each active attempt, including server queue
 and network waits. Paused time between runs is excluded; a resumed job gets a new
 attempt entry. Failed and paused attempts are labeled accordingly. The per-sticker
@@ -171,13 +171,13 @@ single quotes, for example `'D:\Art\protagonist.png'`.
 | `output.jpeg_subsampling` | Default 0 (4:4:4) for illustration edges; 2 makes smaller files |
 | `output.feathering` | Blended boundary between the original and generated extension |
 | `output.preserve_center` | Restore the original center with edge feathering; default true |
-| `generation.seed` | `null` for random; integer for seed + 2 × sticker index, then +1 for Flux |
+| `generation.seed` | `null` for random; integer for seed + 2 × sticker index, then +1 for Qwen outpainting |
 | `llm.send_reference_images` | Send the ordered reference images to a vision-capable LLM |
 | `llm.extra_body` | Server-specific OpenAI request fields, such as thinking controls |
 | `workflows.*.overrides` | Override existing node inputs such as checkpoints, steps, or guidance |
 
 The checked-in defaults preserve the supplied samplers: Qwen 21 steps / CFG 1.4;
-Flux 50 steps / CFG 1, with Flux guidance 30. They are workflow settings, not a
+Qwen outpainting 25 steps / CFG 1, Euler / Simple / denoise 1. They are workflow settings, not a
 claim of optimal model parameters. See [workflow details](src/birthday_stickers/flows/README.md) for
 all node bindings and reference-resolution tuning.
 
@@ -222,7 +222,7 @@ The shared [refinement template](src/birthday_stickers/flows/common/refinement_m
 and [Qwen guide](src/birthday_stickers/flows/scene_preset/guide.md) preserve the
 selected character-source assignments and scene details. Refinement uses the raw
 response plus the guide, followed by explicit reference-tag assignments. The raw
-scene remains the input to Flux; it is never replaced by the reference-tagged
+scene remains the input to Qwen outpainting; it is never replaced by the reference-tagged
 Qwen refinement. The graph's internal prompt enhancer is bypassed.
 
 ### Master planning and refinement templates
@@ -270,16 +270,16 @@ For source width W and requested width M, the desired left padding is
 `(M - W) // 2`, with the remainder on the right. Height works the same way.
 The script measures the actual intermediate JPEG before calculating this.
 
-Flux gets a working canvas rounded up to multiples of 16. After generation,
+Qwen outpainting gets a working canvas rounded up to multiples of 32. After generation,
 the script crops only the additional outer margins to deliver the exact target.
 For example, a 1024 × 1024 intermediate into 1600 × 1200 needs 288 px on each
 horizontal side and 88 px on each vertical side. Odd remainders go right/bottom.
 The central image is never stretched or cropped. A target smaller than the source
-is rejected. An equal-size target skips the redundant Flux job.
+is rejected. An equal-size target skips the redundant Qwen outpainting job.
 
 The default central composite protects the original subjects from diffusion/VAE
 changes, while feathering allows a smooth border. JPEG compression means the saved
-pixels are not bit-for-bit identical. Turn `preserve_center` off to retain Flux's
+pixels are not bit-for-bit identical. Turn `preserve_center` off to retain Qwen outpainting's
 whole decoded result. JPEG has no alpha channel; transparent input is flattened
 against `output.jpeg_background`.
 
@@ -533,8 +533,8 @@ and resume. Switching rows discards an unapplied toggle change.
 headless runs. The duo default is on; the solo dragon default is off.
 
 With outpainting on, any scene preset saves an intermediate JPEG, then uses the
-original raw scene prompt with Flux. Padding centers the source in the configured
-final canvas. With it off, Qwen saves to `image_generation/results/` and Flux is
+original raw scene prompt with Qwen outpainting. Padding centers the source in the configured
+final canvas. With it off, Qwen saves to `image_generation/results/` and Qwen outpainting is
 not validated, uploaded to, or run. Existing sessions without this setting retain
 the old behavior: duo on, solo dragon off.
 
@@ -547,18 +547,18 @@ The switch is saved in the session snapshot, along with the chosen dimensions.
 
 ### Avoiding foggy outpaint borders
 
-The shared `flows/common/flow.yaml` uses 50 Flux Fill steps (node `3`) instead of the supplied
-workflow's 20, retaining guidance 30, CFG 1 and denoise 1. This matches the model
-publisher's example sampling budget: https://huggingface.co/black-forest-labs/FLUX.1-Fill-dev.
-It is a quality-oriented starting point, not a guarantee of sharper results, and
-increases sampling time. Keep denoise at 1 for newly padded empty regions.
+The shared `flows/common/flow.yaml` now uses the supplied core Qwen 2.1 outpainting
+workflow with the outpaint v2 LoRA: 25 steps / CFG 1 / Euler / Simple / denoise 1.
+It samples the full padded canvas, then restores the original interior using the
+padding mask. Encoder resolution 0 preserves canvas geometry. The working canvas
+is rounded to multiples of 32, with the final JPEG cropped to the configured size.
 
 The resolved `outpainting.md` file appends local continuity instructions to the **original
 raw scene**, requesting consistent detail, lighting and focus rather than a vignette
 or blurred frame. Added regions must contain scenery only, with no new characters
 or duplicated faces/bodies; an existing character crossing the boundary may be
 continued anatomically. The exact combined prompt is saved as `outpainting_prompt` in
-scene metadata and in the submitted Flux graph. Set `prompts.outpainting: null`
+scene metadata and in the submitted Qwen outpainting graph. Set `prompts.outpainting: null`
 for raw-only behavior in a flow-based config.
 The 24-pixel feather and center preservation remain unchanged: they only blend the
 source boundary, and do not blur the entire generated border.
@@ -566,7 +566,7 @@ source boundary, and do not blur the entire generated border.
 Flow-based configs inherit these defaults. Existing session snapshots
 and already-submitted jobs retain their previous settings. Compare new sessions with
 the same scene/seed before deciding whether the new settings improve your output.
-For a paused session, changes to its saved YAML only affect Flux jobs not yet submitted;
+For a paused session, changes to its saved YAML only affect Qwen outpainting jobs not yet submitted;
 never clear a saved job ID to rerender a job that may still be running.
 
 
@@ -574,7 +574,7 @@ never clear a saved job ID to rerender a job that may still be running.
 
 The shared Qwen builder and refinement assets live in
 `src/birthday_stickers/flows/scene_preset/`. Scene content lives in
-`src/birthday_stickers/presets/`; common outpainting/negative prompts and Flux
+`src/birthday_stickers/presets/`; common outpainting/negative prompts and Qwen outpainting
 bindings live in `flows/common/`. Only preset-based configurations are supported;
 retired flow folders and compatibility aliases have been removed.
 
@@ -593,7 +593,7 @@ prompts:
 workflows:
   flux:
     overrides:
-      "3": {steps: 40}              # merged with the flow's workflow defaults
+      "114": {steps: 40}              # merged with the flow's workflow defaults
 ```
 
 Absolute paths and paths containing directories resolve relative to the YAML
@@ -659,7 +659,7 @@ and errors. Resuming appends to the existing logs. Shared resumable state and
 submitted workflow graphs remain under `metadata/`.
 
 Base images are kept regardless of whether outpainting is enabled. To add
-outpainting to a paused **or completed** session, configure the desired Flux
+outpainting to a paused **or completed** session, configure the desired Qwen outpainting
 workflow, target dimensions and ComfyUI endpoint in your launch YAML, then run:
 
 ```powershell
@@ -670,12 +670,12 @@ This explicitly snapshots the outpainting settings into that session and queues
 already-generated images. Saved prompts and Qwen images are reused; originals
 are never replaced by extended images. Repeating the command skips completed
 outpainting. You can also use the selected-session toggle in the interface.
-Disabling outpainting preserves extended images and any submitted Flux job IDs.
-If an earlier Flux job is still pending, it is allowed to finish before more
+Disabling outpainting preserves extended images and any submitted Qwen outpainting job IDs.
+If an earlier Qwen outpainting job is still pending, it is allowed to finish before more
 Qwen jobs start; the toggle does not cancel submitted server work.
 Re-enabling it reuses completed outputs and reconnects to pending jobs using the
 session's existing outpainting settings. Settings from the current profile are
-imported only when adding outpainting to a session that has no saved Flux workflow.
+imported only when adding outpainting to a session that has no saved Qwen outpainting workflow.
 
 New sessions use manifest version **2**. Sessions from before the master-template
 update are unsupported and excluded from the resumable session table, with an
@@ -694,7 +694,7 @@ New sessions snapshot the file as `inputs/negative.md`; edit that saved file
 while stopped to change negatives for future jobs in an existing session.
 Submitted jobs keep their original prompts.
 
-Flux receives a separate negative text-conditioning node, but its default CFG
+Qwen outpainting receives negatives through TextEncodeQwenImage21, but its default CFG
 of 1 bypasses negative conditioning in ComfyUI. The program reports this in the
 outpainting log display. Borderless, complete, edge-to-edge 2D instructions also
 appear in the positive planning/refinement and outpainting prompts. CFG is left
@@ -884,3 +884,21 @@ Use the eye button to switch to gallery mode (`?mode=gallery`). Drag horizontall
 to browse a looping gallery; use the shared action buttons to categorize the
 visible image. Corner badges show its saved categories. The ↔ button returns
 to swipe mode. Both modes retain the selected category and preload setting.
+
+### Qwen 2.1 outpainting workflow
+
+Outpainting now uses `flows/common/qwen-outpaint.json`, converted from the supplied
+core-node workflow. Install `qwen-image-2.1-outpaint-v2.safetensors` under ComfyUI's
+LoRA directory, alongside the Qwen model, Qwen3-VL encoder and Qwen VAE already used
+for generation. The graph does not download models. Model filenames and sampler
+settings can be changed through overrides; see the workflow bindings document.
+
+The YAML key `workflows.flux` and existing job metadata names are retained for
+bookkeeping, but the default graph is Qwen. Start a **new session** to use this
+replacement; existing session snapshots are not automatically converted. Any old
+Flux-specific overrides must be removed or remapped to the new node IDs.
+The attachment's captioning branch is replaced by the local raw scene plus
+`outpainting.md`; its 1 MP resizer is omitted so the source remains at its saved
+size. Padding is computed around that source. Masked restoration runs once in
+ComfyUI when `output.preserve_center` is enabled; the client then crops and saves
+JPEG, without applying feathering a second time.

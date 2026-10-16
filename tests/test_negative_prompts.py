@@ -7,7 +7,7 @@ import test_pipeline as fixtures
 from birthday_stickers.config import load_config
 from birthday_stickers.images import plan_padding
 from birthday_stickers.sessions import SessionStore
-from birthday_stickers.workflows import build_flux, load_workflow
+from birthday_stickers.workflows import build_outpaint, load_workflow
 
 
 class NegativePromptTests(unittest.TestCase):
@@ -35,7 +35,7 @@ class NegativePromptTests(unittest.TestCase):
 
     def test_flux_negative_reaches_sampler_through_inpaint_conditioning(self):
         config = load_config(Path(__file__).resolve().parents[1] / "config.yaml")
-        graph = build_flux(
+        graph = build_outpaint(
             load_workflow(config.flux.path),
             config.flux.nodes,
             config.flux.overrides,
@@ -47,12 +47,11 @@ class NegativePromptTests(unittest.TestCase):
             "test",
             negative="border, 3d, incomplete image, framed.",
         )
-        conditioning = graph[str(config.flux.nodes["conditioning"])]["inputs"]
-        node = graph[conditioning["negative"][0]]
-        self.assertEqual(node["class_type"], "CLIPTextEncode")
-        self.assertEqual(node["inputs"]["text"], "border, 3d, incomplete image, framed.")
-        self.assertNotIn("46", graph)  # Zero-out would discard the requested conditioning.
-        self.assertEqual(graph[str(config.flux.nodes["sampler"])]["inputs"]["cfg"], 1)
+        encoder = graph[str(config.flux.nodes["encoder"])]["inputs"]
+        self.assertIn("border, 3d, incomplete image, framed", encoder["negative_prompt"])
+        sampler = graph[str(config.flux.nodes["sampler"])]["inputs"]
+        self.assertEqual(sampler["negative"], [str(config.flux.nodes["encoder"]), 1])
+        self.assertEqual(sampler["cfg"], 1)
 
     def test_session_snapshots_negative_file(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

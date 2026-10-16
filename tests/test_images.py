@@ -11,9 +11,9 @@ from birthday_stickers.images import finish_outpaint, plan_padding, save_jpeg
 class ImageTests(unittest.TestCase):
     def test_odd_padding_centers_to_within_one_pixel_and_exact_target(self):
         plan = plan_padding((1001, 777), (1500, 1000))
-        self.assertEqual(plan.canvas, (1504, 1008))
-        self.assertEqual((plan.left, plan.right, plan.top, plan.bottom), (251, 252, 115, 116))
-        self.assertEqual(plan.crop_box, (2, 4, 1502, 1004))
+        self.assertEqual(plan.canvas, (1504, 1024))
+        self.assertEqual((plan.left, plan.right, plan.top, plan.bottom), (251, 252, 123, 124))
+        self.assertEqual(plan.crop_box, (2, 12, 1502, 1012))
         result = finish_outpaint(
             Image.new("RGB", plan.canvas, "blue"),
             Image.new("RGB", plan.source, "red"),

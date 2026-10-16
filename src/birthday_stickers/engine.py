@@ -32,7 +32,7 @@ from .pipeline import (
 from .references import reference_pools
 from .retry import copyfile, read_bytes, read_text, retry_scope
 from .scheduling import gpu_policy
-from .workflows import build_flux
+from .workflows import build_outpaint
 
 log = logging.getLogger(__name__)
 
@@ -434,7 +434,7 @@ class Scene:
                     self.meta["outpainting_prompt"] = "\n\n".join(
                         text for text in (raw, local["outpainting_prompt"].strip()) if text
                     )
-                    graph = build_flux(
+                    graph = build_outpaint(
                         local["flux"],
                         config.flux.nodes,
                         config.flux.overrides,
@@ -443,12 +443,13 @@ class Scene:
                         padding,
                         config.output.feathering,
                         self.meta["flux_seed"],
-                        self.name + "-flux",
+                        self.name + "-outpaint",
+                        preserve_center=config.output.preserve_center,
                         negative=read_text(config.negative, encoding="utf-8").strip()
                         if config.negative
                         else None,
                     )
-            with self.step("rendering_flux", "Flux outpaint and download"):
+            with self.step("rendering_flux", "Qwen outpaint and download"):
                 if "flux_prompt_id" not in self.meta:
                     self.submit("flux", graph)
                 data = comfy.wait_image(
@@ -460,7 +461,7 @@ class Scene:
                     source,
                     padding,
                     config.output.feathering,
-                    config.output.preserve_center,
+                    False,  # Qwen graph already restores/blends the source interior.
                 )
                 save_jpeg(
                     final,
@@ -550,7 +551,7 @@ def execute(
             if not meta.get("flux_prompt_id"):
                 continue
             if config.flux is None:
-                raise ValueError("Keep the saved Flux workflow to finish its submitted job")
+                raise ValueError("Keep the saved outpainting workflow to finish its submitted job")
             pipeline.comfy_outpainting = ComfyClient(config.outpainting_comfy, "outpainting")
             scene = Scene(pipeline, path, meta, "outpainting")
             pipeline.report("outpainting", scene.name, "waiting_for_submitted_job")

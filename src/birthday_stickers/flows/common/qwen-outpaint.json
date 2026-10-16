@@ -1,0 +1,238 @@
+{
+  "200": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": ""
+    },
+    "_meta": {
+      "title": "1. Upload your image"
+    }
+  },
+  "202": {
+    "class_type": "ImagePadForOutpaint",
+    "inputs": {
+      "left": 256,
+      "top": 256,
+      "right": 256,
+      "bottom": 256,
+      "feathering": 32,
+      "image": [
+        "204",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "3. Expand sides (use multiples of 32)"
+    }
+  },
+  "203": {
+    "class_type": "EmptyImage",
+    "inputs": {
+      "width": 64,
+      "height": 64,
+      "batch_size": 1,
+      "color": 16777215
+    },
+    "_meta": {
+      "title": "White background for transparent pixels"
+    }
+  },
+  "204": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "x": 0,
+      "y": 0,
+      "resize_source": true,
+      "destination": [
+        "200",
+        0
+      ],
+      "source": [
+        "203",
+        0
+      ],
+      "mask": [
+        "200",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "Flatten input transparency onto white"
+    }
+  },
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "qwen_image_2.1_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": {
+      "title": "Diffusion model"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "_meta": {
+      "title": "Text encoder"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    },
+    "_meta": {
+      "title": "VAE"
+    }
+  },
+  "112": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "prompt": "Outpaint the image: replace the solid gray areas with a seamless continuation of the scene, keeping the existing picture unchanged.",
+      "negative_prompt": "",
+      "resolution": 0,
+      "clip": [
+        "2",
+        0
+      ],
+      "images.image_1": [
+        "202",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Text Encode Qwen Image 2.1 - Prompt and canvas"
+    }
+  },
+  "113": {
+    "class_type": "QwenImage21Cache",
+    "inputs": {
+      "device": "auto",
+      "dtype": "default",
+      "model": [
+        "205",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Reference cache"
+    }
+  },
+  "114": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 26092503,
+      "steps": 25,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "113",
+        0
+      ],
+      "positive": [
+        "112",
+        0
+      ],
+      "negative": [
+        "112",
+        1
+      ],
+      "latent_image": [
+        "112",
+        2
+      ]
+    },
+    "_meta": {
+      "title": "Qwen 2.1 sampler"
+    }
+  },
+  "115": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "114",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Decode"
+    }
+  },
+  "116": {
+    "class_type": "SplitImageWithAlpha",
+    "inputs": {
+      "image": [
+        "115",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Drop the alpha"
+    }
+  },
+  "205": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {
+      "lora_name": "qwen-image-2.1-outpaint-v2.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "1",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Outpaint v2 LoRA (no node pack needed)"
+    }
+  },
+  "206": {
+    "class_type": "ImageCompositeMasked",
+    "inputs": {
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "destination": [
+        "202",
+        0
+      ],
+      "source": [
+        "116",
+        0
+      ],
+      "mask": [
+        "202",
+        1
+      ]
+    },
+    "_meta": {
+      "title": "Restore original interior; blend padding"
+    }
+  },
+  "207": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "qwen21_outpaint_core",
+      "images": [
+        "206",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Save finished outpaint"
+    }
+  }
+}

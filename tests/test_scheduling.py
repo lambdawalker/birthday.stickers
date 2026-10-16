@@ -176,7 +176,7 @@ class SchedulingTests(unittest.TestCase):
             self.assertEqual(len(run(config, resume=True)), 2)
             self.assertEqual(len(service.graphs), 4)
             self.assertIn("461", service.graphs[1])
-            self.assertIn("9", service.graphs[2])
+            self.assertIn("207", service.graphs[2])
 
     def test_sequential_generation_failure_does_not_start_outpainting(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

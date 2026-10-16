@@ -85,7 +85,7 @@ def qwen_negative(graph, nodes, negative):
         encoder["negative_prompt"] = merge_negative(encoder.get("negative_prompt", ""), negative)
 
 
-def build_flux(
+def build_outpaint(
     template: Graph,
     nodes: dict,
     overrides: dict,
@@ -96,33 +96,29 @@ def build_flux(
     seed: int,
     prefix: str,
     negative: str | None = None,
+    preserve_center: bool = True,
 ) -> Graph:
+    """Qwen 2.1 outpaint: full-canvas sampling, then masked interior restoration."""
     graph = copy.deepcopy(template)
     apply_overrides(graph, overrides)
     mapped_inputs(graph, nodes, "image", "LoadImage")["image"] = image
-    mapped_inputs(graph, nodes, "prompt", "CLIPTextEncode")["text"] = prompt
+    encoder = mapped_inputs(graph, nodes, "encoder", "TextEncodeQwenImage21")
+    encoder.update(prompt=prompt, resolution=0)
     mapped_inputs(graph, nodes, "pad", "ImagePadForOutpaint").update(
-        image=[str(nodes["image"]), 0],
         left=padding.left,
         top=padding.top,
         right=padding.right,
         bottom=padding.bottom,
         feathering=feathering,
     )
-    mapped_inputs(graph, nodes, "conditioning", "InpaintModelConditioning")["noise_mask"] = True
     mapped_inputs(graph, nodes, "sampler", "KSampler")["seed"] = seed
-    if negative:
-        node_id = "sticker_negative"
-        while node_id in graph:
-            node_id += "_"
-        graph[node_id] = {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"clip": graph[str(nodes["prompt"])]["inputs"]["clip"], "text": negative},
-        }
-        mapped_inputs(graph, nodes, "conditioning", "InpaintModelConditioning")["negative"] = [
-            node_id,
-            0,
-        ]
+    qwen_negative(graph, nodes, negative)
+    if not preserve_center:
+        output = graph[str(nodes["output"])]["inputs"]
+        composite_id = str(output["images"][0])
+        if graph[composite_id]["class_type"] != "ImageCompositeMasked":
+            raise ValueError("Outpainting output must use masked interior restoration")
+        output["images"] = graph[composite_id]["inputs"]["source"]
     core_saver(graph, nodes, prefix)
     return reachable_graph(graph, str(nodes["output"]))
 

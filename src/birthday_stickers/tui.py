@@ -507,7 +507,7 @@ class StickerApp(App):
             "rendering_qwen": "Rendering with Qwen",
             "save_intermediate": "Saving intermediate JPEG",
             "upload_intermediate": "Uploading intermediate image",
-            "rendering_flux": "Outpainting with Flux",
+            "rendering_flux": "Outpainting with Qwen",
             "save_final": "Saving final JPEG",
             "complete": "Image saved",
         }
