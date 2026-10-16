@@ -194,12 +194,12 @@ function buildCarousel() {
     badge.className = "category-badge";
     badge.textContent = [
       item.status === "accepted"
-        ? "😊"
+        ? "😊 Accepted"
         : item.status === "rejected"
-          ? "😢"
-          : "○",
-      item.favorite ? "⭐" : "",
-      item.tshirt ? "👕" : "",
+          ? "😢 Rejected"
+          : "To review",
+      item.favorite ? "⭐ Favorite" : "",
+      item.tshirt ? "👕 T-shirt" : "",
     ]
       .filter(Boolean)
       .join(" ");
@@ -262,6 +262,11 @@ async function load() {
     $("progress").title = done + " of " + data.total + " reviewed";
     reviewedCount = done;
     totalCount = data.total;
+    if (exiting && images[index]) {
+      const next = new Image();
+      next.src = imageURL(images[index]);
+      if (next.decode) await next.decode();
+    }
     show();
     if (galleryMode) buildCarousel();
   } catch (e) {
@@ -373,7 +378,10 @@ $("stage").addEventListener("pointermove", (e) => {
       : y < 0
         ? "favorite"
         : "tshirt";
-  previewChoice(action, Math.max(Math.abs(x), Math.abs(y)) >= swipeThreshold ? 1 : 0);
+  previewChoice(
+    action,
+    Math.max(Math.abs(x), Math.abs(y)) >= swipeThreshold ? 1 : 0,
+  );
 });
 function clearGesture() {
   if (exiting) return;
@@ -420,9 +428,11 @@ $("stage").addEventListener("pointerup", async (e) => {
   $("hero").style.transition = "none";
   clearGesture();
   controls();
-  requestAnimationFrame(() => {
-    $("hero").style.transition = "";
-  });
+  // Commit the off-screen-to-center reset with transitions disabled before
+  // restoring the normal drag-cancel transition. Otherwise browsers may
+  // coalesce both style changes and animate the old card back into view.
+  void $("hero").offsetWidth;
+  $("hero").style.transition = "";
 });
 $("stage").addEventListener("pointercancel", clearGesture);
 $("stage").addEventListener("lostpointercapture", clearGesture);
@@ -477,7 +487,24 @@ async function sessions() {
 }
 if (name) {
   const targetMode = galleryMode ? "swipe" : "gallery";
-  $("mode-toggle").textContent = galleryMode ? "↔" : "👁";
+  $("mode-toggle").textContent = galleryMode ? "" : "👁";
+  if (galleryMode) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 32 32");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute(
+      "d",
+      "M27 8C21 1 12 1 6 8M6 4v4h4 M13 23l-6-6c-2-2 1-5 3-3l5 5-7-8c-2-2 1-5 3-3l7 8 3-3c2-2 4-1 6 1 5 5 1 13-3 15-5 3-8 0-11-3",
+    );
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "2.5");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.append(path);
+    $("mode-toggle").append(svg);
+  }
   $("mode-toggle").setAttribute(
     "aria-label",
     "Switch to " + targetMode + " mode",

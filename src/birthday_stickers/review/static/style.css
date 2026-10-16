@@ -518,3 +518,12 @@ nav::-webkit-scrollbar {
   font-size: 12px;
   padding: 5px 10px;
 }
+
+#mode-toggle svg {
+  width: 30px;
+  height: 30px;
+}
+.category-badge {
+  font-size: 12px;
+  max-width: calc(100% - 20px);
+}
