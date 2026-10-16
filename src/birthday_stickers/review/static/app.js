@@ -318,7 +318,10 @@ async function send() {
     localStorage.removeItem(storageKey);
     pending = null;
     $("retry").hidden = true;
-    await load(false);
+    if (!galleryMode && category === "all" && action !== "undo" && current) {
+      index = (images.findIndex((item) => item.hash === current.hash) + 1) % images.length;
+    }
+    await load();
   } catch (e) {
     error(
       Error(
