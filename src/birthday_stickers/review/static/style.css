@@ -527,3 +527,41 @@ nav::-webkit-scrollbar {
   font-size: 12px;
   max-width: calc(100% - 20px);
 }
+
+#mode-toggle img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+.toolbar {
+  gap: 5px;
+  align-items: center;
+}
+.toolbar button {
+  width: 46px;
+  height: 48px;
+  font-size: 21px;
+  flex-shrink: 1;
+  min-width: 0;
+}
+.toolbar #previous-image,
+.toolbar #next-image {
+  width: 28px;
+  background: transparent;
+  border: 0;
+  font-size: 30px;
+}
+.toolbar svg {
+  width: 23px;
+  height: 23px;
+}
+.bottom-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+#progress {
+  text-align: right;
+}

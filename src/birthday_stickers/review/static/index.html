@@ -56,6 +56,7 @@
           <div id="gesture" aria-hidden="true"></div>
         </div>
         <div class="toolbar">
+          <button id="previous-image" aria-label="Previous image">‹</button>
           <button id="undo" aria-label="Undo last choice">
             ↶<span>Undo</span>
           </button>
@@ -80,9 +81,16 @@
           ><button id="accept" data-action="accept" aria-label="Accept image">
             ✓<span>Accept</span>
           </button>
+          <button id="next-image" aria-label="Next image">›</button>
         </div>
         <button id="next" hidden>Next image →</button>
-        <span id="progress" aria-live="polite"></span>
+        <div class="bottom-status">
+          <span
+            id="category-progress"
+            title="Accepted / rejected / favorites / T-shirts — category total / images"
+          ></span
+          ><span id="progress" aria-live="polite"></span>
+        </div>
       </section>
       <section id="grid" hidden></section>
       <section id="sessions" hidden></section>

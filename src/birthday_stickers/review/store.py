@@ -42,6 +42,12 @@ class ReviewStore(Gallery):
                     (name, pipeline),
                 ).fetchall()
             )
+            extras = db.execute(
+                "SELECT COALESCE(SUM(favorite),0),COALESCE(SUM(tshirt),0) "
+                "FROM reviews WHERE name=? AND pipeline=?",
+                (name, pipeline),
+            ).fetchone()
+            counts.update(favorites=extras[0], tshirt=extras[1])
             total = db.execute(
                 "SELECT COUNT(*) FROM images WHERE pipeline=?", (pipeline,)
             ).fetchone()[0]

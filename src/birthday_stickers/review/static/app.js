@@ -48,6 +48,8 @@ const imageURL = (item) =>
   encodeURIComponent(pipeline) +
   "/" +
   encodeURIComponent(item.filename);
+const positionKey = "review-position:" + name + ":" + pipeline + ":" + category;
+let loadedPosition = false;
 const storageKey = "pending-review:" + name + ":" + pipeline;
 function error(e) {
   $("error").textContent = e.message || String(e);
@@ -80,6 +82,8 @@ function controls() {
     );
   $("undo").disabled = busy || !!pending || exiting;
   $("next").disabled = busy || exiting || !!pending;
+  for (const id of ["previous-image", "next-image"])
+    $(id).disabled = busy || exiting || !!pending || images.length < 2;
 }
 function show() {
   $("stage").hidden = galleryMode;
@@ -90,7 +94,7 @@ function show() {
   const item = images[index];
   $("empty").hidden = !!item;
   $("hero").hidden = !item;
-  $("next").hidden = galleryMode || category === "pending" || !item;
+  $("next").hidden = true;
   if (item) {
     $("hero").src = imageURL(item);
     $("hero").alt = "Illustration " + (index + 1) + " for " + name;
@@ -169,6 +173,14 @@ function confirmChoice(action) {
 function updateCounter() {
   $("progress").textContent =
     (images.length ? index + 1 : 0) + " / " + images.length;
+  if (images[index]) {
+    try {
+      localStorage.setItem(
+        positionKey,
+        JSON.stringify({ hash: images[index].hash, index }),
+      );
+    } catch (_) {}
+  }
   $("progress").title = reviewedCount + " of " + totalCount + " reviewed";
 }
 function buildCarousel() {
@@ -238,25 +250,38 @@ window.addEventListener("resize", () => {
       (index + (images.length > 1 ? 1 : 0)) * $("carousel").clientWidth;
 });
 async function load() {
-  const previousHash = galleryMode ? images[index]?.hash : null;
-  const previousIndex = index;
+  let previousHash = images[index]?.hash;
+  let previousIndex = index;
+  if (!loadedPosition) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(positionKey) || "null");
+      if (saved) {
+        previousHash = saved.hash;
+        previousIndex = saved.index || 0;
+      }
+    } catch (_) {}
+  }
   $("error").textContent = "";
   try {
     const data = await request(api + "&" + new URLSearchParams({ category }));
     $("empty").querySelector("h2").textContent = "You’re all caught up.";
     images = data.images;
-    index = galleryMode
-      ? Math.max(
-          0,
-          images.findIndex((item) => item.hash === previousHash),
-        )
-      : 0;
-    if (
-      galleryMode &&
-      previousHash &&
-      !images.some((item) => item.hash === previousHash)
-    )
+    index = images.findIndex((item) => item.hash === previousHash);
+    if (index < 0)
       index = Math.min(previousIndex, Math.max(0, images.length - 1));
+    loadedPosition = true;
+    const counts = [
+      data.counts.accepted || 0,
+      data.counts.rejected || 0,
+      data.counts.favorites || 0,
+      data.counts.tshirt || 0,
+    ];
+    $("category-progress").textContent =
+      counts.join("/") +
+      " - " +
+      counts.reduce((a, b) => a + b, 0) +
+      "/" +
+      data.total;
     const done = (data.counts.accepted || 0) + (data.counts.rejected || 0);
     $("progress").textContent = done + " / " + data.total;
     $("progress").title = done + " of " + data.total + " reviewed";
@@ -324,6 +349,15 @@ async function act(action, fromSwipe = false) {
   }
   await send();
 }
+function navigateImage(direction) {
+  if (busy || pending || exiting || images.length < 2) return;
+  index = (index + direction + images.length) % images.length;
+  show();
+  if (galleryMode)
+    $("carousel").scrollLeft = (index + 1) * $("carousel").clientWidth;
+}
+$("previous-image").onclick = () => navigateImage(-1);
+$("next-image").onclick = () => navigateImage(1);
 $("retry").onclick = send;
 $("undo").onclick = () => act("undo");
 $("reload").onclick = () => load();
@@ -397,6 +431,14 @@ $("stage").addEventListener("pointerup", async (e) => {
     y = e.clientY - start.y;
   if (Math.max(Math.abs(x), Math.abs(y)) < swipeThreshold) {
     clearGesture();
+    if (Math.max(Math.abs(x), Math.abs(y)) < 10) {
+      const rect = $("hero").getBoundingClientRect?.();
+      if (rect && rect.width) {
+        const edge = Math.min(64, rect.width * 0.18);
+        if (e.clientX <= rect.left + edge) navigateImage(-1);
+        else if (e.clientX >= rect.right - edge) navigateImage(1);
+      }
+    }
     return;
   }
   start = null;
@@ -487,24 +529,10 @@ async function sessions() {
 }
 if (name) {
   const targetMode = galleryMode ? "swipe" : "gallery";
-  $("mode-toggle").textContent = galleryMode ? "" : "👁";
-  if (galleryMode) {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", "0 0 32 32");
-    svg.setAttribute("aria-hidden", "true");
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute(
-      "d",
-      "M27 8C21 1 12 1 6 8M6 4v4h4 M13 23l-6-6c-2-2 1-5 3-3l5 5-7-8c-2-2 1-5 3-3l7 8 3-3c2-2 4-1 6 1 5 5 1 13-3 15-5 3-8 0-11-3",
-    );
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke", "currentColor");
-    path.setAttribute("stroke-width", "2.5");
-    path.setAttribute("stroke-linecap", "round");
-    path.setAttribute("stroke-linejoin", "round");
-    svg.append(path);
-    $("mode-toggle").append(svg);
-  }
+  const modeIcon = document.createElement("img");
+  modeIcon.src = galleryMode ? "/pointing-hand.png" : "/view.png";
+  modeIcon.alt = "";
+  $("mode-toggle").replaceChildren(modeIcon);
   $("mode-toggle").setAttribute(
     "aria-label",
     "Switch to " + targetMode + " mode",
@@ -516,7 +544,8 @@ if (name) {
     "?" +
     new URLSearchParams({
       pipeline,
-      category,
+      category:
+        targetMode === "gallery" && category === "pending" ? "all" : category,
       preload: bufferSize,
       mode: targetMode,
     });

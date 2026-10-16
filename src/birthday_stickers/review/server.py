@@ -69,6 +69,8 @@ def make_server(gallery, host="0.0.0.0", port=8080):
                         mimetypes.guess_type(source.name)[0] or "image/jpeg",
                         cache="private, max-age=31536000, immutable",
                     )
+                elif path in ("/view.png", "/pointing-hand.png"):
+                    self.send_bytes((STATIC / path[1:]).read_bytes(), "image/png")
                 elif path in ("/app.js", "/style.css"):
                     source = STATIC / path[1:]
                     self.send_bytes(
