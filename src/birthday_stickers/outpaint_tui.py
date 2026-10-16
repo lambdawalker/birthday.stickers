@@ -43,8 +43,13 @@ class OutpaintApp(App):
     #setup-controls, #controls { height: 5; align: center middle; }
     Button { margin: 0 1; }
     #status, #endpoints, #setup-endpoints, #summary { margin: 0 3; height: auto; }
-    ProgressBar { margin: 0 3; }
-    RichLog { margin: 1 2; border: round $secondary; height: 1fr; }
+    #pipelines { height: 1fr; margin: 1 2; }
+    .pipeline { width: 1fr; height: 1fr; border: round $primary; padding: 1; }
+    #prompt-panel { margin-right: 1; }
+    .pipeline-title { text-style: bold; color: $accent; height: 1; }
+    .endpoint { height: auto; margin-bottom: 1; color: $text-muted; }
+    ProgressBar { margin: 0 0 1 0; width: 1fr; }
+    RichLog { height: 1fr; }
     """
 
     def __init__(self, config):
@@ -87,11 +92,6 @@ class OutpaintApp(App):
                     yield Button("Start / Resume", id="start", variant="primary")
             with Vertical(id="monitor"):
                 yield Static(id="summary")
-                yield Static(
-                    f"Vision LLM: {self.config['llm']['base_url']}\n"
-                    f"ComfyUI: {self.config['comfy']['base_url']}",
-                    id="endpoints",
-                )
                 with Horizontal(id="controls"):
                     yield Button("Resume", id="resume", variant="primary", disabled=True)
                     yield Button("Back to setup", id="back", disabled=True)
@@ -100,17 +100,29 @@ class OutpaintApp(App):
                 yield Static(
                     "Ready · completed images and submitted jobs resume automatically", id="status"
                 )
-                yield Label("  Image descriptions")
-                yield ProgressBar(total=1, id="descriptions")
-                yield Label("  Finished outpaintings")
-                yield ProgressBar(total=1, id="renders")
-                yield RichLog(id="log", wrap=True)
+                with Horizontal(id="pipelines"):
+                    with Vertical(id="prompt-panel", classes="pipeline"):
+                        yield Label("Prompt generation", classes="pipeline-title")
+                        yield Static(self.config["llm"]["base_url"], classes="endpoint")
+                        yield ProgressBar(total=1, id="descriptions")
+                        yield RichLog(id="prompt-log", wrap=True)
+                    with Vertical(id="outpaint-panel", classes="pipeline"):
+                        yield Label("Outpainting", classes="pipeline-title")
+                        yield Static(self.config["comfy"]["base_url"], classes="endpoint")
+                        yield ProgressBar(total=1, id="renders")
+                        yield RichLog(id="outpaint-log", wrap=True)
         yield Footer()
 
     def report(self, kind, value):
-        if kind == "log":
-            self.query_one("#log", RichLog).write(value)
-        else:
+        if kind in ("log", "prompts_log", "outpainting_log"):
+            targets = {
+                "log": ("prompt-log", "outpaint-log"),
+                "prompts_log": ("prompt-log",),
+                "outpainting_log": ("outpaint-log",),
+            }
+            for target in targets[kind]:
+                self.query_one("#" + target, RichLog).write(value)
+        elif kind == "progress":
             self.query_one("#descriptions", ProgressBar).update(
                 total=value["total"], progress=value["described"]
             )
@@ -165,7 +177,8 @@ class OutpaintApp(App):
             except ValueError as error:
                 self.notify(str(error), severity="error")
                 return
-            self.query_one("#log", RichLog).clear()
+            for log in self.query(RichLog):
+                log.clear()
             self.start_monitor()
 
     def start_monitor(self):

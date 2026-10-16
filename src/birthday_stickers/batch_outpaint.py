@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
 from queue import Empty, Queue
-from threading import Event, RLock
+from threading import Event, RLock, local
 
 import yaml
 
@@ -110,6 +110,7 @@ def run_batch(config, control=None, report=lambda *args: None):
         (root / folder).mkdir(parents=True, exist_ok=True)
     original_report = report
     report_lock = RLock()
+    reporting = local()
 
     @file_retry
     def log_line(message):
@@ -120,6 +121,9 @@ def run_batch(config, control=None, report=lambda *args: None):
         with report_lock:
             if kind == "log":
                 log_line(value)
+                stage = getattr(reporting, "stage", None)
+                if stage:
+                    kind = stage + "_log"
             original_report(kind, value)
 
     with retry_scope(control.check, "outpainting"), session_lock(root):
@@ -357,6 +361,7 @@ def run_batch(config, control=None, report=lambda *args: None):
 
         def worker(function, stage):
             # Retry context is thread-local: both workers must install it themselves.
+            reporting.stage = stage
             with retry_scope(control.check, stage):
                 try:
                     function()
