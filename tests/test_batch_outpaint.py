@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from threading import Event
 from unittest.mock import patch
 
 import test_pipeline as fixtures
@@ -11,6 +12,7 @@ from textual.widgets import ListView
 from birthday_stickers.batch_outpaint import run_batch, settings
 from birthday_stickers.comfy import ComfyClient
 from birthday_stickers.control import RunControl, RunHalted
+from birthday_stickers.llm import LLMClient
 from birthday_stickers.outpaint_tui import OutpaintApp
 from birthday_stickers.tui import StickerApp
 
@@ -44,6 +46,38 @@ class BatchTests(unittest.TestCase):
             run_batch(config)
             self.assertEqual(len(service.chats), 1)
             self.assertEqual(len(service.graphs), 1)
+
+    def test_next_description_runs_while_first_image_is_rendering(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = self.config(Path(temp), service)
+            Image.new("RGB", (32, 32), "blue").save(Path(config["source"]) / "two.png")
+            rendering = Event()
+            second_description = Event()
+            complete = LLMClient.complete
+            wait_image = ComfyClient.wait_image
+            calls = 0
+
+            def describe(client, *args, **kwargs):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    self.assertTrue(rendering.wait(5), "Rendering did not overlap descriptions")
+                result = complete(client, *args, **kwargs)
+                if calls == 2:
+                    second_description.set()
+                return result
+
+            def render(client, *args, **kwargs):
+                rendering.set()
+                self.assertTrue(second_description.wait(5), "LLM waited for rendering to finish")
+                return wait_image(client, *args, **kwargs)
+
+            with (
+                patch.object(LLMClient, "complete", describe),
+                patch.object(ComfyClient, "wait_image", render),
+            ):
+                result = run_batch(config)
+            self.assertEqual(result, {"described": 2, "rendered": 2, "failed": 0, "total": 2})
 
     def test_pause_after_description_reuses_saved_prompt(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

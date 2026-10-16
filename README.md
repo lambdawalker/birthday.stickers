@@ -892,7 +892,10 @@ URL, source folder and destination folder. The terminal interface lets you adjus
 both folders, final canvas width/height, feathering, sampling steps, CFG and JPEG
 quality. Start / Resume, Pause and Stop preserve checkpoints. Ctrl+Q stops at a
 checkpoint before exiting. Server-side ComfyUI jobs continue and are recovered on
-resume. Separate progress bars track descriptions and finished outpaintings;
+resume. The LLM description worker and ComfyUI outpainting worker run in parallel: each
+completed prompt is saved before being queued, while the LLM prepares the next image.
+Pause/stop applies to both workers; resume reuses saved descriptions and submitted jobs.
+Separate progress bars track descriptions and finished outpaintings;
 logs show service URLs and elapsed time. The Windows Wi-Fi helper runs separately
 unless `--no-wifi` is supplied.
 

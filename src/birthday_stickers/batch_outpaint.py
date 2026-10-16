@@ -6,8 +6,11 @@ import json
 import secrets
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
+from queue import Empty, Queue
+from threading import Event, RLock
 
 import yaml
 
@@ -94,6 +97,7 @@ def run_batch(config, control=None, report=lambda *args: None):
     for folder in ("results", "prompts", "state", "logs", "uploads"):
         (root / folder).mkdir(parents=True, exist_ok=True)
     original_report = report
+    report_lock = RLock()
 
     @file_retry
     def log_line(message):
@@ -101,9 +105,10 @@ def run_batch(config, control=None, report=lambda *args: None):
             log.write(message + "\n")
 
     def report(kind, value):
-        if kind == "log":
-            log_line(value)
-        original_report(kind, value)
+        with report_lock:
+            if kind == "log":
+                log_line(value)
+            original_report(kind, value)
 
     with retry_scope(control.check, "outpainting"), session_lock(root):
         prompts = {
@@ -125,122 +130,177 @@ def run_batch(config, control=None, report=lambda *args: None):
         )
         counts = {"described": 0, "rendered": 0, "failed": 0, "total": len(paths)}
         report("progress", counts.copy())
-        for path in paths:
-            control.check()
-            started = time.monotonic()
-            try:
-                digest = hashlib.sha256(read_bytes(path)).hexdigest()
-                key = hashlib.sha256(
-                    (str(path.relative_to(source_root)) + digest + signature).encode()
-                ).hexdigest()
-                name = path.stem + "-" + key[:16]
-                state_path = root / "state" / (name + ".json")
-                output = root / "results" / (name + ".jpg")
-                record = (
-                    json.loads(read_text(state_path))
-                    if state_path.exists()
-                    else {"source": str(path), "seed": secrets.randbits(63)}
-                )
-                if record.get("complete") and output.exists():
-                    counts["described"] += 1
-                    counts["rendered"] += 1
-                    report("log", f"Already complete: {path.name}")
-                    report("progress", counts.copy())
-                    continue
-                source = decode_image(path)
-                padding = plan_padding(source.size, (config["width"], config["height"]))
-                if "description" not in record:
-                    report("log", f"Describing {path.name} · {llm_config.base_url}")
-                    step = time.monotonic()
-                    record["description"] = LLMClient(
-                        llm_config,
-                        (path,),
-                        system_prompt=(
-                            "You describe supplied images accurately for outpainting. "
-                            "Follow the user's instructions and output only the requested prompt."
-                        ),
-                    ).complete(prompts["description_prompt"])
-                    checkpoint(state_path, record)
-                    report("log", f"Description ready · {time.monotonic() - step:.1f}s")
-                counts["described"] += 1
-                prompt = (
-                    prompts["outpainting_prompt"].strip() + "\n\nScene: " + record["description"]
-                )
-                write_text(
-                    root / "prompts" / (name + ".md"),
-                    f"# {path.name}\n\n## Description\n\n{record['description']}"
-                    f"\n\n## Outpainting prompt\n\n{prompt}\n",
-                    encoding="utf-8",
-                )
+
+        def failed(path, error):
+            advance(failed=1)
+            report("log", f"Failed {path.name}: {error}")
+            write_text(
+                root
+                / "logs"
+                / (hashlib.sha256(str(path).encode()).hexdigest()[:16] + ".error.log"),
+                str(error),
+            )
+
+        def advance(**changes):
+            with report_lock:
+                for key, amount in changes.items():
+                    counts[key] += amount
                 report("progress", counts.copy())
+
+        ready = Queue()
+        descriptions_done = Event()
+
+        def describe():
+            for path in paths:
                 control.check()
-                if source.size == padding.target:
-                    final = source
-                else:
-                    if "prompt_id" not in record:
-                        if record.get("request_id"):
-                            record["prompt_id"] = comfy.submit(
-                                {}, record["request_id"], recover=True
-                            )
-                        else:
-                            upload_path = root / "uploads" / (name + ".png")
-                            file_retry(source.save)(upload_path, format="PNG")
-                            uploaded = comfy.upload(upload_path, "outpaint-source")
-                            graph = build_outpaint(
-                                template,
-                                binding["nodes"],
-                                overrides,
-                                prompt,
-                                uploaded,
-                                padding,
-                                config["feathering"],
-                                record["seed"],
-                                name,
-                                negative=prompts["negative_prompt"],
-                                preserve_center=config["preserve_center"],
-                            )
-                            comfy.preflight(graph)
-                            write_text(
-                                root / "state" / (name + ".workflow.json"),
-                                json.dumps(graph, indent=2),
-                            )
-                            record["request_id"] = uuid.uuid4().hex
-                            checkpoint(state_path, record)
-                            try:
-                                record["prompt_id"] = comfy.submit(graph, record["request_id"])
-                            except RejectedSubmission:
-                                record.pop("request_id", None)
-                                checkpoint(state_path, record)
-                                raise
+                started = time.monotonic()
+                try:
+                    digest = hashlib.sha256(read_bytes(path)).hexdigest()
+                    key = hashlib.sha256(
+                        (str(path.relative_to(source_root)) + digest + signature).encode()
+                    ).hexdigest()
+                    name = path.stem + "-" + key[:16]
+                    state_path = root / "state" / (name + ".json")
+                    output = root / "results" / (name + ".jpg")
+                    record = (
+                        json.loads(read_text(state_path))
+                        if state_path.exists()
+                        else {"source": str(path), "seed": secrets.randbits(63)}
+                    )
+                    if record.get("complete") and output.exists():
+                        advance(described=1, rendered=1)
+                        report("log", f"Already complete: {path.name}")
+                        continue
+                    source = decode_image(path)
+                    plan_padding(source.size, (config["width"], config["height"]))
+                    if "description" not in record:
+                        report("log", f"Describing {path.name} · {llm_config.base_url}")
+                        step = time.monotonic()
+                        record["description"] = LLMClient(
+                            llm_config,
+                            (path,),
+                            system_prompt=(
+                                "You describe supplied images accurately for outpainting. "
+                                "Follow the user's instructions and output only "
+                                "the requested prompt."
+                            ),
+                        ).complete(prompts["description_prompt"])
                         checkpoint(state_path, record)
-                    report("log", f"Outpainting {path.name} · {comfy.config.base_url}")
-                    step = time.monotonic()
-                    result = comfy.wait_image(
-                        record["prompt_id"], binding["nodes"]["output"], control.check
+                        report("log", f"Description ready · {time.monotonic() - step:.1f}s")
+                    prompt = (
+                        prompts["outpainting_prompt"].strip()
+                        + "\n\nScene: "
+                        + record["description"]
                     )
-                    final = finish_outpaint(
-                        decode_image(result), source, padding, config["feathering"], False
+                    write_text(
+                        root / "prompts" / (name + ".md"),
+                        f"# {path.name}\n\n## Description\n\n{record['description']}"
+                        f"\n\n## Outpainting prompt\n\n{prompt}\n",
+                        encoding="utf-8",
                     )
-                    report("log", f"Outpainting ready · {time.monotonic() - step:.1f}s")
-                save_jpeg(final, output, config["jpeg_quality"], 0, "white")
-                record.update(complete=True, output=str(output), padding=asdict(padding))
-                checkpoint(state_path, record)
-                counts["rendered"] += 1
-                message = f"Saved {output.name} · total {time.monotonic() - started:.1f}s"
-                write_text(root / "logs" / (name + ".log"), message + "\n")
-                report("log", message)
-            except RunHalted:
+                    advance(described=1)
+                    control.check()
+                    ready.put((path, name, state_path, output, record, prompt, started))
+                except RunHalted:
+                    raise
+                except Exception as error:
+                    failed(path, error)
+
+        def render():
+            while True:
+                control.check()
+                try:
+                    job = ready.get(timeout=0.1)
+                except Empty:
+                    if descriptions_done.is_set() and ready.empty():
+                        return
+                    continue
+                path, name, state_path, output, record, prompt, started = job
+                try:
+                    control.check()
+                    source = decode_image(path)
+                    padding = plan_padding(source.size, (config["width"], config["height"]))
+                    if source.size == padding.target:
+                        final = source
+                    else:
+                        if "prompt_id" not in record:
+                            if record.get("request_id"):
+                                record["prompt_id"] = comfy.submit(
+                                    {}, record["request_id"], recover=True
+                                )
+                            else:
+                                upload_path = root / "uploads" / (name + ".png")
+                                file_retry(source.save)(upload_path, format="PNG")
+                                uploaded = comfy.upload(upload_path, "outpaint-source")
+                                graph = build_outpaint(
+                                    template,
+                                    binding["nodes"],
+                                    overrides,
+                                    prompt,
+                                    uploaded,
+                                    padding,
+                                    config["feathering"],
+                                    record["seed"],
+                                    name,
+                                    negative=prompts["negative_prompt"],
+                                    preserve_center=config["preserve_center"],
+                                )
+                                comfy.preflight(graph)
+                                write_text(
+                                    root / "state" / (name + ".workflow.json"),
+                                    json.dumps(graph, indent=2),
+                                )
+                                record["request_id"] = uuid.uuid4().hex
+                                checkpoint(state_path, record)
+                                try:
+                                    record["prompt_id"] = comfy.submit(graph, record["request_id"])
+                                except RejectedSubmission:
+                                    record.pop("request_id", None)
+                                    checkpoint(state_path, record)
+                                    raise
+                            checkpoint(state_path, record)
+                        report("log", f"Outpainting {path.name} · {comfy.config.base_url}")
+                        step = time.monotonic()
+                        result = comfy.wait_image(
+                            record["prompt_id"], binding["nodes"]["output"], control.check
+                        )
+                        final = finish_outpaint(
+                            decode_image(result), source, padding, config["feathering"], False
+                        )
+                        report("log", f"Outpainting ready · {time.monotonic() - step:.1f}s")
+                    save_jpeg(final, output, config["jpeg_quality"], 0, "white")
+                    record.update(complete=True, output=str(output), padding=asdict(padding))
+                    checkpoint(state_path, record)
+                    advance(rendered=1)
+                    message = f"Saved {output.name} · total {time.monotonic() - started:.1f}s"
+                    write_text(root / "logs" / (name + ".log"), message + "\n")
+                    report("log", message)
+                except RunHalted:
+                    raise
+                except Exception as error:
+                    failed(path, error)
+
+        def worker(function, stage):
+            # Retry context is thread-local: both workers must install it themselves.
+            with retry_scope(control.check, stage):
+                try:
+                    function()
+                except BaseException as error:
+                    control.request(error.status if isinstance(error, RunHalted) else "stopped")
+                    raise
+                finally:
+                    if function is describe:
+                        descriptions_done.set()
+
+        with ThreadPoolExecutor(max_workers=2, thread_name_prefix="outpaint") as workers:
+            describing = workers.submit(worker, describe, "prompts")
+            rendering = workers.submit(worker, render, "outpainting")
+            try:
+                describing.result()
+                rendering.result()
+            except BaseException:
+                control.request(control.status)
                 raise
-            except Exception as error:
-                counts["failed"] += 1
-                report("log", f"Failed {path.name}: {error}")
-                write_text(
-                    root
-                    / "logs"
-                    / (hashlib.sha256(str(path).encode()).hexdigest()[:16] + ".error.log"),
-                    str(error),
-                )
-            report("progress", counts.copy())
         return counts
 
 
