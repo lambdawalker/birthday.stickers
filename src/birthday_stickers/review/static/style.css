@@ -565,3 +565,10 @@ nav::-webkit-scrollbar {
 #progress {
   text-align: right;
 }
+
+.toolbar #previous-image {
+  margin-right: auto;
+}
+.toolbar #next-image {
+  margin-left: auto;
+}
