@@ -78,3 +78,6 @@ desktop.ini
 
 # Exported gallery and persistent review data
 gallery/
+
+# Independent service environments
+.venvs/

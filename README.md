@@ -947,3 +947,29 @@ errors are logged and processing continues with the remaining files.
 
 The main `birthday-stickers` preset picker now uses a keyboard-friendly list:
 select with Up/Down and Enter, or click a row.
+
+### Running services independently (especially on Windows)
+
+Use the standalone launcher in separate terminals. Each service gets its own
+virtual environment under `.venvs/`, so starting/updating one does not reinstall
+executables or dependencies used by another running service:
+
+```powershell
+python src/birthday_stickers/launch.py review --gallery ./gallery --port 8080
+python src/birthday_stickers/launch.py outpaint --config outpaint.yaml
+python src/birthday_stickers/launch.py generate --config config.local.yaml
+```
+
+Run the launcher with `python`, **not `uv run`**: the latter would synchronize the
+shared `.venv` before the launcher could select a service environment. `uv` must
+be installed on PATH; environments are created automatically on first use.
+All service arguments are forwarded unchanged, and relative paths retain your
+current working directory. Ctrl+C stops that service only.
+
+The original `uv run birthday-*` commands still work, but share `.venv` and can
+encounter Windows executable locks during package updates. Stop any old gallery
+instance once and restart it with the launcher to switch to the isolated setup.
+These are separate processes/environments, not separate source-code snapshots;
+restart a service after changing its code. Generation and outpainting may still
+queue behind each other when pointed at the same ComfyUI/GPU. Use separate ComfyUI
+instances/devices when simultaneous GPU execution is needed.
