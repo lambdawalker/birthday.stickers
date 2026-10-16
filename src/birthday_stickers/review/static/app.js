@@ -109,22 +109,36 @@ function warmImages() {
     image.decode?.().catch(() => {});
   }
 }
-function confirmChoice(action) {
-  const labels = {
-    accept: ["😊", "Accepted"],
-    reject: ["😢", "Rejected"],
-    favorite: ["⭐", "Favorite updated"],
-    tshirt: ["👕", "T-shirt selection updated"],
-  };
-  if (!labels[action]) return;
+const labels = {
+  accept: ["😊", "Accept"],
+  reject: ["😢", "Reject"],
+  favorite: ["⭐", "Favorite"],
+  tshirt: ["👕", "T-shirt"],
+};
+function choiceBadge(element, action) {
   const [symbol, label] = labels[action];
+  const icon = document.createElement("span");
+  icon.textContent = symbol;
+  const caption = document.createElement("span");
+  caption.className = "choice-caption";
+  caption.textContent = label;
+  element.replaceChildren(icon, caption);
+}
+function previewChoice(action, strength) {
+  choiceBadge($("gesture"), action);
+  $("gesture").style.opacity = strength;
+  $("gesture").style.transform = `scale(${0.65 + strength * 0.35})`;
+}
+function confirmChoice(action) {
+  if (!labels[action]) return;
+  const [, label] = labels[action];
   const pop = document.createElement("div");
   pop.className = "confirmation-pop";
   pop.setAttribute("aria-hidden", "true");
-  pop.textContent = symbol;
+  choiceBadge(pop, action);
   pop.addEventListener("animationend", () => pop.remove());
   $("confirmation").replaceChildren(pop);
-  $("announcement").textContent = label;
+  $("announcement").textContent = label + " saved";
 }
 function grid() {
   inGrid = true;
@@ -244,25 +258,28 @@ $("stage").addEventListener("pointermove", (e) => {
   if (!start || e.pointerId !== start.pointerId) return;
   const x = e.clientX - start.x,
     y = e.clientY - start.y;
-  $("hero").style.transform = `translate(${x}px,${y}px)`;
+  const strength = Math.min(1, Math.max(Math.abs(x), Math.abs(y)) / 140);
+  const reducedMotion = window.matchMedia?.(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  const tilt = reducedMotion ? 0 : Math.max(-14, Math.min(14, x / 18));
+  $("hero").style.transform = `translate(${x}px,${y}px) rotate(${tilt}deg)`;
+  $("hero").style.opacity = 1 - strength * 0.65;
   const action =
     Math.abs(x) > Math.abs(y)
       ? x > 0
-        ? "Accept"
-        : "Reject"
+        ? "accept"
+        : "reject"
       : y < 0
-        ? "Favorite"
-        : "T-shirt";
-  $("gesture").textContent = action;
-  $("gesture").style.opacity = Math.min(
-    1,
-    Math.max(Math.abs(x), Math.abs(y)) / 90,
-  );
+        ? "favorite"
+        : "tshirt";
+  previewChoice(action, Math.min(1, Math.max(Math.abs(x), Math.abs(y)) / 70));
 });
 function clearGesture() {
   start = null;
   $("stage").classList.remove("dragging");
   $("hero").style.transform = "";
+  $("hero").style.opacity = "";
   $("gesture").style.opacity = 0;
 }
 $("stage").addEventListener("pointerup", (e) => {

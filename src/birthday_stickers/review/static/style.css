@@ -173,15 +173,15 @@ button:disabled {
 }
 
 #gesture {
-  position: absolute;
-  top: 22px;
-  left: 22px;
-  background: #2c5046;
-  color: white;
-  border-radius: 10px;
-  padding: 12px;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   pointer-events: none;
+  font-size: clamp(64px, 18vw, 120px);
 }
 
 .toolbar {
@@ -376,7 +376,7 @@ nav::-webkit-scrollbar {
 #hero {
   position: relative;
   z-index: 1;
-  background: #f5f3ec;
+  background: transparent;
 }
 #gesture {
   z-index: 2;
@@ -396,8 +396,8 @@ nav::-webkit-scrollbar {
 }
 @keyframes choice-pop {
   0% {
-    opacity: 0;
-    transform: translateY(30px) scale(0.3);
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
   30% {
     opacity: 1;
@@ -436,4 +436,19 @@ nav::-webkit-scrollbar {
   100% {
     opacity: 0;
   }
+}
+
+.confirmation-pop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.choice-caption {
+  font:
+    600 14px system-ui,
+    sans-serif;
+  color: white;
+  background: #2c5046;
+  padding: 7px 14px;
+  border-radius: 20px;
 }
