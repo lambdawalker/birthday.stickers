@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const swipeThreshold = 140;
 const params = new URLSearchParams(location.search);
 const pipeline = params.get("pipeline") || "image_generation";
 const requestedBuffer = Number(params.get("preload") ?? 3);
@@ -372,7 +373,7 @@ $("stage").addEventListener("pointermove", (e) => {
       : y < 0
         ? "favorite"
         : "tshirt";
-  previewChoice(action, Math.min(1, Math.max(Math.abs(x), Math.abs(y)) / 70));
+  previewChoice(action, Math.max(Math.abs(x), Math.abs(y)) >= swipeThreshold ? 1 : 0);
 });
 function clearGesture() {
   if (exiting) return;
@@ -386,7 +387,7 @@ $("stage").addEventListener("pointerup", async (e) => {
   if (!start || e.pointerId !== start.pointerId) return;
   const x = e.clientX - start.x,
     y = e.clientY - start.y;
-  if (Math.max(Math.abs(x), Math.abs(y)) < 70) {
+  if (Math.max(Math.abs(x), Math.abs(y)) < swipeThreshold) {
     clearGesture();
     return;
   }
