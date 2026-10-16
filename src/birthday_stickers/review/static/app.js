@@ -85,6 +85,29 @@ function controls() {
   for (const id of ["previous-image", "next-image"])
     $(id).disabled = busy || exiting || !!pending || images.length < 2;
 }
+function renderCategoryBadge(badge, item) {
+  badge.textContent = [
+    item.status === "accepted"
+      ? "😊 Accepted"
+      : item.status === "rejected"
+        ? "😢 Rejected"
+        : "To review",
+    item.favorite ? "⭐ Favorite" : "",
+    item.tshirt ? "👕 T-shirt" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  badge.setAttribute(
+    "aria-label",
+    [
+      item.status || "Pending",
+      item.favorite ? "Favorite" : "",
+      item.tshirt ? "T-shirt" : "",
+    ]
+      .filter(Boolean)
+      .join(", "),
+  );
+}
 function show() {
   $("stage").hidden = galleryMode;
   $("carousel").hidden = !galleryMode;
@@ -94,6 +117,8 @@ function show() {
   const item = images[index];
   $("empty").hidden = !!item;
   $("hero").hidden = !item;
+  $("swipe-badge").hidden = galleryMode || category !== "all" || !item;
+  if (item) renderCategoryBadge($("swipe-badge"), item);
   $("next").hidden = true;
   if (item) {
     $("hero").src = imageURL(item);
@@ -204,27 +229,7 @@ function buildCarousel() {
       "Illustration " + (((position - 1 + images.length) % images.length) + 1);
     const badge = document.createElement("span");
     badge.className = "category-badge";
-    badge.textContent = [
-      item.status === "accepted"
-        ? "😊 Accepted"
-        : item.status === "rejected"
-          ? "😢 Rejected"
-          : "To review",
-      item.favorite ? "⭐ Favorite" : "",
-      item.tshirt ? "👕 T-shirt" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    badge.setAttribute(
-      "aria-label",
-      [
-        item.status || "Pending",
-        item.favorite ? "Favorite" : "",
-        item.tshirt ? "T-shirt" : "",
-      ]
-        .filter(Boolean)
-        .join(", "),
-    );
+    renderCategoryBadge(badge, item);
     card.append(image, badge);
     rail.append(card);
   });
@@ -319,7 +324,9 @@ async function send() {
     pending = null;
     $("retry").hidden = true;
     if (!galleryMode && category === "all" && action !== "undo" && current) {
-      index = (images.findIndex((item) => item.hash === current.hash) + 1) % images.length;
+      index =
+        (images.findIndex((item) => item.hash === current.hash) + 1) %
+        images.length;
     }
     await load();
   } catch (e) {

@@ -572,3 +572,8 @@ nav::-webkit-scrollbar {
 .toolbar #next-image {
   margin-left: auto;
 }
+
+#swipe-badge {
+  z-index: 2;
+  pointer-events: none;
+}
