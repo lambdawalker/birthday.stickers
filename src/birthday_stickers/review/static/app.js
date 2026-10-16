@@ -7,11 +7,16 @@ const bufferSize = Number.isFinite(requestedBuffer)
   : 3;
 const imageBuffer = new Map();
 const recentImages = [];
-const category = params.get("category") || "pending";
+const galleryMode = params.get("mode") === "gallery";
+const category = params.get("category") || (galleryMode ? "all" : "pending");
+let exiting = false;
+let reviewedCount = 0;
+let totalCount = 0;
 const name = location.pathname.startsWith("/user/")
   ? decodeURIComponent(location.pathname.slice(6))
   : null;
 const categories = {
+  all: "All",
   pending: "To review",
   accepted: "Accepted",
   rejected: "Rejected",
@@ -24,7 +29,13 @@ let images = [],
   inGrid = false,
   pending = null;
 const query = (cat) =>
-  "?" + new URLSearchParams({ pipeline, category: cat, preload: bufferSize });
+  "?" +
+  new URLSearchParams({
+    pipeline,
+    category: cat,
+    preload: bufferSize,
+    mode: galleryMode ? "gallery" : "swipe",
+  });
 const userURL = (user, cat) => "/user/" + encodeURIComponent(user) + query(cat);
 const api =
   "/api/user/" +
@@ -64,19 +75,21 @@ function controls() {
   document
     .querySelectorAll("[data-action]")
     .forEach(
-      (b) => (b.disabled = busy || !!pending || !images[index] || inGrid),
+      (b) => (b.disabled = busy || !!pending || !images[index] || exiting),
     );
-  $("undo").disabled = busy || !!pending;
-  $("next").disabled = busy;
+  $("undo").disabled = busy || !!pending || exiting;
+  $("next").disabled = busy || exiting || !!pending;
 }
 function show() {
+  $("stage").hidden = galleryMode;
+  $("carousel").hidden = !galleryMode;
   inGrid = false;
   $("grid").hidden = true;
   $("review").hidden = false;
   const item = images[index];
   $("empty").hidden = !!item;
   $("hero").hidden = !item;
-  $("next").hidden = category === "pending" || !item;
+  $("next").hidden = galleryMode || category === "pending" || !item;
   if (item) {
     $("hero").src = imageURL(item);
     $("hero").alt = "Illustration " + (index + 1) + " for " + name;
@@ -89,6 +102,7 @@ function show() {
   $("underneath").hidden = !underneath;
   if (underneath) $("underneath").src = imageURL(underneath);
   else $("underneath").removeAttribute("src");
+  updateCounter();
   warmImages();
   controls();
 }
@@ -124,12 +138,22 @@ function choiceBadge(element, action) {
   caption.textContent = label;
   element.replaceChildren(icon, caption);
 }
+function positionFeedback() {
+  const surface = galleryMode ? $("carousel") : $("stage");
+  const bounds = surface.getBoundingClientRect?.();
+  if (!bounds) return;
+  const padding = Math.max(12, window.innerHeight - bounds.bottom + 12) + "px";
+  $("gesture").style.paddingBottom = padding;
+  $("confirmation").style.paddingBottom = padding;
+}
 function previewChoice(action, strength) {
+  positionFeedback();
   choiceBadge($("gesture"), action);
   $("gesture").style.opacity = strength;
   $("gesture").style.transform = `scale(${0.65 + strength * 0.35})`;
 }
 function confirmChoice(action) {
+  positionFeedback();
   if (!labels[action]) return;
   const [, label] = labels[action];
   const pop = document.createElement("div");
@@ -137,45 +161,112 @@ function confirmChoice(action) {
   pop.setAttribute("aria-hidden", "true");
   choiceBadge(pop, action);
   pop.addEventListener("animationend", () => pop.remove());
+  $("gesture").style.opacity = 0;
   $("confirmation").replaceChildren(pop);
   $("announcement").textContent = label + " saved";
 }
-function grid() {
-  inGrid = true;
-  $("review").hidden = true;
-  $("grid").hidden = false;
-  $("grid").replaceChildren();
-  images.forEach((item, i) => {
-    const button = document.createElement("button");
-    button.setAttribute("aria-label", "Review image " + (i + 1));
-    const img = document.createElement("img");
-    img.loading = "lazy";
-    img.src = imageURL(item);
-    img.alt = "Reviewed illustration";
-    button.append(img);
-    button.onclick = () => {
-      index = i;
-      show();
-    };
-    $("grid").append(button);
-  });
-  if (!images.length) $("grid").textContent = "No images in this category yet.";
+function updateCounter() {
+  $("progress").textContent =
+    (images.length ? index + 1 : 0) + " / " + images.length;
+  $("progress").title = reviewedCount + " of " + totalCount + " reviewed";
 }
-async function load(asGrid = false) {
+function buildCarousel() {
+  clearTimeout(scrollTimer);
+  const rail = $("carousel");
+  rail.replaceChildren();
+  if (!images.length) {
+    rail.textContent = "No images in this category yet.";
+    return;
+  }
+  const items =
+    images.length > 1 ? [images.at(-1), ...images, images[0]] : images;
+  items.forEach((item, position) => {
+    const card = document.createElement("div");
+    card.className = "gallery-card";
+    const image = document.createElement("img");
+    image.src = imageURL(item);
+    image.loading = "lazy";
+    image.draggable = false;
+    image.alt =
+      "Illustration " + (((position - 1 + images.length) % images.length) + 1);
+    const badge = document.createElement("span");
+    badge.className = "category-badge";
+    badge.textContent = [
+      item.status === "accepted"
+        ? "😊"
+        : item.status === "rejected"
+          ? "😢"
+          : "○",
+      item.favorite ? "⭐" : "",
+      item.tshirt ? "👕" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    badge.setAttribute(
+      "aria-label",
+      [
+        item.status || "Pending",
+        item.favorite ? "Favorite" : "",
+        item.tshirt ? "T-shirt" : "",
+      ]
+        .filter(Boolean)
+        .join(", "),
+    );
+    card.append(image, badge);
+    rail.append(card);
+  });
+  rail.scrollLeft = (index + (images.length > 1 ? 1 : 0)) * rail.clientWidth;
+}
+let scrollTimer;
+$("carousel").addEventListener("scroll", () => {
+  const rail = $("carousel");
+  if (!rail.clientWidth || !images.length) return;
+  const slot = Math.round(rail.scrollLeft / rail.clientWidth);
+  index = images.length > 1 ? (slot - 1 + images.length) % images.length : 0;
+  show();
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    if (images.length > 1 && (slot === 0 || slot === images.length + 1)) {
+      rail.scrollLeft = (index + 1) * rail.clientWidth;
+    }
+  }, 120);
+});
+window.addEventListener("resize", () => {
+  if (galleryMode)
+    $("carousel").scrollLeft =
+      (index + (images.length > 1 ? 1 : 0)) * $("carousel").clientWidth;
+});
+async function load() {
+  const previousHash = galleryMode ? images[index]?.hash : null;
+  const previousIndex = index;
   $("error").textContent = "";
   try {
     const data = await request(api + "&" + new URLSearchParams({ category }));
     $("empty").querySelector("h2").textContent = "You’re all caught up.";
     images = data.images;
-    index = 0;
+    index = galleryMode
+      ? Math.max(
+          0,
+          images.findIndex((item) => item.hash === previousHash),
+        )
+      : 0;
+    if (
+      galleryMode &&
+      previousHash &&
+      !images.some((item) => item.hash === previousHash)
+    )
+      index = Math.min(previousIndex, Math.max(0, images.length - 1));
     const done = (data.counts.accepted || 0) + (data.counts.rejected || 0);
     $("progress").textContent = done + " / " + data.total;
     $("progress").title = done + " of " + data.total + " reviewed";
-    if (asGrid) grid();
-    else show();
+    reviewedCount = done;
+    totalCount = data.total;
+    show();
+    if (galleryMode) buildCarousel();
   } catch (e) {
     images = [];
     show();
+    if (galleryMode) buildCarousel();
     $("empty").querySelector("h2").textContent = "Could not load the gallery.";
     error(e);
   }
@@ -210,8 +301,8 @@ async function send() {
     controls();
   }
 }
-async function act(action) {
-  if (busy || pending) return;
+async function act(action, fromSwipe = false) {
+  if (busy || pending || (exiting && !fromSwipe)) return;
   if (action !== "undo" && !images[index]) return;
   pending = { hash: images[index]?.hash, action, token: token() };
   try {
@@ -243,7 +334,15 @@ $("hero").onerror = () =>
   );
 let start = null;
 $("stage").addEventListener("pointerdown", (e) => {
-  if (busy || pending || !images[index] || e.target.closest("button")) return;
+  if (
+    galleryMode ||
+    exiting ||
+    busy ||
+    pending ||
+    !images[index] ||
+    e.target.closest("button")
+  )
+    return;
   if (
     start ||
     e.isPrimary === false ||
@@ -264,7 +363,7 @@ $("stage").addEventListener("pointermove", (e) => {
   ).matches;
   const tilt = reducedMotion ? 0 : Math.max(-14, Math.min(14, x / 18));
   $("hero").style.transform = `translate(${x}px,${y}px) rotate(${tilt}deg)`;
-  $("hero").style.opacity = 1 - strength * 0.65;
+  $("hero").style.opacity = 1 - strength * 0.1;
   const action =
     Math.abs(x) > Math.abs(y)
       ? x > 0
@@ -276,19 +375,37 @@ $("stage").addEventListener("pointermove", (e) => {
   previewChoice(action, Math.min(1, Math.max(Math.abs(x), Math.abs(y)) / 70));
 });
 function clearGesture() {
+  if (exiting) return;
   start = null;
   $("stage").classList.remove("dragging");
   $("hero").style.transform = "";
   $("hero").style.opacity = "";
   $("gesture").style.opacity = 0;
 }
-$("stage").addEventListener("pointerup", (e) => {
+$("stage").addEventListener("pointerup", async (e) => {
   if (!start || e.pointerId !== start.pointerId) return;
   const x = e.clientX - start.x,
     y = e.clientY - start.y;
-  clearGesture();
-  if (Math.max(Math.abs(x), Math.abs(y)) < 70) return;
-  act(
+  if (Math.max(Math.abs(x), Math.abs(y)) < 70) {
+    clearGesture();
+    return;
+  }
+  start = null;
+  exiting = true;
+  controls();
+  const distance =
+    Math.max(window.innerWidth || 1000, window.innerHeight || 1000) * 1.5;
+  const scale = distance / Math.max(Math.abs(x), Math.abs(y));
+  $("hero").style.transition = "transform 240ms ease-out";
+  $("hero").style.transform =
+    `translate(${x * scale}px,${y * scale}px) rotate(${Math.sign(x) * 18}deg)`;
+  await new Promise((resolve) =>
+    setTimeout(
+      resolve,
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : 240,
+    ),
+  );
+  await act(
     Math.abs(x) > Math.abs(y)
       ? x > 0
         ? "accept"
@@ -296,13 +413,21 @@ $("stage").addEventListener("pointerup", (e) => {
       : y < 0
         ? "favorite"
         : "tshirt",
+    true,
   );
+  exiting = false;
+  $("hero").style.transition = "none";
+  clearGesture();
+  controls();
+  requestAnimationFrame(() => {
+    $("hero").style.transition = "";
+  });
 });
 $("stage").addEventListener("pointercancel", clearGesture);
 $("stage").addEventListener("lostpointercapture", clearGesture);
 window.addEventListener("blur", clearGesture);
 document.addEventListener("keydown", (e) => {
-  if (e.target.closest("input,button,a") || inGrid || !name) return;
+  if (e.target.closest("input,button,a") || galleryMode || !name) return;
   const action = {
     ArrowRight: "accept",
     ArrowLeft: "reject",
@@ -321,6 +446,7 @@ async function sessions() {
   $("sessions").hidden = false;
   $("title").textContent = "Review sessions";
   $("sessions-link").hidden = true;
+  $("mode-toggle").hidden = true;
   try {
     const rows = await request(
       "/api/sessions?" + new URLSearchParams({ pipeline }),
@@ -349,6 +475,23 @@ async function sessions() {
   }
 }
 if (name) {
+  const targetMode = galleryMode ? "swipe" : "gallery";
+  $("mode-toggle").textContent = galleryMode ? "↔" : "👁";
+  $("mode-toggle").setAttribute(
+    "aria-label",
+    "Switch to " + targetMode + " mode",
+  );
+  $("mode-toggle").title = "Switch to " + targetMode + " mode";
+  $("mode-toggle").href =
+    "/user/" +
+    encodeURIComponent(name) +
+    "?" +
+    new URLSearchParams({
+      pipeline,
+      category,
+      preload: bufferSize,
+      mode: targetMode,
+    });
   $("title").textContent = name + " Space";
   document.title = name + " Space";
   $("sessions-link").href = "/sessions?" + new URLSearchParams({ pipeline });
@@ -364,7 +507,7 @@ if (name) {
   } catch (e) {
     error(e);
   }
-  load(category !== "pending").then(() => {
+  load().then(() => {
     if (pending) {
       $("retry").hidden = false;
       error(Error("An earlier choice is waiting to be saved. Tap Retry."));

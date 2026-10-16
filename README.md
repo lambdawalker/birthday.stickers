@@ -879,3 +879,8 @@ images for Undo). Set `?preload=5` on a reviewer link to change the buffer to 5
 images in each direction; supported values are 1–20. The next image sits underneath
 the current card while dragging. Saved choices show a brief confirmation icon;
 failed requests retain the retry action without showing a success confirmation.
+
+Use the eye button to switch to gallery mode (`?mode=gallery`). Drag horizontally
+to browse a looping gallery; use the shared action buttons to categorize the
+visible image. Corner badges show its saved categories. The ↔ button returns
+to swipe mode. Both modes retain the selected category and preload setting.

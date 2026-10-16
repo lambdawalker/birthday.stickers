@@ -19,7 +19,12 @@
         >←</a
       >
       <h1 id="title">Review sessions</h1>
-      <span id="progress" aria-live="polite"></span>
+      <a
+        id="mode-toggle"
+        aria-label="Switch to gallery mode"
+        title="Gallery mode"
+        >◉</a
+      >
     </header>
     <div id="confirmation" aria-hidden="true"></div>
     <div
@@ -33,6 +38,7 @@
       <p id="error" role="alert"></p>
       <button id="retry" hidden>Retry saved action</button>
       <section id="review">
+        <div id="carousel" aria-label="Image gallery" tabindex="0" hidden></div>
         <div class="stage" id="stage">
           <img
             id="underneath"
@@ -76,6 +82,7 @@
           </button>
         </div>
         <button id="next" hidden>Next image →</button>
+        <span id="progress" aria-live="polite"></span>
       </section>
       <section id="grid" hidden></section>
       <section id="sessions" hidden></section>
