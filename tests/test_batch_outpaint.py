@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -79,6 +80,28 @@ class BatchTests(unittest.TestCase):
                 result = run_batch(config)
             self.assertEqual(result, {"described": 2, "rendered": 2, "failed": 0, "total": 2})
 
+    def test_completed_older_run_survives_rename_and_settings_changes(self):
+        with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
+            config = self.config(Path(temp), service)
+            run_batch(config)
+            state = next(
+                p
+                for p in (Path(config["destination"]) / "state").glob("*.json")
+                if not p.name.endswith(".workflow.json")
+            )
+            record = json.loads(state.read_text())
+            record.pop("image_identity", None)
+            state.write_text(json.dumps(record))
+            source = Path(config["source"])
+            (source / "one.png").rename(source / "renamed.png")
+            config["cfg"] = 2.0
+            self.assertEqual(run_batch(config)["rendered"], 1)
+            self.assertEqual(len(service.graphs), 1)
+            self.assertEqual(len(service.chats), 1)
+            next((Path(config["destination"]) / "results").glob("*.jpg")).unlink()
+            self.assertEqual(run_batch(config)["rendered"], 1)
+            self.assertEqual(len(service.graphs), 2)
+
     def test_pause_after_description_reuses_saved_prompt(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
             config = self.config(Path(temp), service)
@@ -107,6 +130,19 @@ class BatchTests(unittest.TestCase):
 
 
 class BatchUITests(unittest.IsolatedAsyncioTestCase):
+    async def test_quit_shortcuts(self):
+        config = settings(fixtures.ROOT / "outpaint.yaml")
+        app = OutpaintApp(config)
+        async with app.run_test() as pilot:
+            app.query_one("#start").focus()
+            with patch.object(app, "exit") as leave:
+                await pilot.press("q")
+                leave.assert_called_once()
+            app.query_one("#source").focus()
+            with patch.object(app, "exit") as leave:
+                await pilot.press("ctrl+q")
+                leave.assert_called_once()
+
     async def test_controls_and_list_picker(self):
         config = settings(fixtures.ROOT / "outpaint.yaml")
         app = OutpaintApp(config)

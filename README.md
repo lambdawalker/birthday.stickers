@@ -952,3 +952,10 @@ These are separate processes/environments, not separate source-code snapshots;
 restart a service after changing its code. Generation and outpainting may still
 queue behind each other when pointed at the same ComfyUI/GPU. Use separate ComfyUI
 instances/devices when simultaneous GPU execution is needed.
+
+Folder outpainting skips previously completed images in the same destination when
+image content and target dimensions match, even after renaming inputs or changing
+server/prompt/sampling settings. Existing runs are recognized from their saved
+upload snapshots. Delete a finished result (or choose a new destination) to redo it.
+`Q` quits outside text inputs; `Ctrl+Q` also works while editing a field. Active
+requests finish/checkpoint before exit, and the monitor displays the pending quit.

@@ -81,6 +81,11 @@ def checkpoint(path, record):
     replace(temporary, path)
 
 
+def image_identity(image):
+    rgba = image.convert("RGBA")
+    return hashlib.sha256(str(rgba.size).encode() + rgba.tobytes()).hexdigest()
+
+
 def run_batch(config, control=None, report=lambda *args: None):
     control = control or RunControl()
     root = Path(config["destination"])
@@ -128,6 +133,33 @@ def run_batch(config, control=None, report=lambda *args: None):
         signature = json.dumps(
             {"config": config, "prompts": prompts, "workflow": template}, sort_keys=True
         )
+        # Finished outputs survive endpoint, prompt and sampling-setting changes.
+        completed = set()
+        target = (config["width"], config["height"])
+        for saved in (root / "state").glob("*.json"):
+            control.check()
+            if saved.name.endswith(".workflow.json"):
+                continue
+            try:
+                previous = json.loads(read_text(saved, encoding="utf-8"))
+                output = root / "results" / (saved.stem + ".jpg")
+                if not previous.get("complete") or not output.exists():
+                    continue
+                if decode_image(output).size != target:
+                    continue
+                identity = previous.get("image_identity")
+                if not identity:
+                    # Older runs saved the exact input as a PNG before upload.
+                    upload = root / "uploads" / (saved.stem + ".png")
+                    if not upload.exists():
+                        continue
+                    identity = image_identity(decode_image(upload))
+                    previous["image_identity"] = identity
+                    checkpoint(saved, previous)
+                completed.add(identity)
+            except (ValueError, OSError):
+                continue
+        completed_lock = RLock()
         counts = {"described": 0, "rendered": 0, "failed": 0, "total": len(paths)}
         report("progress", counts.copy())
 
@@ -155,6 +187,14 @@ def run_batch(config, control=None, report=lambda *args: None):
                 control.check()
                 started = time.monotonic()
                 try:
+                    source = decode_image(path)
+                    identity = image_identity(source)
+                    with completed_lock:
+                        already_done = identity in completed
+                    if already_done:
+                        advance(described=1, rendered=1)
+                        report("log", f"Already outpainted: {path.name}")
+                        continue
                     digest = hashlib.sha256(read_bytes(path)).hexdigest()
                     key = hashlib.sha256(
                         (str(path.relative_to(source_root)) + digest + signature).encode()
@@ -171,7 +211,7 @@ def run_batch(config, control=None, report=lambda *args: None):
                         advance(described=1, rendered=1)
                         report("log", f"Already complete: {path.name}")
                         continue
-                    source = decode_image(path)
+                    record["image_identity"] = identity
                     plan_padding(source.size, (config["width"], config["height"]))
                     if "description" not in record:
                         report("log", f"Describing {path.name} · {llm_config.base_url}")
@@ -271,6 +311,8 @@ def run_batch(config, control=None, report=lambda *args: None):
                     save_jpeg(final, output, config["jpeg_quality"], 0, "white")
                     record.update(complete=True, output=str(output), padding=asdict(padding))
                     checkpoint(state_path, record)
+                    with completed_lock:
+                        completed.add(record["image_identity"])
                     advance(rendered=1)
                     message = f"Saved {output.name} · total {time.monotonic() - started:.1f}s"
                     write_text(root / "logs" / (name + ".log"), message + "\n")

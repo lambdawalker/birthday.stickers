@@ -4,6 +4,7 @@ from pathlib import Path
 
 from textual import on, work
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual.widgets import (
     Button,
@@ -23,7 +24,11 @@ from .control import RunControl, RunHalted
 
 class OutpaintApp(App):
     TITLE = "Qwen · Folder Outpainting"
-    BINDINGS = [("ctrl+q", "safe_quit", "Quit"), ("ctrl+p", "pause", "Pause")]
+    BINDINGS = [
+        Binding("q", "safe_quit", "Quit"),
+        Binding("ctrl+q", "safe_quit", "Quit", priority=True, show=False),
+        Binding("ctrl+p", "pause", "Pause"),
+    ]
     CSS = """
     Screen { background: $background; }
     #settings { height: 19; padding: 1 3; border: round $primary; margin: 1 2; }
@@ -208,5 +213,8 @@ class OutpaintApp(App):
         if self.busy:
             self.quitting = True
             self.control.request("stopped")
+            self.query_one("#status", Static).update(
+                "Quitting… waiting for active requests to finish and saving checkpoints."
+            )
         else:
             self.exit()
