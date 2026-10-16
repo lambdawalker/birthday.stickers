@@ -577,3 +577,9 @@ nav::-webkit-scrollbar {
   z-index: 2;
   pointer-events: none;
 }
+
+.reset-session {
+  margin-top: 14px;
+  color: #9c352d;
+  font-size: 12px;
+}

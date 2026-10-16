@@ -428,10 +428,7 @@ $("stage").addEventListener("pointermove", (e) => {
       : y < 0
         ? "favorite"
         : "tshirt";
-  previewChoice(
-    action,
-    reachesSwipeThreshold(x, y) ? 1 : 0,
-  );
+  previewChoice(action, reachesSwipeThreshold(x, y) ? 1 : 0);
 });
 function clearGesture() {
   if (exiting) return;
@@ -520,6 +517,7 @@ async function sessions() {
     const rows = await request(
       "/api/sessions?" + new URLSearchParams({ pipeline }),
     );
+    $("sessions").replaceChildren();
     if (!rows.length)
       $("sessions").textContent =
         "No reviews yet. Open /user/your-name to start.";
@@ -536,7 +534,52 @@ async function sessions() {
         link.textContent = label;
         nav.append(link);
       }
-      card.append(title, summary, nav);
+      const reset = document.createElement("button");
+      reset.textContent = "Reset";
+      reset.className = "reset-session";
+      reset.setAttribute("aria-label", "Reset review session for " + row.name);
+      let resetToken = null;
+      reset.onclick = async () => {
+        if (
+          !resetToken &&
+          !window.confirm(
+            "Reset " +
+              row.name +
+              "’s reviews for " +
+              pipeline +
+              "? All decisions and undo history will be cleared. Images will be kept.",
+          )
+        )
+          return;
+        resetToken ||= token();
+        reset.disabled = true;
+        try {
+          await request(
+            "/api/user/" +
+              encodeURIComponent(row.name) +
+              "?" +
+              new URLSearchParams({ pipeline }),
+            { action: "reset", token: resetToken },
+          );
+          try {
+            localStorage.removeItem(
+              "pending-review:" + row.name + ":" + pipeline,
+            );
+            for (const cat of Object.keys(categories))
+              localStorage.removeItem(
+                "review-position:" + row.name + ":" + pipeline + ":" + cat,
+              );
+          } catch (_) {}
+          $("error").textContent = "";
+          await sessions();
+        } catch (e) {
+          error(e);
+          reset.textContent = "Retry reset";
+        } finally {
+          reset.disabled = false;
+        }
+      };
+      card.append(title, summary, nav, reset);
       $("sessions").append(card);
     }
   } catch (e) {

@@ -91,6 +91,26 @@ class GalleryTests(unittest.TestCase):
         act("undo", "f")
         self.assertEqual(len(reopened.collection("maria", "image_generation")["images"]), 1)
 
+    def test_reset_clears_only_selected_session_and_cannot_be_undone(self):
+        self.gallery.add(self.image)
+        self.gallery.import_files([self.image], "outpainting")
+        store = ReviewStore(self.gallery.root)
+        key = store.collection("maria", "image_generation")["images"][0]["hash"]
+        store.decide("maria", "image_generation", key, "favorite", "a" * 32)
+        store.decide("juan", "image_generation", key, "accept", "b" * 32)
+        store.decide("maria", "outpainting", key, "tshirt", "c" * 32)
+        store.decide("maria", "image_generation", None, "reset", "r" * 32)
+        store.decide("maria", "image_generation", None, "undo", "u" * 32)
+        self.assertEqual(len(store.collection("maria", "image_generation")["images"]), 1)
+        self.assertEqual(len(store.collection("juan", "image_generation", "accepted")["images"]), 1)
+        self.assertEqual(len(store.collection("maria", "outpainting", "tshirt")["images"]), 1)
+        store.decide("maria", "image_generation", key, "accept", "d" * 32)
+        store.decide("maria", "image_generation", None, "reset", "r" * 32)
+        self.assertEqual(
+            len(store.collection("maria", "image_generation", "accepted")["images"]), 1
+        )
+        self.assertTrue(self.image.exists())
+
     def test_http_gallery_decision_and_sessions(self):
         self.gallery.add(self.image)
         server = make_server(self.gallery.root, "127.0.0.1", 0)

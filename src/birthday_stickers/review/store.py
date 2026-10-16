@@ -55,7 +55,7 @@ class ReviewStore(Gallery):
 
     def decide(self, name, pipeline, key, action, token):
         self.validate(name, pipeline)
-        if action not in ("accept", "reject", "favorite", "tshirt", "undo"):
+        if action not in ("accept", "reject", "favorite", "tshirt", "undo", "reset"):
             raise ValueError("Unknown action")
         if not isinstance(token, str) or not re.fullmatch(r"[A-Za-z0-9-]{16,80}", token):
             raise ValueError("A request ID is required")
@@ -66,7 +66,10 @@ class ReviewStore(Gallery):
             ).fetchone():
                 return
             db.execute("INSERT OR IGNORE INTO reviewers(name) VALUES(?)", (name,))
-            if action == "undo":
+            if action == "reset":
+                db.execute("DELETE FROM reviews WHERE name=? AND pipeline=?", (name, pipeline))
+                db.execute("DELETE FROM events WHERE name=? AND pipeline=?", (name, pipeline))
+            elif action == "undo":
                 event = db.execute(
                     "SELECT * FROM events WHERE name=? AND pipeline=? AND undone=0 "
                     "ORDER BY id DESC LIMIT 1",
