@@ -20,7 +20,7 @@ from .control import RunControl, RunHalted
 from .http import RejectedSubmission
 from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
 from .llm import LLMClient
-from .retry import file_retry, read_bytes, read_text, replace, retry_scope, write_text
+from .retry import copyfile, file_retry, read_bytes, read_text, replace, retry_scope, write_text
 from .sessions import session_lock
 from .wifi_watchdog import wifi_watchdog
 from .workflows import build_outpaint, load_workflow
@@ -99,6 +99,13 @@ def run_batch(config, control=None, report=lambda *args: None):
     )
     if not paths:
         raise ValueError("No supported images found in the source directory")
+    outputs = {}
+    for path in paths:
+        relative = path.relative_to(source_root).with_suffix(".jpg")
+        normalized = relative.as_posix().casefold()
+        if normalized in outputs:
+            raise ValueError(f"Output filename collision: {outputs[normalized]} and {path}")
+        outputs[normalized] = path
     for folder in ("results", "prompts", "state", "logs", "uploads"):
         (root / folder).mkdir(parents=True, exist_ok=True)
     original_report = report
@@ -134,7 +141,7 @@ def run_batch(config, control=None, report=lambda *args: None):
             {"config": config, "prompts": prompts, "workflow": template}, sort_keys=True
         )
         # Finished outputs survive endpoint, prompt and sampling-setting changes.
-        completed = set()
+        completed = {}
         target = (config["width"], config["height"])
         for saved in (root / "state").glob("*.json"):
             control.check()
@@ -142,7 +149,11 @@ def run_batch(config, control=None, report=lambda *args: None):
                 continue
             try:
                 previous = json.loads(read_text(saved, encoding="utf-8"))
-                output = root / "results" / (saved.stem + ".jpg")
+                output = (
+                    root / "results" / previous["output_relative"]
+                    if previous.get("output_relative")
+                    else Path(previous.get("output", root / "results" / (saved.stem + ".jpg")))
+                )
                 if not previous.get("complete") or not output.exists():
                     continue
                 if decode_image(output).size != target:
@@ -156,7 +167,7 @@ def run_batch(config, control=None, report=lambda *args: None):
                     identity = image_identity(decode_image(upload))
                     previous["image_identity"] = identity
                     checkpoint(saved, previous)
-                completed.add(identity)
+                completed[identity] = (output, saved, previous)
             except (ValueError, OSError):
                 continue
         completed_lock = RLock()
@@ -187,13 +198,34 @@ def run_batch(config, control=None, report=lambda *args: None):
                 control.check()
                 started = time.monotonic()
                 try:
+                    relative = path.relative_to(source_root).with_suffix(".jpg")
+                    output = root / "results" / relative
+                    if output.exists():
+                        try:
+                            valid = decode_image(output).size == target
+                        except (ValueError, OSError):
+                            valid = False
+                        if valid:
+                            advance(described=1, rendered=1)
+                            report("log", f"Already outpainted: {relative}")
+                            continue
                     source = decode_image(path)
                     identity = image_identity(source)
                     with completed_lock:
-                        already_done = identity in completed
-                    if already_done:
+                        previous = completed.get(identity)
+                    if previous and previous[0].exists():
+                        old_output, saved, old_record = previous
+                        output.parent.mkdir(parents=True, exist_ok=True)
+                        if old_output.name == saved.stem + ".jpg":
+                            replace(old_output, output)
+                        else:
+                            copyfile(old_output, output)
+                        old_record.update(output=str(output), output_relative=relative.as_posix())
+                        checkpoint(saved, old_record)
+                        with completed_lock:
+                            completed[identity] = (output, saved, old_record)
                         advance(described=1, rendered=1)
-                        report("log", f"Already outpainted: {path.name}")
+                        report("log", f"Reused finished image: {relative}")
                         continue
                     digest = hashlib.sha256(read_bytes(path)).hexdigest()
                     key = hashlib.sha256(
@@ -201,16 +233,11 @@ def run_batch(config, control=None, report=lambda *args: None):
                     ).hexdigest()
                     name = path.stem + "-" + key[:16]
                     state_path = root / "state" / (name + ".json")
-                    output = root / "results" / (name + ".jpg")
                     record = (
                         json.loads(read_text(state_path))
                         if state_path.exists()
                         else {"source": str(path), "seed": secrets.randbits(63)}
                     )
-                    if record.get("complete") and output.exists():
-                        advance(described=1, rendered=1)
-                        report("log", f"Already complete: {path.name}")
-                        continue
                     record["image_identity"] = identity
                     plan_padding(source.size, (config["width"], config["height"]))
                     if "description" not in record:
@@ -308,11 +335,17 @@ def run_batch(config, control=None, report=lambda *args: None):
                             decode_image(result), source, padding, config["feathering"], False
                         )
                         report("log", f"Outpainting ready · {time.monotonic() - step:.1f}s")
+                    output.parent.mkdir(parents=True, exist_ok=True)
                     save_jpeg(final, output, config["jpeg_quality"], 0, "white")
-                    record.update(complete=True, output=str(output), padding=asdict(padding))
+                    record.update(
+                        complete=True,
+                        output=str(output),
+                        output_relative=output.relative_to(root / "results").as_posix(),
+                        padding=asdict(padding),
+                    )
                     checkpoint(state_path, record)
                     with completed_lock:
-                        completed.add(record["image_identity"])
+                        completed[record["image_identity"]] = (output, state_path, record)
                     advance(rendered=1)
                     message = f"Saved {output.name} · total {time.monotonic() - started:.1f}s"
                     write_text(root / "logs" / (name + ".log"), message + "\n")

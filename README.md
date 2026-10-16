@@ -959,3 +959,11 @@ server/prompt/sampling settings. Existing runs are recognized from their saved
 upload snapshots. Delete a finished result (or choose a new destination) to redo it.
 `Q` quits outside text inputs; `Ctrl+Q` also works while editing a field. Active
 requests finish/checkpoint before exit, and the monitor displays the pending quit.
+
+Finished folder-outpainting images now keep their source basenames: `photo.png`
+becomes `results/photo.jpg`. Recursive imports preserve relative subfolders.
+An existing readable output at the requested canvas size is skipped, even without
+its checkpoint. Older hash-suffixed results are reused and renamed automatically
+when their saved state and input snapshot identify them. Delete the result to redo
+an image. Inputs that would map to the same JPG path (such as `a.png` and `a.jpg`)
+are rejected before processing so neither image is overwritten.

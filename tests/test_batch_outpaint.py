@@ -42,6 +42,7 @@ class BatchTests(unittest.TestCase):
             self.assertEqual(content[1]["type"], "image_url")
             self.assertIn("207", service.graphs[0])
             output = next((Path(config["destination"]) / "results").glob("*.jpg"))
+            self.assertEqual(output.name, "one.jpg")
             with Image.open(output) as image:
                 self.assertEqual(image.size, (64, 64))
             run_batch(config)
@@ -98,7 +99,8 @@ class BatchTests(unittest.TestCase):
             self.assertEqual(run_batch(config)["rendered"], 1)
             self.assertEqual(len(service.graphs), 1)
             self.assertEqual(len(service.chats), 1)
-            next((Path(config["destination"]) / "results").glob("*.jpg")).unlink()
+            for output in (Path(config["destination"]) / "results").glob("*.jpg"):
+                output.unlink()
             self.assertEqual(run_batch(config)["rendered"], 1)
             self.assertEqual(len(service.graphs), 2)
 
