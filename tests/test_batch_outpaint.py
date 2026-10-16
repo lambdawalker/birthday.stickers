@@ -7,7 +7,7 @@ from unittest.mock import patch
 import test_pipeline as fixtures
 import yaml
 from PIL import Image
-from textual.widgets import ListView
+from textual.widgets import ContentSwitcher, ListView
 
 from birthday_stickers.batch_outpaint import run_batch, settings
 from birthday_stickers.comfy import ComfyClient
@@ -114,9 +114,15 @@ class BatchUITests(unittest.IsolatedAsyncioTestCase):
             "birthday_stickers.outpaint_tui.run_batch", return_value={"rendered": 0, "failed": 0}
         ):
             async with app.run_test(size=(100, 42)) as pilot:
+                self.assertEqual(app.query_one("#pages", ContentSwitcher).current, "setup")
                 await pilot.click("#start")
                 await app.workers.wait_for_complete()
                 self.assertFalse(app.busy)
+                self.assertEqual(app.query_one("#pages", ContentSwitcher).current, "monitor")
+                await pilot.click("#resume")
+                await app.workers.wait_for_complete()
+                await pilot.click("#back")
+                self.assertEqual(app.query_one("#pages", ContentSwitcher).current, "setup")
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
             original = fixtures.PipelineTests().configuration(temp, service)
             app = StickerApp(original)

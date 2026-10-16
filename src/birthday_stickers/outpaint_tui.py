@@ -4,8 +4,18 @@ from pathlib import Path
 
 from textual import on, work
 from textual.app import App, ComposeResult
-from textual.containers import Grid, Horizontal, VerticalScroll
-from textual.widgets import Button, Footer, Header, Input, Label, ProgressBar, RichLog, Static
+from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
+from textual.widgets import (
+    Button,
+    ContentSwitcher,
+    Footer,
+    Header,
+    Input,
+    Label,
+    ProgressBar,
+    RichLog,
+    Static,
+)
 
 from .batch_outpaint import run_batch
 from .control import RunControl, RunHalted
@@ -23,9 +33,11 @@ class OutpaintApp(App):
     #parameters { grid-size: 2; grid-columns: 1fr 1fr; grid-rows: 3;
         grid-gutter: 0 3; height: 9; }
     #parameters .row Label { width: 15; }
-    #controls { height: 5; align: center middle; }
+    ContentSwitcher { height: 1fr; }
+    #setup, #monitor { height: 1fr; }
+    #setup-controls, #controls { height: 5; align: center middle; }
     Button { margin: 0 1; }
-    #status, #endpoints { margin: 0 3; height: auto; }
+    #status, #endpoints, #setup-endpoints, #summary { margin: 0 3; height: auto; }
     ProgressBar { margin: 0 3; }
     RichLog { margin: 1 2; border: round $secondary; height: 1fr; }
     """
@@ -39,43 +51,55 @@ class OutpaintApp(App):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        with VerticalScroll(id="settings"):
-            for key, label in (
-                ("source", "Source folder"),
-                ("destination", "Destination"),
-            ):
-                with Horizontal(classes="row"):
-                    yield Label(label)
-                    yield Input(str(self.config[key]), id=key)
-            with Grid(id="parameters"):
-                for key, label in (
-                    ("width", "Canvas width"),
-                    ("height", "Canvas height"),
-                    ("feathering", "Feathering"),
-                    ("steps", "Sampling steps"),
-                    ("cfg", "CFG"),
-                    ("jpeg_quality", "JPEG quality"),
-                ):
-                    with Horizontal(classes="row"):
-                        yield Label(label)
-                        yield Input(str(self.config[key]), id=key)
-        yield Static(
-            f"Vision LLM: {self.config['llm']['base_url']}\n"
-            f"ComfyUI: {self.config['comfy']['base_url']}",
-            id="endpoints",
-        )
-        with Horizontal(id="controls"):
-            yield Button("Start / Resume", id="start", variant="primary")
-            yield Button("Pause", id="pause", disabled=True)
-            yield Button("Stop", id="stop", disabled=True)
-        yield Static(
-            "Ready · completed images and submitted jobs resume automatically", id="status"
-        )
-        yield Label("  Image descriptions")
-        yield ProgressBar(total=1, id="descriptions")
-        yield Label("  Finished outpaintings")
-        yield ProgressBar(total=1, id="renders")
-        yield RichLog(id="log", wrap=True)
+        with ContentSwitcher(initial="setup", id="pages"):
+            with Vertical(id="setup"):
+                with VerticalScroll(id="settings"):
+                    for key, label in (
+                        ("source", "Source folder"),
+                        ("destination", "Destination"),
+                    ):
+                        with Horizontal(classes="row"):
+                            yield Label(label)
+                            yield Input(str(self.config[key]), id=key)
+                    with Grid(id="parameters"):
+                        for key, label in (
+                            ("width", "Canvas width"),
+                            ("height", "Canvas height"),
+                            ("feathering", "Feathering"),
+                            ("steps", "Sampling steps"),
+                            ("cfg", "CFG"),
+                            ("jpeg_quality", "JPEG quality"),
+                        ):
+                            with Horizontal(classes="row"):
+                                yield Label(label)
+                                yield Input(str(self.config[key]), id=key)
+                yield Static(
+                    f"Vision LLM: {self.config['llm']['base_url']}\n"
+                    f"ComfyUI: {self.config['comfy']['base_url']}",
+                    id="setup-endpoints",
+                )
+                with Horizontal(id="setup-controls"):
+                    yield Button("Start / Resume", id="start", variant="primary")
+            with Vertical(id="monitor"):
+                yield Static(id="summary")
+                yield Static(
+                    f"Vision LLM: {self.config['llm']['base_url']}\n"
+                    f"ComfyUI: {self.config['comfy']['base_url']}",
+                    id="endpoints",
+                )
+                with Horizontal(id="controls"):
+                    yield Button("Resume", id="resume", variant="primary", disabled=True)
+                    yield Button("Back to setup", id="back", disabled=True)
+                    yield Button("Pause", id="pause", disabled=True)
+                    yield Button("Stop", id="stop", disabled=True)
+                yield Static(
+                    "Ready · completed images and submitted jobs resume automatically", id="status"
+                )
+                yield Label("  Image descriptions")
+                yield ProgressBar(total=1, id="descriptions")
+                yield Label("  Finished outpaintings")
+                yield ProgressBar(total=1, id="renders")
+                yield RichLog(id="log", wrap=True)
         yield Footer()
 
     def report(self, kind, value):
@@ -96,13 +120,19 @@ class OutpaintApp(App):
         self.busy = busy
         for widget in self.query(Input):
             widget.disabled = busy
-        self.query_one("#start", Button).disabled = busy
+        for key in ("start", "resume", "back"):
+            self.query_one("#" + key, Button).disabled = busy
         for key in ("pause", "stop"):
             self.query_one("#" + key, Button).disabled = not busy
 
     @on(Button.Pressed)
     def pressed(self, event):
-        if event.button.id in ("pause", "stop"):
+        if event.button.id == "back" and not self.busy:
+            self.query_one("#pages", ContentSwitcher).current = "setup"
+            self.query_one("#source", Input).focus()
+        elif event.button.id == "resume" and not self.busy:
+            self.start_monitor()
+        elif event.button.id in ("pause", "stop"):
             self.control.request("paused" if event.button.id == "pause" else "stopped")
             self.query_one("#status", Static).update(
                 "Saving checkpoint… ComfyUI jobs remain resumable."
@@ -130,9 +160,24 @@ class OutpaintApp(App):
             except ValueError as error:
                 self.notify(str(error), severity="error")
                 return
-            self.control = RunControl()
-            self.set_busy(True)
-            self.process()
+            self.query_one("#log", RichLog).clear()
+            self.start_monitor()
+
+    def start_monitor(self):
+        self.query_one("#pages", ContentSwitcher).current = "monitor"
+        self.query_one("#summary", Static).update(
+            f"{self.config['source']} → {self.config['destination']}\n"
+            f"Canvas: {self.config['width']} × {self.config['height']}"
+        )
+        self.query_one("#status", Static).update("Starting · preparing resumable jobs…")
+        self.control = RunControl()
+        self.set_busy(True)
+        self.query_one("#pause", Button).focus()
+        self.process()
+
+    def show_status(self, message):
+        self.query_one("#status", Static).update(message)
+        self.report("log", message)
 
     @work(thread=True, exclusive=True)
     def process(self):
@@ -141,16 +186,15 @@ class OutpaintApp(App):
                 self.config, self.control, lambda k, v: self.call_from_thread(self.report, k, v)
             )
             self.call_from_thread(
-                self.report,
-                "log",
+                self.show_status,
                 f"Finished: {result['rendered']} saved, {result['failed']} failed",
             )
         except RunHalted as error:
             self.call_from_thread(
-                self.report, "log", f"{error.status.title()} · use Start / Resume to continue"
+                self.show_status, f"{error.status.title()} · resume or return to setup"
             )
         except Exception as error:
-            self.call_from_thread(self.report, "log", f"Error: {error}")
+            self.call_from_thread(self.show_status, f"Error: {error}")
         finally:
             self.call_from_thread(self.set_busy, False)
             if self.quitting:

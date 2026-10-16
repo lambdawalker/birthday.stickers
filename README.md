@@ -890,7 +890,9 @@ uv run birthday-outpaint --config outpaint.yaml
 Edit `outpaint.yaml` with a vision-capable OpenAI-compatible LLM URL/model, ComfyUI
 URL, source folder and destination folder. The terminal interface lets you adjust
 both folders, final canvas width/height, feathering, sampling steps, CFG and JPEG
-quality. Start / Resume, Pause and Stop preserve checkpoints. Ctrl+Q stops at a
+quality. Start / Resume opens a separate monitor with both progress bars, logs,
+and Pause/Stop controls. Once paused, stopped, or finished, use Resume or Back to
+setup to adjust the form. Both views preserve checkpoints. Ctrl+Q stops at a
 checkpoint before exiting. Server-side ComfyUI jobs continue and are recovered on
 resume. The LLM description worker and ComfyUI outpainting worker run in parallel: each
 completed prompt is saved before being queued, while the LLM prepares the next image.
