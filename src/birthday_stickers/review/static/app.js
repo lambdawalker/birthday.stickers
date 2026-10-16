@@ -1,5 +1,11 @@
 const $ = (id) => document.getElementById(id);
 const swipeThreshold = 140;
+const verticalSwipeThreshold = swipeThreshold * 0.65;
+function reachesSwipeThreshold(x, y) {
+  return Math.abs(x) > Math.abs(y)
+    ? Math.abs(x) >= swipeThreshold
+    : Math.abs(y) >= verticalSwipeThreshold;
+}
 const params = new URLSearchParams(location.search);
 const pipeline = params.get("pipeline") || "image_generation";
 const requestedBuffer = Number(params.get("preload") ?? 3);
@@ -424,7 +430,7 @@ $("stage").addEventListener("pointermove", (e) => {
         : "tshirt";
   previewChoice(
     action,
-    Math.max(Math.abs(x), Math.abs(y)) >= swipeThreshold ? 1 : 0,
+    reachesSwipeThreshold(x, y) ? 1 : 0,
   );
 });
 function clearGesture() {
@@ -439,7 +445,7 @@ $("stage").addEventListener("pointerup", async (e) => {
   if (!start || e.pointerId !== start.pointerId) return;
   const x = e.clientX - start.x,
     y = e.clientY - start.y;
-  if (Math.max(Math.abs(x), Math.abs(y)) < swipeThreshold) {
+  if (!reachesSwipeThreshold(x, y)) {
     clearGesture();
     if (Math.max(Math.abs(x), Math.abs(y)) < 10) {
       const rect = $("hero").getBoundingClientRect?.();
