@@ -4,7 +4,7 @@ from pathlib import Path
 
 from textual import on, work
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, VerticalScroll
+from textual.containers import Grid, Horizontal, VerticalScroll
 from textual.widgets import Button, Footer, Header, Input, Label, ProgressBar, RichLog, Static
 
 from .batch_outpaint import run_batch
@@ -20,6 +20,9 @@ class OutpaintApp(App):
     .row { height: 3; }
     .row Label { width: 18; padding: 1 0; }
     .row Input { width: 1fr; }
+    #parameters { grid-size: 2; grid-columns: 1fr 1fr; grid-rows: 3;
+        grid-gutter: 0 3; height: 9; }
+    #parameters .row Label { width: 15; }
     #controls { height: 5; align: center middle; }
     Button { margin: 0 1; }
     #status, #endpoints { margin: 0 3; height: auto; }
@@ -40,16 +43,22 @@ class OutpaintApp(App):
             for key, label in (
                 ("source", "Source folder"),
                 ("destination", "Destination"),
-                ("width", "Canvas width"),
-                ("height", "Canvas height"),
-                ("feathering", "Feathering"),
-                ("steps", "Sampling steps"),
-                ("cfg", "CFG"),
-                ("jpeg_quality", "JPEG quality"),
             ):
                 with Horizontal(classes="row"):
                     yield Label(label)
                     yield Input(str(self.config[key]), id=key)
+            with Grid(id="parameters"):
+                for key, label in (
+                    ("width", "Canvas width"),
+                    ("height", "Canvas height"),
+                    ("feathering", "Feathering"),
+                    ("steps", "Sampling steps"),
+                    ("cfg", "CFG"),
+                    ("jpeg_quality", "JPEG quality"),
+                ):
+                    with Horizontal(classes="row"):
+                        yield Label(label)
+                        yield Input(str(self.config[key]), id=key)
         yield Static(
             f"Vision LLM: {self.config['llm']['base_url']}\n"
             f"ComfyUI: {self.config['comfy']['base_url']}",
