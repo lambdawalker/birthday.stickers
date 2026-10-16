@@ -1,0 +1,27 @@
+# Independent existing-image outpainting command: uv run birthday-outpaint
+source: ./images-to-outpaint
+destination: ./outpainted
+recursive: false
+width: 1536
+height: 1536
+feathering: 24
+preserve_center: true
+steps: 25
+cfg: 1.0
+jpeg_quality: 95
+llm:
+  base_url: http://127.0.0.1:1234/v1
+  model: your-vision-model
+  temperature: 0.3
+  max_tokens: 1024
+  timeout: 300
+comfy:
+  base_url: http://127.0.0.1:8188
+  job_timeout: 1800
+  poll_interval: 2
+# Optional local prompt files; omitted values use flows/common defaults.
+# description_prompt: ./describe.md
+# outpainting_prompt: ./extend.md
+# negative_prompt: ./negative.md
+# Model filename overrides use node IDs in flows/common/qwen-outpaint.json.
+overrides: {}

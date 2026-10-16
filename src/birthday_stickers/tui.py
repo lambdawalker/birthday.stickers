@@ -16,6 +16,8 @@ from textual.widgets import (
     Header,
     Input,
     Label,
+    ListItem,
+    ListView,
     ProgressBar,
     RichLog,
     Static,
@@ -70,6 +72,7 @@ class StickerApp(App):
     Header { background: #24243d; color: #e5c9fa; }
     Footer { background: #24243d; }
     #type-picker, #home, #dashboard { padding: 1 3; }
+    #preset-list { height: auto; max-height: 20; margin: 1 0; border: round $primary; }
     .title { color: #e5c9fa; text-style: bold; margin-bottom: 0; }
     .muted { color: #acb4ca; margin-bottom: 0; }
     .card { border: round #565277; padding: 0 1; height: auto; margin-bottom: 1; }
@@ -133,11 +136,13 @@ class StickerApp(App):
         with VerticalScroll(id="type-picker"):
             yield Static("What would you like to create?", classes="title")
             yield Static("Choose a scene preset to start or resume a collection.", classes="muted")
-            for button_id, path in self.preset_buttons.items():
-                with Vertical(classes="card"):
-                    yield Label(path.name.replace("_", " ").title(), classes="title")
-                    yield Static(str(path), classes="muted")
-                    yield Button("Select preset", variant="primary", id=button_id)
+            yield ListView(
+                *(
+                    ListItem(Label(path.name.replace("_", " ").title()), id=item_id)
+                    for item_id, path in self.preset_buttons.items()
+                ),
+                id="preset-list",
+            )
             yield Static("", id="type-error")
         with VerticalScroll(id="home"):
             yield Static("A new adventure, or right where you left off.", classes="title")
@@ -590,15 +595,17 @@ class StickerApp(App):
         finally:
             self.call_from_thread(enable, True)
 
+    @on(ListView.Selected, "#preset-list")
+    def preset_selected(self, event: ListView.Selected) -> None:
+        self.choose_preset(self.preset_buttons[event.item.id])
+
     @on(Button.Pressed)
     def pressed(self, event: Button.Pressed) -> None:
         action = event.button.id
-        if action in self.preset_buttons:
-            self.choose_preset(self.preset_buttons[action])
-        elif action == "change-type" and not self.busy:
+        if action == "change-type" and not self.busy:
             self.query_one("#home").display = False
             self.query_one("#type-picker").display = True
-            self.query_one("#" + next(iter(self.preset_buttons)), Button).focus()
+            self.query_one("#preset-list", ListView).focus()
         elif action == "new":
             try:
                 count = int(self.query_one("#count", Input).value)

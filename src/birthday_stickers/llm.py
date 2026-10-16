@@ -61,7 +61,9 @@ class LLMClient:
         config: LLMConfig,
         references: tuple[Path, ...],
         generation_type="scene_preset",
+        system_prompt: str | None = None,
     ):
+        self.system_prompt = system_prompt
         self.generation_type = generation_type
         self.config = config
         self.http = HTTPClient(config.base_url, config.timeout, auth_headers(config.api_key_env))
@@ -78,7 +80,9 @@ class LLMClient:
                 )
 
     def complete(self, prompt: str, *, refined: bool = False) -> str:
-        system = get_flow(self.generation_type).system_prompt(refined, bool(self.reference_parts))
+        system = self.system_prompt or get_flow(self.generation_type).system_prompt(
+            refined, bool(self.reference_parts)
+        )
         user_content = (
             [{"type": "text", "text": prompt}, *self.reference_parts]
             if self.reference_parts

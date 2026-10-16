@@ -902,3 +902,48 @@ The attachment's captioning branch is replaced by the local raw scene plus
 size. Padding is computed around that source. Masked restoration runs once in
 ComfyUI when `output.preserve_center` is enabled; the client then crops and saves
 JPEG, without applying feathering a second time.
+
+## Outpaint a folder of existing images
+
+Use the independent command (no scene preset or character references required):
+
+```bash
+uv run birthday-outpaint --config outpaint.yaml
+```
+
+Edit `outpaint.yaml` with a vision-capable OpenAI-compatible LLM URL/model, ComfyUI
+URL, source folder and destination folder. The terminal interface lets you adjust
+both folders, final canvas width/height, feathering, sampling steps, CFG and JPEG
+quality. Start / Resume, Pause and Stop preserve checkpoints. Ctrl+Q stops at a
+checkpoint before exiting. Server-side ComfyUI jobs continue and are recovered on
+resume. Separate progress bars track descriptions and finished outpaintings;
+logs show service URLs and elapsed time. The Windows Wi-Fi helper runs separately
+unless `--no-wifi` is supplied.
+
+```bash
+uv run birthday-outpaint --config outpaint.yaml --source ./pictures --destination ./expanded
+uv run birthday-outpaint --config outpaint.yaml --headless
+```
+
+Each image is sent to the vision LLM with the editable
+`flows/common/describe-outpainting.md` prompt. Its description is combined with
+`outpainting.md`, then submitted to the Qwen outpainting workflow. You may override
+`description_prompt`, `outpainting_prompt` and `negative_prompt` with local files
+in YAML. `overrides` controls model filenames and other workflow inputs. The
+outpaint v2 LoRA and Qwen model files must already be installed on ComfyUI.
+
+Supported inputs: JPG, PNG, WebP, BMP and TIFF. `recursive: true` includes subfolders;
+the destination subtree is excluded. Sources remain untouched. Target dimensions
+must be at least as large as each source; smaller targets are reported as failures.
+Equal-size images are saved as JPEG without a redundant ComfyUI render.
+
+The destination contains `results/`, `prompts/`, `state/`, `logs/` and `uploads/`.
+Output names combine the source stem and a fingerprint of its path, content,
+settings and prompts to avoid collisions. Repeating an unchanged run skips finished
+images, reuses descriptions and resumes queued ComfyUI jobs. Changing settings,
+source content or prompt files creates a distinct result. Keep `state/` to resume.
+Only one process may run against a destination folder at a time. Individual image
+errors are logged and processing continues with the remaining files.
+
+The main `birthday-stickers` preset picker now uses a keyboard-friendly list:
+select with Up/Down and Enter, or click a row.
