@@ -22,7 +22,6 @@ birthday-convert-to-jpg = "birthday_stickers.convert_to_jpg:main"
 birthday-center-dragon = "birthday_stickers.center_dragon:main"
 birthday-keep-wifi = "birthday_stickers.keep_wifi_connected:main"
 birthday-gallery-fix = "birthday_stickers.gallery:main"
-birthday-review = "birthday_stickers.review.server:main"
 
 
 [tool.hatch.build.targets.wheel]

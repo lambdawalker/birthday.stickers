@@ -11,7 +11,6 @@ import subprocess
 from pathlib import Path
 
 SERVICES = {
-    "review": "birthday_stickers.review.server",
     "outpaint": "birthday_stickers.batch_outpaint",
     "generate": "birthday_stickers.cli",
 }

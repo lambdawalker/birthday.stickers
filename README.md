@@ -824,33 +824,20 @@ and reports corrupt files without abandoning the rest. Use `--gallery PATH` to c
 the destination, or `--pipeline outpainting` for that pipeline. Run it again whenever
 new images arrive. Different byte encodings of the same picture are distinct hashes.
 
-Start the review website separately (it can run while images are being generated):
+The review website now lives in [web.photogallery](https://github.com/lambdawalker/web.photogallery),
+with its own package, dependencies, and environment. From that repository, run:
 
 ```powershell
-uv run birthday-review --gallery ./gallery --host 0.0.0.0 --port 8080
+uv run photogallery --gallery "D:\dev\birthday.stickers\gallery" --port 8080
 ```
 
-Open `http://<computer-ip>:8080/user/maria`, replacing the name for each reviewer.
-On Windows, allow the server through the firewall on your private network if prompted.
-The website defaults directly to image generation. Pipeline-aware storage and URLs
-already support `?pipeline=outpainting`; a visible selector can be added later.
-
-- Right / Accept: accept and advance.
-- Left / Reject: reject and advance, clearing favorite and T-shirt marks.
-- Up / star: toggle favorite, accept, and advance.
-- Down / T-shirt: toggle T-shirt candidate, accept, and advance.
-- Undo: restore the previous decision, including both marks.
-
-The star and T-shirt controls sit at the bottom center. Arrow keys work on desktop;
-`z` undoes the last action. Category links show accepted, rejected, favorite, and
-T-shirt galleries. **Review sessions** lists each person's counts and links to their
-selections. Each person's decisions are independent. Reopening the same named link
-resumes the remaining queue; repeated exports do not reset progress. A failed save
-stays available for retry, including after a reload; retried requests are idempotent.
-
-Names in links identify reviewers without passwords. Anyone with a person's link
-can continue or change that person's review. This server is intended for a trusted
-network. Rejection never deletes an image.
+Point it at the **same existing gallery folder** to retain every image, reviewer,
+decision, and undo history. No reimport or database migration is needed. The
+**Generate gallery** button and `birthday-gallery-fix` remain here as exporters;
+the standalone repo also provides `photogallery-import` for other image folders.
+Both applications can run simultaneously. See the gallery repo for review controls
+and deployment instructions. `birthday-review` and the `launch.py review` option
+have moved out of this package.
 
 ## Packaged utilities and Wi-Fi watchdog
 
@@ -873,17 +860,6 @@ selection. Preview, validation, and the review server do not start the watchdog.
 
 The destructive flattening utility and its command have been removed. Use
 **Generate gallery** or `birthday-gallery-fix` instead.
-
-Review pages preload 3 images ahead and behind by default (including recently reviewed
-images for Undo). Set `?preload=5` on a reviewer link to change the buffer to 5
-images in each direction; supported values are 1–20. The next image sits underneath
-the current card while dragging. Saved choices show a brief confirmation icon;
-failed requests retain the retry action without showing a success confirmation.
-
-Use the eye button to switch to gallery mode (`?mode=gallery`). Drag horizontally
-to browse a looping gallery; use the shared action buttons to categorize the
-visible image. Corner badges show its saved categories. The ↔ button returns
-to swipe mode. Both modes retain the selected category and preload setting.
 
 ### Qwen 2.1 outpainting workflow
 
@@ -955,7 +931,6 @@ virtual environment under `.venvs/`, so starting/updating one does not reinstall
 executables or dependencies used by another running service:
 
 ```powershell
-python src/birthday_stickers/launch.py review --gallery ./gallery --port 8080
 python src/birthday_stickers/launch.py outpaint --config outpaint.yaml
 python src/birthday_stickers/launch.py generate --config config.local.yaml
 ```
@@ -967,8 +942,7 @@ All service arguments are forwarded unchanged, and relative paths retain your
 current working directory. Ctrl+C stops that service only.
 
 The original `uv run birthday-*` commands still work, but share `.venv` and can
-encounter Windows executable locks during package updates. Stop any old gallery
-instance once and restart it with the launcher to switch to the isolated setup.
+encounter Windows executable locks during package updates. The gallery now runs from its own repository and environment.
 These are separate processes/environments, not separate source-code snapshots;
 restart a service after changing its code. Generation and outpainting may still
 queue behind each other when pointed at the same ComfyUI/GPU. Use separate ComfyUI
