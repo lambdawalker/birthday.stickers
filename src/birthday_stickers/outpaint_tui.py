@@ -52,8 +52,11 @@ class OutpaintApp(App):
     RichLog { height: 1fr; }
     """
 
-    def __init__(self, config):
+    def __init__(self, config, *, repair=False):
         super().__init__()
+        self.repair = repair
+        if repair:
+            self.title = "Qwen · Glasses Reflection Repair"
         self.config = config.copy()
         self.control = RunControl()
         self.busy = False
@@ -72,14 +75,7 @@ class OutpaintApp(App):
                             yield Label(label)
                             yield Input(str(self.config[key]), id=key)
                     with Grid(id="parameters"):
-                        for key, label in (
-                            ("width", "Canvas width"),
-                            ("height", "Canvas height"),
-                            ("feathering", "Feathering"),
-                            ("steps", "Sampling steps"),
-                            ("cfg", "CFG"),
-                            ("jpeg_quality", "JPEG quality"),
-                        ):
+                        for key, label in self.fields():
                             with Horizontal(classes="row"):
                                 yield Label(label)
                                 yield Input(str(self.config[key]), id=key)
@@ -102,16 +98,35 @@ class OutpaintApp(App):
                 )
                 with Horizontal(id="pipelines"):
                     with Vertical(id="prompt-panel", classes="pipeline"):
-                        yield Label("Prompt generation", classes="pipeline-title")
+                        yield Label(
+                            "Screening & prompts" if self.repair else "Prompt generation",
+                            classes="pipeline-title",
+                        )
                         yield Static(self.config["llm"]["base_url"], classes="endpoint")
                         yield ProgressBar(total=1, id="descriptions")
                         yield RichLog(id="prompt-log", wrap=True)
                     with Vertical(id="outpaint-panel", classes="pipeline"):
-                        yield Label("Outpainting", classes="pipeline-title")
+                        yield Label(
+                            "Glasses repair" if self.repair else "Outpainting",
+                            classes="pipeline-title",
+                        )
                         yield Static(self.config["comfy"]["base_url"], classes="endpoint")
                         yield ProgressBar(total=1, id="renders")
                         yield RichLog(id="outpaint-log", wrap=True)
         yield Footer()
+
+    def fields(self):
+        common = (("steps", "Sampling steps"), ("cfg", "CFG"), ("jpeg_quality", "JPEG quality"))
+        return (
+            common
+            if self.repair
+            else (
+                ("width", "Canvas width"),
+                ("height", "Canvas height"),
+                ("feathering", "Feathering"),
+                *common,
+            )
+        )
 
     def report(self, kind, value):
         if kind in ("log", "prompts_log", "outpainting_log"):
@@ -127,10 +142,11 @@ class OutpaintApp(App):
                 total=value["total"], progress=value["described"]
             )
             self.query_one("#renders", ProgressBar).update(
-                total=value["total"], progress=value["rendered"]
+                total=value.get("flagged", value["total"]), progress=value["rendered"]
             )
             self.query_one("#status", Static).update(
-                f"{value['rendered']}/{value['total']} saved · {value['failed']} failed"
+                f"{value['rendered']}/{value.get('flagged', value['total'])} saved · "
+                f"{value.get('skipped', 0)} skipped · {value['failed']} failed"
             )
 
     def set_busy(self, busy):
@@ -161,18 +177,23 @@ class OutpaintApp(App):
                     config[key] = str(
                         Path(self.query_one("#" + key, Input).value).expanduser().resolve()
                     )
-                for key in ("width", "height", "feathering", "steps", "jpeg_quality"):
-                    config[key] = int(self.query_one("#" + key, Input).value)
+                for key, _ in self.fields():
+                    if key != "cfg":
+                        config[key] = int(self.query_one("#" + key, Input).value)
                 config["cfg"] = float(self.query_one("#cfg", Input).value)
                 if config["source"] == config["destination"]:
                     raise ValueError("Choose different source and destination directories")
-                if (
+                if not self.repair and (
                     min(config["width"], config["height"], config["steps"]) < 1
                     or not 0 <= config["feathering"] <= 8192
                     or not 1 <= config["jpeg_quality"] <= 100
                     or not 0 < config["cfg"] <= 100
                 ):
                     raise ValueError("Check dimensions, steps, feathering, CFG and JPEG quality")
+                if self.repair:
+                    from .batch_repair import validate
+
+                    validate(config)
                 self.config = config
             except ValueError as error:
                 self.notify(str(error), severity="error")
@@ -185,7 +206,11 @@ class OutpaintApp(App):
         self.query_one("#pages", ContentSwitcher).current = "monitor"
         self.query_one("#summary", Static).update(
             f"{self.config['source']} → {self.config['destination']}\n"
-            f"Canvas: {self.config['width']} × {self.config['height']}"
+            + (
+                "Glasses reflection repair"
+                if self.repair
+                else f"Canvas: {self.config['width']} × {self.config['height']}"
+            )
         )
         self.query_one("#status", Static).update("Starting · preparing resumable jobs…")
         self.control = RunControl()
@@ -200,12 +225,16 @@ class OutpaintApp(App):
     @work(thread=True, exclusive=True)
     def process(self):
         try:
-            result = run_batch(
+            runner = run_batch
+            if self.repair:
+                from .batch_repair import run_batch as runner
+            result = runner(
                 self.config, self.control, lambda k, v: self.call_from_thread(self.report, k, v)
             )
             self.call_from_thread(
                 self.show_status,
-                f"Finished: {result['rendered']} saved, {result['failed']} failed",
+                f"Finished: {result['rendered']} saved, {result.get('skipped', 0)} skipped, "
+                f"{result['failed']} failed",
             )
         except RunHalted as error:
             self.call_from_thread(

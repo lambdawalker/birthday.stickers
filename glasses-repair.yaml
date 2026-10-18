@@ -1,0 +1,24 @@
+source: ./images-to-repair
+destination: ./glasses-repaired
+recursive: false
+steps: 25
+cfg: 1.0
+jpeg_quality: 95
+# Null/uncertain or malformed classification is reported as a failure, never edited.
+# Prompt files can be overridden with paths relative to this YAML:
+# girl_prompt: ./girl.md
+# glasses_prompt: ./glasses.md
+# reflection_prompt: ./reflection.md
+# negative_prompt: ./negative.md
+llm:
+  base_url: http://127.0.0.1:1234/v1
+  model: your-vision-model
+  temperature: 0.2
+  max_tokens: 2048
+  timeout: 300
+comfy:
+  base_url: http://127.0.0.1:8188
+  job_timeout: 1800
+  poll_interval: 2
+# Optional node input overrides, e.g. model filenames in flows/glasses_repair/qwen.json.
+overrides: {}

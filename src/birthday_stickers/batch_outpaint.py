@@ -6,7 +6,6 @@ import json
 import secrets
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
 from queue import Empty, Queue
@@ -20,6 +19,7 @@ from .control import RunControl, RunHalted
 from .http import RejectedSubmission
 from .images import decode_image, finish_outpaint, plan_padding, save_jpeg
 from .llm import LLMClient
+from .parallel import run_parallel
 from .retry import copyfile, file_retry, read_bytes, read_text, replace, retry_scope, write_text
 from .sessions import session_lock
 from .wifi_watchdog import wifi_watchdog
@@ -372,15 +372,11 @@ def run_batch(config, control=None, report=lambda *args: None):
                     if function is describe:
                         descriptions_done.set()
 
-        with ThreadPoolExecutor(max_workers=2, thread_name_prefix="outpaint") as workers:
-            describing = workers.submit(worker, describe, "prompts")
-            rendering = workers.submit(worker, render, "outpainting")
-            try:
-                describing.result()
-                rendering.result()
-            except BaseException:
-                control.request(control.status)
-                raise
+        run_parallel(
+            lambda: worker(describe, "prompts"),
+            lambda: worker(render, "outpainting"),
+            control,
+        )
         return counts
 
 

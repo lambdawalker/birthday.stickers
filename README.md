@@ -967,3 +967,62 @@ its checkpoint. Older hash-suffixed results are reused and renamed automatically
 when their saved state and input snapshot identify them. Delete the result to redo
 an image. Inputs that would map to the same JPG path (such as `a.png` and `a.jpg`)
 are rejected before processing so neither image is overwritten.
+
+## Repair reflections in the girl's glasses
+
+A third folder workflow screens existing images with a vision LLM, then edits only
+flagged images with Qwen 2.1. Configure `glasses-repair.yaml` and run:
+
+```powershell
+uv run birthday-repair-glasses --config glasses-repair.yaml
+# Isolated environment, safe alongside generation/outpainting:
+python src/birthday_stickers/launch.py repair --config glasses-repair.yaml
+# Unattended operation:
+uv run birthday-repair-glasses --config glasses-repair.yaml --headless
+```
+
+`--source PATH`, `--destination PATH`, and `--no-wifi` are also supported. Relative
+YAML paths resolve beside the YAML file. The form shows directories followed by
+steps, CFG and JPEG quality; Start opens the two-panel monitor with separate LLM
+and ComfyUI URLs, progress and elapsed-time logs. Pause, Stop, Resume, Back to setup,
+Q and Ctrl+Q work as in folder outpainting.
+
+For each image the LLM first answers whether a girl is visible. Only a positive
+answer leads to the glasses question. Only a positive glasses answer leads to an
+edit prompt describing reflections consistent with the actual environment while
+keeping the lenses black and semitransparent. The second worker edits flagged
+images while the LLM screens subsequent images. Uncertain or invalid JSON answers
+are failures for retry, not silent exclusions or edits. Nonmatching images remain
+untouched and receive a saved skip decision; results contains **only repaired
+images**, not copies of the entire input collection.
+
+The dedicated graph and user-editable prompts live under
+`src/birthday_stickers/flows/glasses_repair/`. You can override `girl_prompt`,
+`glasses_prompt`, `reflection_prompt` and `negative_prompt` in YAML. Classification
+prompts must return `{"answer": true/false, "reason": "visual evidence"}`. Null is
+allowed as an uncertain response but is reported for retry. Model filenames can
+be customized via `overrides` (node IDs are in `qwen.json`). This graph uses the
+existing Qwen model/encoder/VAE and QwenImage21 nodes with one source image; it
+uses neither the outpainting LoRA nor padding. Source-sized Qwen conditioning is
+used (`resolution: 0`).
+
+Saved data in the destination:
+
+- `results/`: source-named JPGs, with relative subfolders preserved.
+- `state/`: per-image classification, flags, seeds, submission IDs and graph snapshots.
+- `prompts/`: classification evidence and generated edit prompts in Markdown.
+- `logs/analysis/` and `logs/repair/`: separate worker logs.
+- `uploads/`: staged PNG source images.
+
+Existing readable result files are skipped. Successful classifications and prompts
+are checkpointed independently; resuming a submitted ComfyUI job does not submit
+it again. Delete a repaired result to rerender with a fresh seed and the saved
+prompt. Input-content or classification-prompt/model changes invalidate cached
+screening decisions. To re-evaluate a skipped image without those changes, remove
+its state JSON. Inputs whose names collide after JPG conversion are rejected.
+Use a dedicated destination per workflow; do not point repair at outpainting's
+result folder, whose existing files would be treated as already repaired.
+
+The edit prompt asks Qwen to preserve the face, frames and all other scene details.
+This is a full-image edit, not a pixel mask: inspect results for unintended changes
+before replacing originals. The workflow does not overwrite source images.
