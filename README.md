@@ -1043,8 +1043,8 @@ From the repository root, run:
 uv run birthday-banners
 ```
 
-This creates `print/banners/outputs/family.png` and `friends.png`. Each is a
-single tall, opaque PNG with a top cap, repeated side borders, dividers between
+This creates `print/banners/outputs/family.jpg` and `friends.jpg`. Each is a
+single tall, opaque JPEG (quality 95, optimized progressive encoding and 4:2:0 chroma subsampling) with a top cap, repeated side borders, dividers between
 pictures, and a bottom cap. The bundled birch, moss, flowers and Nordic knotwork
 artwork has organic edges over the pictures and flat rectangular exterior edges.
 A soft drop shadow follows the wood and foliage silhouettes over the pictures,
