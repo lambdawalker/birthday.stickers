@@ -7,7 +7,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from PIL import Image, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 
 ASSETS = Path(__file__).parent / "assets" / "banner_frame"
 EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
@@ -56,6 +56,7 @@ def render_banner(paths: list[Path], destination: Path, *, image_size: int = 153
         raise ValueError(f"Banner would be {width} x {height} pixels; reduce --image-size "
                          "or raise --max-megapixels (requires more RAM)")
     canvas = Image.new("RGBA", (width, height), "#bca384")
+    frame = Image.new("RGBA", canvas.size)
     overlap = max(1, border // 2)
     left = frame_piece("left", (border + overlap, image_size + 2 * overlap))
     right = frame_piece("right", (border + overlap, image_size + 2 * overlap))
@@ -81,17 +82,26 @@ def render_banner(paths: list[Path], destination: Path, *, image_size: int = 153
             square.crop((0, image_size - 1, image_size, image_size))
             .resize((image_size, overlap)), (border, y + image_size))
         canvas.alpha_composite(square, (border, y))
-        canvas.alpha_composite(left, (0, y - overlap))
-        canvas.alpha_composite(right, (width - right.width, y - overlap))
+        frame.alpha_composite(left, (0, y - overlap))
+        frame.alpha_composite(right, (width - right.width, y - overlap))
     # Horizontal beams cover the vertical joins. The final canvas is opaque
     # and rectangular; only the interior foliage overlaps the photographs.
-    canvas.alpha_composite(frame_piece("top", (width, border + overlap)), (0, 0))
+    frame.alpha_composite(frame_piece("top", (width, border + overlap)), (0, 0))
     for index in range(1, len(paths)):
         y = index * (image_size + border)
-        canvas.alpha_composite(frame_piece("divider", (width, border + 2 * overlap)),
+        frame.alpha_composite(frame_piece("divider", (width, border + 2 * overlap)),
                                (0, y - overlap))
-    canvas.alpha_composite(frame_piece("bottom", (width, border + overlap)),
+    frame.alpha_composite(frame_piece("bottom", (width, border + overlap)),
                            (0, height - border - overlap))
+    # Cast the assembled silhouette once, below every frame component, so
+    # foliage casts a shadow onto images without darkening overlapping beams.
+    radius = max(1, border / 16)
+    offset = max(1, round(border / 32))
+    shadow = Image.new("L", canvas.size)
+    shadow.paste(frame.getchannel("A"), (offset, offset))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius)).point(lambda a: round(a * 0.38))
+    canvas.paste((0, 0, 0, 255), (0, 0), shadow)
+    canvas.alpha_composite(frame)
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(suffix=".png", dir=destination.parent)
     os.close(descriptor)
