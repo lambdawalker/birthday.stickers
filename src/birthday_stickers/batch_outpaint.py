@@ -131,7 +131,9 @@ def run_batch(config, control=None, report=lambda *args: None):
             key: read_text(Path(config[key]), encoding="utf-8")
             for key in ("description_prompt", "outpainting_prompt", "negative_prompt")
         }
-        binding = yaml.safe_load((COMMON / "flow.yaml").read_text())["workflows"]["flux"]
+        binding = yaml.safe_load((COMMON / "flow.yaml").read_text(encoding="utf-8"))["workflows"][
+            "flux"
+        ]
         template = load_workflow(COMMON / binding["path"])
         overrides = {**config.get("overrides", {})}
         overrides["114"] = {

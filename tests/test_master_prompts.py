@@ -36,10 +36,12 @@ class MasterPromptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
             config = setup(temp, service)
             config.planning = Path(temp) / "planning.md"
-            config.planning.write_text("CUSTOM PLAN\n{{scene_brief}}\n{{previous_scenes}}")
+            config.planning.write_text(
+                "CUSTOM PLAN\n{{scene_brief}}\n{{previous_scenes}}", encoding="utf-8"
+            )
             config.refinement = Path(temp) / "refinement.md"
             config.refinement.write_text(
-                "CUSTOM REFINE\n{{guide}}\n{{scene}}\n{{character_sources}}"
+                "CUSTOM REFINE\n{{guide}}\n{{scene}}\n{{character_sources}}", encoding="utf-8"
             )
             switched = with_preset(config, ROOT / "girl_dragon_references")
             self.assertEqual(switched.planning, config.planning)
@@ -83,7 +85,7 @@ class MasterPromptTests(unittest.TestCase):
                 patch("birthday_stickers.retry.pause"),
             ):
                 scene.prepare(1, [])
-            saved = json.loads(scene.path.read_text())
+            saved = json.loads(scene.path.read_text(encoding="utf-8"))
             self.assertEqual(saved["status"], "prompts_ready")
             self.assertIn("<image1>", saved["refined_scene"])
             self.assertNotIn("<image2>", saved["refined_scene"])
@@ -98,7 +100,7 @@ class MasterPromptTests(unittest.TestCase):
                 with patch("birthday_stickers.retry.pause", side_effect=RunHalted("paused")):
                     with self.assertRaises(RunHalted), scene.guard():
                         scene.prepare(1, [])
-            saved = json.loads(scene.path.read_text())
+            saved = json.loads(scene.path.read_text(encoding="utf-8"))
             self.assertEqual(saved["raw_scene"], "RAW")
             self.assertEqual(saved["refinement_candidate"], "Missing the tag")
             self.assertNotIn("refined_scene", saved)
@@ -112,7 +114,9 @@ class MasterPromptTests(unittest.TestCase):
             with patch.object(LLMClient, "complete", complete):
                 Scene(scene.pipeline, scene.path, saved, "prompts").prepare(1, [])
             self.assertIn("Missing", requests[0])
-            self.assertEqual(json.loads(scene.path.read_text())["status"], "prompts_ready")
+            self.assertEqual(
+                json.loads(scene.path.read_text(encoding="utf-8"))["status"], "prompts_ready"
+            )
 
     def test_invalid_master_is_rejected_before_services(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:
@@ -122,7 +126,7 @@ class MasterPromptTests(unittest.TestCase):
                 ("Missing brief", "scene_brief"),
                 ("{{ scene_brief }} {{ typo }}", "typo"),
             ):
-                config.planning.write_text(text)
+                config.planning.write_text(text, encoding="utf-8")
                 with self.subTest(text=text), self.assertRaisesRegex(ValueError, message):
                     validate_local(config)
             self.assertEqual(service.chats, [])
@@ -140,10 +144,16 @@ class MasterPromptTests(unittest.TestCase):
             self.assertEqual(item["version"], 2)
             self.assertEqual(saved.planning.name, "planning.md")
             self.assertEqual(saved.refinement.name, "refinement.md")
-            self.assertEqual(saved.planning.read_text(), config.planning.read_text())
-            self.assertEqual(saved.refinement.read_text(), config.refinement.read_text())
-            self.assertIn("scene_brief", saved.planning.read_text())
-            self.assertIn("character_sources", saved.refinement.read_text())
+            self.assertEqual(
+                saved.planning.read_text(encoding="utf-8"),
+                config.planning.read_text(encoding="utf-8"),
+            )
+            self.assertEqual(
+                saved.refinement.read_text(encoding="utf-8"),
+                config.refinement.read_text(encoding="utf-8"),
+            )
+            self.assertIn("scene_brief", saved.planning.read_text(encoding="utf-8"))
+            self.assertIn("character_sources", saved.refinement.read_text(encoding="utf-8"))
 
     def test_each_shipped_preset_owns_its_master_templates(self):
         from birthday_stickers.config import load_config

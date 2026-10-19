@@ -36,7 +36,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
             def fake_run(config, *, resume, control, worker_progress):
                 worker_progress("images", 0, "stiker-0000", "rendering_qwen")
                 started.set()
-                if not control.requested.wait(5):
+                if not control.requested.wait(30):
                     raise RuntimeError("Test control was not requested")
                 control.check()
                 raise RunHalted("paused")
@@ -89,7 +89,7 @@ class TUITests(unittest.IsolatedAsyncioTestCase):
 
             def fake_run(config, *, resume, control, worker_progress):
                 started.set()
-                control.requested.wait(5)
+                control.requested.wait(30)
                 control.check()
 
             with patch("birthday_stickers.sessions.run", fake_run):

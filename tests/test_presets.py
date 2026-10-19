@@ -95,9 +95,9 @@ class PresetTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "general_direction.md.*typo"):
                 load_preset(folder)
             write_preset(folder)
-            data = yaml.safe_load((folder / "activities.yaml").read_text())
+            data = yaml.safe_load((folder / "activities.yaml").read_text(encoding="utf-8"))
             data["activities"][0]["props"]["spoons"] = []
-            (folder / "activities.yaml").write_text(yaml.safe_dump(data))
+            (folder / "activities.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "empty"):
                 load_preset(folder)
 
@@ -124,9 +124,9 @@ class PresetTests(unittest.TestCase):
                 with self.subTest(error=error), self.assertRaisesRegex(ValueError, error):
                     load_preset(folder)
             write_preset(folder)
-            data = yaml.safe_load((folder / "activities.yaml").read_text())
+            data = yaml.safe_load((folder / "activities.yaml").read_text(encoding="utf-8"))
             data["activities"][0]["venueTags"] = ["ocean"]
-            (folder / "activities.yaml").write_text(yaml.safe_dump(data))
+            (folder / "activities.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "no compatible venue"):
                 load_preset(folder)
 
@@ -178,10 +178,12 @@ class PresetTests(unittest.TestCase):
             self.assertEqual(reference_pools(config), pools)  # No repeated conversion.
             store = SessionStore(Path(temp) / "sessions")
             item = store.create(config)
-            (preset_folder / "image_style.md").write_text("CHANGED STYLE")
+            (preset_folder / "image_style.md").write_text("CHANGED STYLE", encoding="utf-8")
             saved = load_config(store.directory(item["name"]) / "config.yaml")
             self.assertEqual(saved.preset.image_style, "STYLE FIRST")
-            self.assertEqual(saved.character_directory, config.character_directory)
+            self.assertEqual(
+                saved.character_directory.resolve(), config.character_directory.resolve()
+            )
             self.assertFalse((store.directory(item["name"]) / "inputs/characters").exists())
             Image.new("RGB", (32, 32)).save(config.character_directory / "fox999999.jpg")
             self.assertEqual(len(reference_pools(saved)[1]), 2)
@@ -199,7 +201,7 @@ class PresetTests(unittest.TestCase):
                 scene = select_scene(preset, metadata)
                 selections.append(scene["activity"]["id"])
                 (metadata / f"stiker-{i:04}.json").write_text(
-                    json.dumps({"scene_selection": scene})
+                    json.dumps({"scene_selection": scene}), encoding="utf-8"
                 )
             self.assertEqual(len(set(selections[:2])), 2)
             self.assertEqual(len(set(selections[2:])), 2)
@@ -216,7 +218,7 @@ class PresetTests(unittest.TestCase):
             with patch.object(LLMClient, "complete", side_effect=RuntimeError("offline")):
                 with self.assertRaisesRegex(RuntimeError, "offline"):
                     scene.prepare(0, [])
-            saved = json.loads(path.read_text())
+            saved = json.loads(path.read_text(encoding="utf-8"))
             with patch(
                 "birthday_stickers.presets.select_scene", side_effect=AssertionError("reroll")
             ):
@@ -272,7 +274,7 @@ class PresetTests(unittest.TestCase):
             with patch("birthday_stickers.presets.select_scene", side_effect=RunHalted("paused")):
                 with self.assertRaises(RunHalted), scene.guard():
                     scene.prepare(1, [])
-            saved = json.loads(path.read_text())
+            saved = json.loads(path.read_text(encoding="utf-8"))
             self.assertIn("references", saved)
             self.assertNotIn("planning_prompt", saved)
             original_refs = copy.deepcopy(saved["references"])
@@ -283,7 +285,7 @@ class PresetTests(unittest.TestCase):
                     Scene(pipeline, path, saved, "prompts").prepare(1, [])
                 except KeyError as error:
                     self.fail(f"Partial scene must recover on resume, missing {error}")
-            recovered = json.loads(path.read_text())
+            recovered = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(recovered["status"], "prompts_ready")
             self.assertEqual(recovered["references"], original_refs)
             self.assertEqual(recovered["qwen_seed"], original_seed)
@@ -301,7 +303,7 @@ class PresetTests(unittest.TestCase):
             with patch.object(LLMClient, "complete", side_effect=RunHalted("paused")):
                 with self.assertRaises(RunHalted), scene.guard():
                     scene.prepare(1, [])
-            saved = json.loads(path.read_text())
+            saved = json.loads(path.read_text(encoding="utf-8"))
             selection = copy.deepcopy(saved["scene_selection"])
             del saved["planning_prompt"]
             del saved["planning_request"]
@@ -313,7 +315,7 @@ class PresetTests(unittest.TestCase):
                         Scene(pipeline, path, saved, "prompts").prepare(1, [])
                     except KeyError as error:
                         self.fail(f"Saved selection must restore missing {error}")
-            recovered = json.loads(path.read_text())
+            recovered = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(recovered["scene_selection"], selection)
             self.assertEqual(recovered["planning_prompt"], selection["prompt"])
 
@@ -326,14 +328,17 @@ class PresetTests(unittest.TestCase):
             metadata = Path(temp) / "metadata"
             metadata.mkdir()
             (metadata / "stiker-0000.json").write_text(
-                json.dumps({"scene_selection": {"activity": {"id": preset.activities[0]["id"]}}})
+                json.dumps({"scene_selection": {"activity": {"id": preset.activities[0]["id"]}}}),
+                encoding="utf-8",
             )
             for name in (
                 "stiker-0000.qwen.json",
                 "stiker-0000.flux.json",
                 "stiker-not-a-scene.json",
             ):
-                (metadata / name).write_text("Not scene metadata; must not be parsed")
+                (metadata / name).write_text(
+                    "Not scene metadata; must not be parsed", encoding="utf-8"
+                )
             try:
                 selected = select_scene(preset, metadata)
             except ValueError as error:

@@ -23,12 +23,12 @@ class BatchTests(unittest.TestCase):
         source = root / "source"
         source.mkdir()
         Image.new("RGB", (32, 32), "red").save(source / "one.png")
-        config = yaml.safe_load((fixtures.ROOT / "outpaint.yaml").read_text())
+        config = yaml.safe_load((fixtures.ROOT / "outpaint.yaml").read_text(encoding="utf-8"))
         config.update(source=str(source), destination=str(root / "output"), width=64, height=64)
         config["llm"]["base_url"] = service.url + "/v1"
         config["comfy"].update(base_url=service.url, poll_interval=0.002)
         path = root / "batch.yaml"
-        path.write_text(yaml.safe_dump(config))
+        path.write_text(yaml.safe_dump(config), encoding="utf-8")
         return settings(path)
 
     def test_vision_description_render_and_repeat_without_duplicate_jobs(self):
@@ -90,9 +90,9 @@ class BatchTests(unittest.TestCase):
                 for p in (Path(config["destination"]) / "state").glob("*.json")
                 if not p.name.endswith(".workflow.json")
             )
-            record = json.loads(state.read_text())
+            record = json.loads(state.read_text(encoding="utf-8"))
             record.pop("image_identity", None)
-            state.write_text(json.dumps(record))
+            state.write_text(json.dumps(record), encoding="utf-8")
             source = Path(config["source"])
             (source / "one.png").rename(source / "renamed.png")
             config["cfg"] = 2.0
