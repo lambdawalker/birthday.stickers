@@ -16,6 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
+birthday-banners = "birthday_stickers.banners:main"
 birthday-repair-glasses = "birthday_stickers.batch_repair:main"
 birthday-outpaint = "birthday_stickers.batch_outpaint:main"
 birthday-stickers = "birthday_stickers.cli:main"

@@ -1026,3 +1026,56 @@ result folder, whose existing files would be treated as already repaired.
 The edit prompt asks Qwen to preserve the face, frames and all other scene details.
 This is a full-image edit, not a pixel mask: inspect results for unintended changes
 before replacing originals. The workflow does not overwrite source images.
+
+## Printable woodland / Viking banners
+
+Put each banner's images in its own immediate subfolder:
+
+```text
+print/banners/inputs/family/01.png
+print/banners/inputs/family/02.jpg
+print/banners/inputs/friends/01.png
+```
+
+From the repository root, run:
+
+```powershell
+uv run birthday-banners
+```
+
+This creates `print/banners/outputs/family.png` and `friends.png`. Each is a
+single tall, opaque PNG with a top cap, repeated side borders, dividers between
+pictures, and a bottom cap. The bundled birch, moss, flowers and Nordic knotwork
+artwork has organic edges over the pictures and flat rectangular exterior edges.
+The original five frame assets ship with the Python package.
+
+Images sort naturally by filename (`2` before `10`); use numeric prefixes to
+control their order. PNG, JPEG, WebP, TIFF and BMP are supported, case-insensitively.
+Only files directly inside each immediate subfolder are included. EXIF rotation
+is applied. Non-square images fit inside a white square without cropping;
+`--fit cover` instead center-crops them. Transparent source images flatten onto white.
+
+Defaults are a 1536-pixel square opening, 192-pixel borders and 300 DPI metadata.
+For N images, the output is 1920 pixels wide and `1536*N + 192*(N+1)` pixels tall.
+Two images therefore produce 1920 × 3648 pixels (16.26 × 30.89 cm at 300 DPI).
+DPI metadata controls nominal print dimensions, not detail; choose enough pixels
+for your desired print size. Artwork may overlap picture edges, so leave some
+space around faces. Print at actual size on suitable roll/custom paper; this
+command does not split the banner into printer-sized pages.
+
+```powershell
+# Larger openings; border defaults to one eighth of the opening size:
+uv run birthday-banners --image-size 2400 --dpi 300
+# Explicit paths and dimensions:
+uv run birthday-banners --input-dir ./my-pictures --output-dir ./my-banners --image-size 1536 --border 192
+# Rebuild existing outputs after changing inputs:
+uv run birthday-banners --overwrite
+```
+
+Existing output files are skipped unless `--overwrite` is supplied. Empty folders
+are skipped. A corrupt image fails its banner, prints the reason, and processing
+continues with the other folders; any failures give a nonzero exit status.
+Writes are atomic so a failed render retains any previous output. The default
+120-megapixel output limit prevents accidental oversized allocations; lower
+`--image-size` or explicitly raise `--max-megapixels` if sufficient RAM is available.
+Local input images and generated outputs are ignored by Git.
