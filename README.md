@@ -1048,7 +1048,8 @@ single tall, opaque JPEG (quality 95, optimized progressive encoding and 4:2:0 c
 pictures, and a bottom cap. The bundled birch, moss, flowers and Nordic knotwork
 artwork has organic edges over the pictures and flat rectangular exterior edges.
 A soft drop shadow follows the wood and foliage silhouettes over the pictures,
-scaling with border thickness. The original five frame assets ship with the Python package.
+scaling with border thickness. The five original frame PNGs live in `assets/banner_frame/` and are also bundled
+with the installed Python package.
 
 Images sort naturally by filename (`2` before `10`); use numeric prefixes to
 control their order. PNG, JPEG, WebP, TIFF and BMP are supported, case-insensitively.

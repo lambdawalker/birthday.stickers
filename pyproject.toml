@@ -29,6 +29,9 @@ birthday-gallery-fix = "birthday_stickers.gallery:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/birthday_stickers"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"assets/banner_frame" = "birthday_stickers/assets/banner_frame"
+
 [dependency-groups]
 dev = ["ruff>=0.11,<1"]
 

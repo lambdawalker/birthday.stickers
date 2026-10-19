@@ -9,7 +9,10 @@ from pathlib import Path
 
 from PIL import Image, ImageFilter, ImageOps
 
-ASSETS = Path(__file__).parent / "assets" / "banner_frame"
+# Wheels bundle these files internally; source checkouts use the shared assets folder.
+_PACKAGED_ASSETS = Path(__file__).parent / "assets" / "banner_frame"
+ASSETS = (_PACKAGED_ASSETS if _PACKAGED_ASSETS.is_dir()
+          else Path(__file__).resolve().parents[2] / "assets" / "banner_frame")
 EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
 # Remove generation padding; the original PNGs remain available for reuse.
 CROPS = {
