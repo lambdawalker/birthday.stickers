@@ -229,7 +229,9 @@ class FakeServices:
 class PipelineTests(unittest.TestCase):
     def configuration(self, temp, services, count=1):
         directory = Path(temp)
-        data = expand_config(yaml.safe_load((ROOT / "config.yaml").read_text()), ROOT)
+        data = expand_config(
+            yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8")), ROOT
+        )
         folder = directory / "fixture_references"
         folder.mkdir()
         for name in ("A0.jpg", "B0.jpg"):

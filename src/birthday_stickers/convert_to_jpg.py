@@ -138,9 +138,9 @@ def convert_image_to_jpg(
         # Delete original file only after destination is safely written
         if delete_original and file_path.resolve() != dest_path.resolve():
             file_path.unlink()
-            print(f"[✓] Converted: {file_path.name} -> {dest_path.name} (original deleted)")
+            print(f"[OK] Converted: {file_path.name} -> {dest_path.name} (original deleted)")
         else:
-            print(f"[✓] Converted: {file_path.name} -> {dest_path.name}")
+            print(f"[OK] Converted: {file_path.name} -> {dest_path.name}")
 
         return True
 

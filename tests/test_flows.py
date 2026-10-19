@@ -60,7 +60,7 @@ class FlowTests(unittest.TestCase):
                 Path(data["prompts"]["planning"]), (base / "custom/planning.md").resolve()
             )
             old = "prompts/plan_scene.md"
-            self.assertEqual(asset_path(base, old), base / old)
+            self.assertEqual(asset_path(base, old), (base / old).resolve())
 
     def test_session_snapshots_file_prompt(self):
         with tempfile.TemporaryDirectory() as temp, fixtures.FakeServices() as service:

@@ -82,6 +82,7 @@ def read_bytes(path):
 
 @file_retry
 def read_text(path, **kwargs):
+    kwargs.setdefault("encoding", "utf-8")
     return path.read_text(**kwargs)
 
 
@@ -94,6 +95,7 @@ def copyfile(source, destination):
 
 @file_retry
 def write_text(path, text, **kwargs):
+    kwargs.setdefault("encoding", "utf-8")
     return path.write_text(text, **kwargs)
 
 

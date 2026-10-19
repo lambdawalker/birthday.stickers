@@ -31,9 +31,15 @@ class BannerTests(unittest.TestCase):
             for name in ("good", "broken", "empty"):
                 (root / "inputs" / name).mkdir(parents=True)
             Image.new("RGB", (40, 60), "red").save(root / "inputs/good/1.png")
-            (root / "inputs/broken/1.png").write_text("not an image")
-            args = ["--input-dir", str(root / "inputs"), "--output-dir",
-                    str(root / "outputs"), "--image-size", "80"]
+            (root / "inputs/broken/1.png").write_bytes(b"not an image")
+            args = [
+                "--input-dir",
+                str(root / "inputs"),
+                "--output-dir",
+                str(root / "outputs"),
+                "--image-size",
+                "80",
+            ]
             self.assertEqual(main(args), 1)
             result = root / "outputs/good.jpg"
             before = result.read_bytes()

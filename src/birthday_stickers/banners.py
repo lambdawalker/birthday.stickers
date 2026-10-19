@@ -1,4 +1,5 @@
 """Compose one woodland/Viking print banner per immediate input subfolder."""
+
 from __future__ import annotations
 
 import argparse
@@ -11,8 +12,11 @@ from PIL import Image, ImageFilter, ImageOps
 
 # Wheels bundle these files internally; source checkouts use the shared assets folder.
 _PACKAGED_ASSETS = Path(__file__).parent / "assets" / "banner_frame"
-ASSETS = (_PACKAGED_ASSETS if _PACKAGED_ASSETS.is_dir()
-          else Path(__file__).resolve().parents[2] / "assets" / "banner_frame")
+ASSETS = (
+    _PACKAGED_ASSETS
+    if _PACKAGED_ASSETS.is_dir()
+    else Path(__file__).resolve().parents[2] / "assets" / "banner_frame"
+)
 EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
 # Remove generation padding; the original PNGs remain available for reuse.
 CROPS = {
@@ -25,13 +29,16 @@ CROPS = {
 
 
 def natural_key(path: Path) -> tuple:
-    return tuple((1, int(p)) if p.isdigit() else (0, p.casefold())
-                 for p in re.split(r"(\d+)", path.name)) + ((0, path.name),)
+    return tuple(
+        (1, int(p)) if p.isdigit() else (0, p.casefold()) for p in re.split(r"(\d+)", path.name)
+    ) + ((0, path.name),)
 
 
 def images_in(folder: Path) -> list[Path]:
-    return sorted((p for p in folder.iterdir()
-                   if p.is_file() and p.suffix.lower() in EXTENSIONS), key=natural_key)
+    return sorted(
+        (p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in EXTENSIONS),
+        key=natural_key,
+    )
 
 
 def frame_piece(name: str, size: tuple[int, int]) -> Image.Image:
@@ -47,9 +54,16 @@ def frame_piece(name: str, size: tuple[int, int]) -> Image.Image:
     return piece.resize(size, Image.Resampling.LANCZOS)
 
 
-def render_banner(paths: list[Path], destination: Path, *, image_size: int = 1536,
-                  border: int = 192, dpi: int = 300, fit: str = "contain",
-                  max_megapixels: float = 120) -> tuple[int, int]:
+def render_banner(
+    paths: list[Path],
+    destination: Path,
+    *,
+    image_size: int = 1536,
+    border: int = 192,
+    dpi: int = 300,
+    fit: str = "contain",
+    max_megapixels: float = 120,
+) -> tuple[int, int]:
     if not paths:
         raise ValueError("No images to render")
     if image_size < 1 or border < 1 or dpi < 1:
@@ -59,8 +73,10 @@ def render_banner(paths: list[Path], destination: Path, *, image_size: int = 153
     width = image_size + 2 * border
     height = len(paths) * image_size + (len(paths) + 1) * border
     if width * height > max_megapixels * 1_000_000:
-        raise ValueError(f"Banner would be {width} x {height} pixels; reduce --image-size "
-                         "or raise --max-megapixels (requires more RAM)")
+        raise ValueError(
+            f"Banner would be {width} x {height} pixels; reduce --image-size "
+            "or raise --max-megapixels (requires more RAM)"
+        )
     canvas = Image.new("RGBA", (width, height), "#bca384")
     frame = Image.new("RGBA", canvas.size)
     overlap = max(1, border // 2)
@@ -71,22 +87,29 @@ def render_banner(paths: list[Path], destination: Path, *, image_size: int = 153
         with Image.open(path) as source:
             oriented = ImageOps.exif_transpose(source).convert("RGBA")
             if fit == "cover":
-                picture = ImageOps.fit(oriented, (image_size, image_size),
-                                       method=Image.Resampling.LANCZOS)
+                picture = ImageOps.fit(
+                    oriented, (image_size, image_size), method=Image.Resampling.LANCZOS
+                )
             else:
-                picture = ImageOps.contain(oriented, (image_size, image_size),
-                                           method=Image.Resampling.LANCZOS)
+                picture = ImageOps.contain(
+                    oriented, (image_size, image_size), method=Image.Resampling.LANCZOS
+                )
             square = Image.new("RGBA", (image_size, image_size), "white")
-            square.alpha_composite(picture, ((image_size - picture.width) // 2,
-                                            (image_size - picture.height) // 2))
+            square.alpha_composite(
+                picture, ((image_size - picture.width) // 2, (image_size - picture.height) // 2)
+            )
         # Reflect a real strip instead of stretching a single row into streaks.
         bleed = min(overlap, image_size)
         canvas.alpha_composite(
-            ImageOps.flip(square.crop((0, 0, image_size, bleed)))
-            .resize((image_size, overlap)), (border, y - overlap))
+            ImageOps.flip(square.crop((0, 0, image_size, bleed))).resize((image_size, overlap)),
+            (border, y - overlap),
+        )
         canvas.alpha_composite(
-            ImageOps.flip(square.crop((0, image_size - bleed, image_size, image_size)))
-            .resize((image_size, overlap)), (border, y + image_size))
+            ImageOps.flip(square.crop((0, image_size - bleed, image_size, image_size))).resize(
+                (image_size, overlap)
+            ),
+            (border, y + image_size),
+        )
         canvas.alpha_composite(square, (border, y))
         frame.alpha_composite(left, (0, y - overlap))
         frame.alpha_composite(right, (width - right.width, y - overlap))
@@ -95,10 +118,12 @@ def render_banner(paths: list[Path], destination: Path, *, image_size: int = 153
     frame.alpha_composite(frame_piece("top", (width, border + overlap)), (0, 0))
     for index in range(1, len(paths)):
         y = index * (image_size + border)
-        frame.alpha_composite(frame_piece("divider", (width, border + 2 * overlap)),
-                               (0, y - overlap))
-    frame.alpha_composite(frame_piece("bottom", (width, border + overlap)),
-                           (0, height - border - overlap))
+        frame.alpha_composite(
+            frame_piece("divider", (width, border + 2 * overlap)), (0, y - overlap)
+        )
+    frame.alpha_composite(
+        frame_piece("bottom", (width, border + overlap)), (0, height - border - overlap)
+    )
     # Cast the assembled silhouette once, below every frame component, so
     # foliage casts a shadow onto images without darkening overlapping beams.
     radius = max(1, border / 16)
@@ -113,8 +138,14 @@ def render_banner(paths: list[Path], destination: Path, *, image_size: int = 153
     os.close(descriptor)
     try:
         canvas.convert("RGB").save(
-            temporary, format="JPEG", quality=95, optimize=True, progressive=True,
-            subsampling=2, dpi=(dpi, dpi))
+            temporary,
+            format="JPEG",
+            quality=95,
+            optimize=True,
+            progressive=True,
+            subsampling=2,
+            dpi=(dpi, dpi),
+        )
         os.replace(temporary, destination)
     finally:
         Path(temporary).unlink(missing_ok=True)
@@ -132,16 +163,32 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path, default=Path("print/banners/inputs"))
     parser.add_argument("--output-dir", type=Path, default=Path("print/banners/outputs"))
-    parser.add_argument("--image-size", type=positive_int, default=1536,
-                        help="square image opening in pixels (default: 1536)")
-    parser.add_argument("--border", type=positive_int, default=None,
-                        help="border width in pixels (default: image size / 8)")
+    parser.add_argument(
+        "--image-size",
+        type=positive_int,
+        default=1536,
+        help="square image opening in pixels (default: 1536)",
+    )
+    parser.add_argument(
+        "--border",
+        type=positive_int,
+        default=None,
+        help="border width in pixels (default: image size / 8)",
+    )
     parser.add_argument("--dpi", type=positive_int, default=300)
-    parser.add_argument("--fit", choices=("contain", "cover"), default="contain",
-                        help="contain preserves whole image; cover center-crops to square")
+    parser.add_argument(
+        "--fit",
+        choices=("contain", "cover"),
+        default="contain",
+        help="contain preserves whole image; cover center-crops to square",
+    )
     parser.add_argument("--overwrite", action="store_true")
-    parser.add_argument("--max-megapixels", type=positive_int, default=120,
-                        help="maximum output megapixels per banner (default: 120)")
+    parser.add_argument(
+        "--max-megapixels",
+        type=positive_int,
+        default=120,
+        help="maximum output megapixels per banner (default: 120)",
+    )
     args = parser.parse_args(argv)
     if not args.input_dir.is_dir():
         parser.error(f"Input directory does not exist: {args.input_dir}")
@@ -165,12 +212,19 @@ def main(argv: list[str] | None = None) -> int:
             continue
         try:
             width, height = render_banner(
-                paths, destination, image_size=args.image_size,
+                paths,
+                destination,
+                image_size=args.image_size,
                 border=args.border or max(1, args.image_size // 8),
-                dpi=args.dpi, fit=args.fit, max_megapixels=args.max_megapixels)
-            print(f"OK {destination}: {len(paths)} images, {width} x {height} px, "
-                  f"{width / args.dpi * 2.54:.1f} x {height / args.dpi * 2.54:.1f} cm "
-                  f"at {args.dpi} DPI")
+                dpi=args.dpi,
+                fit=args.fit,
+                max_megapixels=args.max_megapixels,
+            )
+            print(
+                f"OK {destination}: {len(paths)} images, {width} x {height} px, "
+                f"{width / args.dpi * 2.54:.1f} x {height / args.dpi * 2.54:.1f} cm "
+                f"at {args.dpi} DPI"
+            )
         except (OSError, ValueError, Image.DecompressionBombError) as exc:
             errors += 1
             print(f"ERROR {folder.name}: {exc}")

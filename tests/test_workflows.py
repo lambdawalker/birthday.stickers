@@ -50,7 +50,9 @@ class WorkflowTests(unittest.TestCase):
 
     def test_preserve_center_can_be_disabled_without_restoration(self):
         source = json.loads(
-            (ROOT / "src/birthday_stickers/flows/common/qwen-outpaint.json").read_text()
+            (ROOT / "src/birthday_stickers/flows/common/qwen-outpaint.json").read_text(
+                encoding="utf-8"
+            )
         )
         graph = build_outpaint(
             source,

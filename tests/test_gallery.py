@@ -50,7 +50,7 @@ class GalleryTests(unittest.TestCase):
 
     def test_bad_image_does_not_interrupt_import(self):
         bad = self.source / "bad.jpg"
-        bad.write_text("not an image")
+        bad.write_text("not an image", encoding="utf-8")
         result = self.gallery.import_files([bad, self.image], "image_generation")
         self.assertEqual(result["added"], 1)
         self.assertEqual(len(result["errors"]), 1)
