@@ -38,6 +38,9 @@ def frame_piece(name: str, size: tuple[int, int]) -> Image.Image:
         # The generated side art has a translucent halo. Remove that halo,
         # retaining solid foliage and bark, before compositing over pictures.
         piece.putalpha(piece.getchannel("A").point(lambda a: 255 if a >= 180 else 0))
+    if name == "top":
+        # Match width without flattening the carved wood and hanging leaves.
+        size = (size[0], round(piece.height * size[0] / piece.width))
     return piece.resize(size, Image.Resampling.LANCZOS)
 
 
@@ -73,13 +76,13 @@ def render_banner(paths: list[Path], destination: Path, *, image_size: int = 153
             square = Image.new("RGBA", (image_size, image_size), "white")
             square.alpha_composite(picture, ((image_size - picture.width) // 2,
                                             (image_size - picture.height) // 2))
-        # Extend the outer rows underneath the organic horizontal edges so
-        # transparent gaps reveal the image instead of the backing color.
+        # Reflect a real strip instead of stretching a single row into streaks.
+        bleed = min(overlap, image_size)
         canvas.alpha_composite(
-            square.crop((0, 0, image_size, 1)).resize((image_size, overlap)),
-            (border, y - overlap))
+            ImageOps.flip(square.crop((0, 0, image_size, bleed)))
+            .resize((image_size, overlap)), (border, y - overlap))
         canvas.alpha_composite(
-            square.crop((0, image_size - 1, image_size, image_size))
+            ImageOps.flip(square.crop((0, image_size - bleed, image_size, image_size)))
             .resize((image_size, overlap)), (border, y + image_size))
         canvas.alpha_composite(square, (border, y))
         frame.alpha_composite(left, (0, y - overlap))
@@ -103,10 +106,12 @@ def render_banner(paths: list[Path], destination: Path, *, image_size: int = 153
     canvas.paste((0, 0, 0, 255), (0, 0), shadow)
     canvas.alpha_composite(frame)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(suffix=".png", dir=destination.parent)
+    descriptor, temporary = tempfile.mkstemp(suffix=".jpg", dir=destination.parent)
     os.close(descriptor)
     try:
-        canvas.convert("RGB").save(temporary, dpi=(dpi, dpi))
+        canvas.convert("RGB").save(
+            temporary, format="JPEG", quality=95, optimize=True, progressive=True,
+            subsampling=2, dpi=(dpi, dpi))
         os.replace(temporary, destination)
     finally:
         Path(temporary).unlink(missing_ok=True)
@@ -151,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
         if not paths:
             print(f"SKIP {folder.name}: no supported images")
             continue
-        destination = output / f"{folder.name}.png"
+        destination = output / f"{folder.name}.jpg"
         if destination.exists() and not args.overwrite:
             print(f"SKIP {destination}: already exists (use --overwrite to rebuild)")
             continue
