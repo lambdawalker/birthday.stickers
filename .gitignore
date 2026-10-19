@@ -81,3 +81,7 @@ gallery/
 
 # Independent service environments
 .venvs/
+
+# Local banner source images (retain the setup placeholder)
+print/banners/inputs/*
+!print/banners/inputs/.gitkeep
