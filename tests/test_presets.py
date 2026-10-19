@@ -181,7 +181,9 @@ class PresetTests(unittest.TestCase):
             (preset_folder / "image_style.md").write_text("CHANGED STYLE", encoding="utf-8")
             saved = load_config(store.directory(item["name"]) / "config.yaml")
             self.assertEqual(saved.preset.image_style, "STYLE FIRST")
-            self.assertEqual(saved.character_directory, config.character_directory)
+            self.assertEqual(
+                saved.character_directory.resolve(), config.character_directory.resolve()
+            )
             self.assertFalse((store.directory(item["name"]) / "inputs/characters").exists())
             Image.new("RGB", (32, 32)).save(config.character_directory / "fox999999.jpg")
             self.assertEqual(len(reference_pools(saved)[1]), 2)

@@ -398,6 +398,9 @@ class StickerApp(App):
         self.config.generation.height = height
 
     def update_outpaint_summary(self) -> None:
+        # Queued switch events may arrive while the screen is being torn down.
+        if not self.query("#outpainting") or not self.query("#outpaint-size"):
+            return
         enabled = self.query_one("#outpainting", Switch).value
         size = self.config.output if enabled else self.config.generation
         self.query_one("#outpaint-size", Static).update(
